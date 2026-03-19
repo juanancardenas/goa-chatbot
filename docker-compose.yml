@@ -1,7 +1,7 @@
 services:
-  goa-ai1:
+  goa-chatbot:
     build: .
-    image: goa-ai1:latest
+    image: goa-chatbot:latest
     restart: always
     ports:
       - "8086:8086"
@@ -15,4 +15,4 @@ services:
 #> docker compose up --build -d
 
 # Para ver los logs de arranque
-#> docker logs -f goa-ai1
+#> docker logs -f goa-chatbot
