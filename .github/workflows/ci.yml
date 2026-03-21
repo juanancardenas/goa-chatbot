@@ -41,7 +41,7 @@ jobs:
 
       - name: 🏷️ Prepare container image metadata, Sonar Organization & artifact from pom
         run: |
-          echo "ORGANIZATION=miw-upm-github" >> $GITHUB_ENV          
+          echo "ORGANIZATION=juanancardenas" >> $GITHUB_ENV          
           echo "ARTIFACT=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV
 
       - name: 📊 Sonar Analysis
