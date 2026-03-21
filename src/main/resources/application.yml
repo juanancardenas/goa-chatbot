@@ -1,6 +1,6 @@
 spring:
   application:
-    name: goa-ai1
+    name: goa-chatbot
   profiles:
     # Profile ----------------------------------------
     active: dev

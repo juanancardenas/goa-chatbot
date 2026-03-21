@@ -1,4 +1,4 @@
-name: CI goa
+name: CI
 on:
   push:
     branches:
