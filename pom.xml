@@ -28,9 +28,9 @@
 
     <developers>
         <developer>
-            <name>Jesus Bernal</name>
-            <id>J.Bernal</id>
-            <email>j.bernal@upm.es</email>
+            <name>Randy Méndez y Juan Cárdenas</name>
+            <id>jacardenas</id>
+            <email>jcardenas@alumnos.upm.es</email>
             <organization>MIW UPM</organization>
             <roles>
                 <role>Architect</role>
