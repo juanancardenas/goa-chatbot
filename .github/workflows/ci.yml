@@ -43,3 +43,11 @@ jobs:
         run: |
           echo "ORGANIZATION=miw-upm-github" >> $GITHUB_ENV          
           echo "ARTIFACT=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV
+
+      - name: 📊 Sonar Analysis
+        run: >
+          mvn -B sonar:sonar
+          -Dsonar.projectKey=${{ env.ORGANIZATION }}_${{ env.ARTIFACT }}
+          -Dsonar.organization=${{ env.ORGANIZATION }}
+          -Dsonar.host.url=https://sonarcloud.io 
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
