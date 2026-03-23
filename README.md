@@ -4,8 +4,8 @@
 
 > Este proyecto es un apoyo docente de la asignatura y contiene ejemplos prácticos sobre Spring
 ### Estado del código
-[![CI goa](https://github.com/miw-upm/goa-ai1/actions/workflows/ci.yml/badge.svg)](https://github.com/miw-upm/goa-ai1/actions/workflows/ci.yml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=miw-upm-github_goa-ai1&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=miw-upm-github_goa-ai1)
+[![CI goa](https://github.com/juanancardenas/goa-chatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/juanancardenas/goa-chatbot/actions/workflows/ci.yml/badge.svg)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=juanancardenas_goa-chatbot&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=juanancardenas_goa-chatbot)
 [![AWS broken](https://gestion.ocanabogados.es/api/goa-ai1/system/version-badge)](https://gestion.ocanabogados.es/api/goa-ai1/system)
 
 
