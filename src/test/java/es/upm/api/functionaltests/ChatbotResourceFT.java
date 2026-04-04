@@ -6,7 +6,6 @@ import es.upm.api.resources.dtos.ChatbotMessageResponseDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
@@ -34,7 +33,7 @@ class ChatbotResourceFT {
     @LocalServerPort
     private int port;
 
-    @MockBean
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test
@@ -66,6 +65,44 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo("Respuesta simulada del asistente");
+        assertThat(response.getBody().getMessage()).isEqualTo("Respuesta simulada del asistente externo");
+    }
+
+    @Test
+    void testSendMessageUnauthorizedWithoutToken() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                POST,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void testPreflightOptionsIsAllowed() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.ORIGIN, "http://localhost:4200");
+        headers.add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST");
+        headers.add(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "content-type");
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                HttpMethod.OPTIONS,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getAccessControlAllowOrigin()).isEqualTo("http://localhost:4200");
     }
 }
