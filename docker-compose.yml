@@ -11,6 +11,12 @@ services:
       SPRING_SECURITY_OAUTH2_TOKEN-URI: http://host.docker.internal:8080/api/goa-user/oauth2/token
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - chatbotNet
+
+networks:
+  chatbotNet:
+    external: true
 
 #> docker compose up --build -d
 

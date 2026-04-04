@@ -33,7 +33,7 @@
 * Crear la red, solo una vez:
 
 ```sh
-> docker network create goa
+> docker network create chatbotNet
 ```
 
 * Ejecutar en el proyecto la siguiente secuencia de comandos de Docker:
