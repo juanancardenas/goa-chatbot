@@ -17,7 +17,7 @@ public class ChatbotService {
 
         return new ChatbotMessageResponseDto(
                 conversationId,
-                "Respuesta simulada del asistente",
+                "Respuesta simulada del asistente externo",
                 null,
                 LocalDateTime.now().toString()
         );
