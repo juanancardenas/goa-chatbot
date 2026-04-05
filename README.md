@@ -6,7 +6,7 @@
 ### Estado del código
 [![CI goa](https://github.com/juanancardenas/goa-chatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/juanancardenas/goa-chatbot/actions/workflows/ci.yml/badge.svg)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=juanancardenas_goa-chatbot&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=juanancardenas_goa-chatbot)
-[![AWS broken](https://tqnubzb5ee.eu-west-1.awsapprunner.com/system/version-badge)](https://tqnubzb5ee.eu-west-1.awsapprunner.com/system)
+[![AWS broken](https://gestion.ocanabogados.es/api/goa-chatbot/system/version-badge)](https://gestion.ocanabogados.es/api/goa-chatbot/system)
 
 
 ### Tecnologías necesarias
