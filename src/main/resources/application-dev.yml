@@ -1,5 +1,20 @@
-# Local Mongodb database (local or Dockerized) -------------
 spring:
+  security:
+    oauth2:
+      jwk-uri: http://localhost:8080/api/goa-user/oauth2/jwks
+      token-uri: http://localhost:8080/api/goa-user/oauth2/token
+      api-client-id: api-client-id
+      api-client-secret: api-client-secret
+
+  # Local Mongodb database (local or Dockerized) -------------
   data:
     mongodb:
-      uri: mongodb://mongo:mongo@localhost:27017/goaai1db?authSource=admin
+      uri: mongodb://mongo:mongo@localhost:27017/goachatbotdb?authSource=admin
+
+goa:
+  user:
+    base-url: http://localhost:8080/api/goa-user/users
+
+app:
+  cors:
+    allowed-origins: http://localhost:4200

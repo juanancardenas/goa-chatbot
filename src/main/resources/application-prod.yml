@@ -1,13 +1,22 @@
 spring:
-  data:
-    mongodb:
-      uri: ${MONGODB_URI}
   security:
     oauth2:
       jwk-uri: https://gestion.ocanabogados.es/api/goa-user/oauth2/jwks
       token-uri: https://gestion.ocanabogados.es/api/goa-user/oauth2/token
       api-client-id: ${API_CLIENT_ID}
       api-client-secret: ${API_CLIENT_SECRET}
+
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+
+goa:
+  user:
+    base-url: https://gestion.ocanabogados.es/api/goa-user/users
+
+app:
+  cors:
+    allowed-origins: https://gestion.ocanabogados.es
 
 springdoc:
   api-docs:
