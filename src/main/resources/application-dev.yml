@@ -9,7 +9,7 @@ spring:
   # Local Mongodb database (local or Dockerized) -------------
   data:
     mongodb:
-      uri: mongodb://mongo:mongo@localhost:27017/goaai1db?authSource=admin
+      uri: mongodb://mongo:mongo@localhost:27017/goachatbotdb?authSource=admin
 
 goa:
   user:
