@@ -7,3 +7,15 @@ de:
     mongodb:
       embedded:
         version: 7.0.16
+
+spring:
+  security:
+    oauth2:
+      jwk-uri: http://localhost:8080/api/goa-user/oauth2/jwks
+      token-uri: http://localhost:8080/api/goa-user/oauth2/token
+      api-client-id: api-client-id
+      api-client-secret: api-client-secret
+
+app:
+  cors:
+    allowed-origins: http://localhost:4200
