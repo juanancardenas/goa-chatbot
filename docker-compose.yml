@@ -1,3 +1,6 @@
+include:
+  - docker-compose-db.yml
+
 services:
   goa-chatbot:
     build: .
@@ -6,7 +9,7 @@ services:
     ports:
       - "8086:8086"
     environment:
-      SPRING_DATA_MONGODB_URI: mongodb://mongo:mongo@mongo:27017/goachatbotdb?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb-chatbot:27017/goachatbotdb?authSource=admin
       SPRING_SECURITY_OAUTH2_JWK-URI: http://host.docker.internal:8080/api/goa-user/oauth2/jwks
       SPRING_SECURITY_OAUTH2_TOKEN-URI: http://host.docker.internal:8080/api/goa-user/oauth2/token
     extra_hosts:
