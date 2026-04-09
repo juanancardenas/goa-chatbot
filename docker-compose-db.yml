@@ -1,0 +1,31 @@
+services:
+  mongodb-chatbot:
+    image: mongo:7.0
+    container_name: mongodb-chatbot
+    restart: always
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_DATABASE: goachatbotdb
+    volumes:
+      - mongodb-chatbot-data:/data/db
+    networks:
+      - chatbotNet
+
+volumes:
+  mongodb-chatbot-data:
+
+networks:
+  chatbotNet:
+    name: chatbotNet
+    external: true
+
+#> docker compose -f docker-compose-db.yml up -d
+
+#> ENTRAR A MONGODB
+#> -----------------
+#> Ejecutamos este comando:             docker exec -it chatbot-mongo mongosh
+#> Visualizamos las DBs:                show dbs
+#> Usamos la DB:                        use (nombre_db)
+#> Visualizamos las collections:        show collections
+#> Vemos el content de la collection:   db."COLLECTION".find().pretty()

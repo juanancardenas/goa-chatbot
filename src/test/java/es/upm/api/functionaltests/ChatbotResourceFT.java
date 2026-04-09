@@ -1,8 +1,13 @@
 package es.upm.api.functionaltests;
 
+import es.upm.api.data.daos.ConversationRepository;
+import es.upm.api.data.entities.ConversationEntity;
 import es.upm.api.resources.ChatbotResource;
+import es.upm.api.resources.dtos.ChatbotContextualConversationRequestDto;
+import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.resources.dtos.ChatbotMessageRequestDto;
 import es.upm.api.resources.dtos.ChatbotMessageResponseDto;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,27 +35,126 @@ class ChatbotResourceFT {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    @Autowired
+    private ConversationRepository conversationRepository;
+
     @LocalServerPort
     private int port;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
+    @BeforeEach
+    void setUp() {
+        this.conversationRepository.deleteAll();
+    }
+
     @Test
-    void testSendMessageAuthenticated() {
-        Jwt jwt = new Jwt(
-                "fake-token",
-                Instant.now(),
-                Instant.now().plusSeconds(300),
-                Map.of("alg", "none"),
-                Map.of("roles", List.of("customer"))
+    void testStartContextualConversationAuthenticated() {
+        HttpHeaders headers = this.authHeaders("fake-token-contextual", "customer-1");
+
+        ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
+        request.setEngagementLetterId("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
+
+        HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<ChatbotContextualConversationResponseDto> response = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                entity,
+                ChatbotContextualConversationResponseDto.class
         );
 
-        when(jwtDecoder.decode("fake-token")).thenReturn(jwt);
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isNotBlank();
+        assertThat(response.getBody().getEngagementLetterId()).isEqualTo("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
+        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+        assertThat(response.getBody().getError()).isNull();
 
+        List<ConversationEntity> conversations = this.conversationRepository.findAll();
+        assertThat(conversations).hasSize(1);
+        assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
+        assertThat(conversations.getFirst().getEngagementLetterId()).isEqualTo("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
+        assertThat(conversations.getFirst().getType()).isEqualTo("CONTEXTUAL");
+    }
+
+    @Test
+    void testStartContextualConversationUnauthorizedWithoutToken() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth("fake-token");
+
+        ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
+        request.setEngagementLetterId("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
+
+        HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void testStartContextualConversationBadRequestWhenEngagementLetterIdIsBlank() {
+        HttpHeaders headers = this.authHeaders("fake-token-blank", "customer-1");
+
+        ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
+        request.setEngagementLetterId("");
+
+        HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(this.conversationRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void testStartContextualConversationReusesSameConversationForSameUserAndEngagementLetter() {
+        HttpHeaders headers = this.authHeaders("fake-token-reuse", "customer-1");
+
+        ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
+        request.setEngagementLetterId("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
+
+        HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<ChatbotContextualConversationResponseDto> firstResponse = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                entity,
+                ChatbotContextualConversationResponseDto.class
+        );
+
+        ResponseEntity<ChatbotContextualConversationResponseDto> secondResponse = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                entity,
+                ChatbotContextualConversationResponseDto.class
+        );
+
+        assertThat(firstResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(secondResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(firstResponse.getBody()).isNotNull();
+        assertThat(secondResponse.getBody()).isNotNull();
+        assertThat(secondResponse.getBody().getConversationId()).isEqualTo(firstResponse.getBody().getConversationId());
+
+        List<ConversationEntity> conversations = this.conversationRepository.findAll();
+        assertThat(conversations).hasSize(1);
+    }
+
+    @Test
+    void testSendMessageAuthenticated() {
+        HttpHeaders headers = this.authHeaders("fake-token-message", "customer-1");
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
@@ -105,4 +209,25 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getHeaders().getAccessControlAllowOrigin()).isEqualTo("http://localhost:4200");
     }
+
+    private HttpHeaders authHeaders(String token, String subject) {
+        Jwt jwt = new Jwt(
+                token,
+                Instant.now(),
+                Instant.now().plusSeconds(300),
+                Map.of("alg", "none"),
+                Map.of(
+                        "sub", subject,
+                        "roles", List.of("customer")
+                )
+        );
+
+        when(this.jwtDecoder.decode(token)).thenReturn(jwt);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(token);
+        return headers;
+    }
+
 }
