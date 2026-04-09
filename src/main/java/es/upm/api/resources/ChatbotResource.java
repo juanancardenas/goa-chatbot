@@ -1,5 +1,7 @@
 package es.upm.api.resources;
 
+import es.upm.api.resources.dtos.ChatbotContextualConversationRequestDto;
+import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.resources.dtos.ChatbotMessageRequestDto;
 import es.upm.api.resources.dtos.ChatbotMessageResponseDto;
 import es.upm.api.services.ChatbotService;
@@ -15,11 +17,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChatbotResource {
     public static final String CHATBOT = "/chatbot";
     public static final String MESSAGES = "/messages";
+    public static final String CONTEXTUAL_CONVERSATIONS = "/conversations/contextual";
 
     private final ChatbotService chatbotService;
 
     public ChatbotResource(ChatbotService chatbotService) {
         this.chatbotService = chatbotService;
+    }
+
+    @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
+    @PostMapping(CONTEXTUAL_CONVERSATIONS)
+    public ChatbotContextualConversationResponseDto startContextualConversation(
+            @Valid @RequestBody ChatbotContextualConversationRequestDto requestDto
+    ) {
+        return this.chatbotService.startContextualConversation(requestDto);
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
