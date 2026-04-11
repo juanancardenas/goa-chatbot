@@ -40,6 +40,7 @@ public class ChatbotService {
                                 UUID.randomUUID().toString(),
                                 userId,
                                 requestDto.getEngagementLetterId(),
+                                null,
                                 CONTEXTUAL,
                                 LocalDateTime.now()
                         )
