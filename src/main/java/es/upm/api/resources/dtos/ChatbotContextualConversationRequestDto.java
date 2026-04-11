@@ -1,21 +1,18 @@
 package es.upm.api.resources.dtos;
 
-import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
 public class ChatbotContextualConversationRequestDto {
 
-    @NotBlank
     private String engagementLetterId;
 
-    public ChatbotContextualConversationRequestDto() {
-    }
-
-    public String getEngagementLetterId() {
-        return engagementLetterId;
-    }
-
     public void setEngagementLetterId(String engagementLetterId) {
-        this.engagementLetterId = engagementLetterId;
+        this.engagementLetterId = engagementLetterId != null && engagementLetterId.isBlank()
+                ? null
+                : engagementLetterId;
     }
 
 }

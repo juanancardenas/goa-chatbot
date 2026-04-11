@@ -1,74 +1,43 @@
 package es.upm.api.data.entities;
 
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-
 import java.time.LocalDateTime;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
 @Document(collection = "conversations")
 public class ConversationEntity {
+
+    private static final ConversationStatus DEFAULT_STATUS = ConversationStatus.ACTIVE;
 
     @Id
     private String id;
     private String userId;
     private String engagementLetterId;
+    @NotNull
+    private ConversationStatus status = DEFAULT_STATUS;
+    @NotNull
     private String type;
+    @NotNull
     private LocalDateTime createdAt;
-
-    public ConversationEntity() {
-    }
 
     public ConversationEntity(
             String id,
             String userId,
             String engagementLetterId,
+            ConversationStatus status,
             String type,
             LocalDateTime createdAt
     ) {
         this.id = id;
         this.userId = userId;
         this.engagementLetterId = engagementLetterId;
+        this.status = status != null ? status : DEFAULT_STATUS;
         this.type = type;
-        this.createdAt = createdAt;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public String getEngagementLetterId() {
-        return engagementLetterId;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public void setEngagementLetterId(String engagementLetterId) {
-        this.engagementLetterId = engagementLetterId;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 

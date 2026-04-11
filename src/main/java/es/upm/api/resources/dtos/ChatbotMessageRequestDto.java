@@ -1,7 +1,13 @@
 package es.upm.api.resources.dtos;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Builder
+@Data
+@NoArgsConstructor
 public class ChatbotMessageRequestDto {
 
     private String conversationId;
@@ -9,27 +15,9 @@ public class ChatbotMessageRequestDto {
     @NotBlank
     private String message;
 
-    public ChatbotMessageRequestDto() {
-    }
-
     public ChatbotMessageRequestDto(String conversationId, String message) {
         this.conversationId = conversationId;
         this.message = message;
     }
 
-    public String getConversationId() {
-        return conversationId;
-    }
-
-    public void setConversationId(String conversationId) {
-        this.conversationId = conversationId;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
 }

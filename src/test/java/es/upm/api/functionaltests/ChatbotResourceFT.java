@@ -1,7 +1,9 @@
 package es.upm.api.functionaltests;
 
 import es.upm.api.data.daos.ConversationRepository;
+import es.upm.api.data.daos.MessageRepository;
 import es.upm.api.data.entities.ConversationEntity;
+import es.upm.api.data.entities.ConversationStatus;
 import es.upm.api.resources.ChatbotResource;
 import es.upm.api.resources.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
@@ -38,6 +40,9 @@ class ChatbotResourceFT {
     @Autowired
     private ConversationRepository conversationRepository;
 
+    @Autowired
+    private MessageRepository messageRepository;
+
     @LocalServerPort
     private int port;
 
@@ -47,6 +52,7 @@ class ChatbotResourceFT {
     @BeforeEach
     void setUp() {
         this.conversationRepository.deleteAll();
+        this.messageRepository.deleteAll();
     }
 
     @Test
@@ -76,6 +82,7 @@ class ChatbotResourceFT {
         assertThat(conversations).hasSize(1);
         assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
         assertThat(conversations.getFirst().getEngagementLetterId()).isEqualTo("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
+        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(conversations.getFirst().getType()).isEqualTo("CONTEXTUAL");
     }
 
@@ -100,7 +107,7 @@ class ChatbotResourceFT {
     }
 
     @Test
-    void testStartContextualConversationBadRequestWhenEngagementLetterIdIsBlank() {
+    void testStartContextualConversationAuthenticatedWhenEngagementLetterIdIsBlank() {
         HttpHeaders headers = this.authHeaders("fake-token-blank", "customer-1");
 
         ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
@@ -115,8 +122,42 @@ class ChatbotResourceFT {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(this.conversationRepository.findAll()).isEmpty();
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+
+        List<ConversationEntity> conversations = this.conversationRepository.findAll();
+        assertThat(conversations).hasSize(1);
+        assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
+        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+    }
+
+    @Test
+    void testStartContextualConversationAuthenticatedWithoutEngagementLetterId() {
+        HttpHeaders headers = this.authHeaders("fake-token-null", "customer-1");
+
+        ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
+
+        HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<ChatbotContextualConversationResponseDto> response = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                entity,
+                ChatbotContextualConversationResponseDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isNotBlank();
+        assertThat(response.getBody().getEngagementLetterId()).isNull();
+        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+        assertThat(response.getBody().getError()).isNull();
+
+        List<ConversationEntity> conversations = this.conversationRepository.findAll();
+        assertThat(conversations).hasSize(1);
+        assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
+        assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
+        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        assertThat(conversations.getFirst().getType()).isEqualTo("CONTEXTUAL");
     }
 
     @Test
