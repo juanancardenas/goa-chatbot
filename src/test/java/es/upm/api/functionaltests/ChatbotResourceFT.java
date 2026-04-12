@@ -4,6 +4,9 @@ import es.upm.api.data.daos.ConversationRepository;
 import es.upm.api.data.daos.MessageRepository;
 import es.upm.api.data.entities.ConversationEntity;
 import es.upm.api.data.entities.ConversationStatus;
+import es.upm.api.data.entities.MessageEntity;
+import es.upm.api.data.entities.MessageSenderType;
+import es.upm.api.data.entities.MessageType;
 import es.upm.api.resources.ChatbotResource;
 import es.upm.api.resources.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
@@ -194,6 +197,63 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testStartGeneralConversationAuthenticated() {
+        HttpHeaders headers = this.authHeaders("fake-token-general", "customer-1");
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<ChatbotMessageResponseDto> response = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
+                POST,
+                entity,
+                ChatbotMessageResponseDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isNotBlank();
+        assertThat(response.getBody().getMessage()).isEqualTo("Hola chatbot");
+        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+
+        List<ConversationEntity> conversations = this.conversationRepository.findAll();
+        assertThat(conversations).hasSize(1);
+        assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
+        assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
+        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        assertThat(conversations.getFirst().getType()).isEqualTo("GENERAL");
+
+        List<MessageEntity> messages = this.messageRepository.findAll();
+        assertThat(messages).hasSize(1);
+        assertThat(messages.getFirst().getConversationId()).isEqualTo(conversations.getFirst().getId());
+        assertThat(messages.getFirst().getSenderType()).isEqualTo(MessageSenderType.USER);
+        assertThat(messages.getFirst().getMessageType()).isEqualTo(MessageType.REQUEST);
+        assertThat(messages.getFirst().getContent()).isEqualTo("Hola chatbot");
+        assertThat(messages.getFirst().getSequenceNumber()).isEqualTo(1);
+        assertThat(messages.getFirst().getTimestamp()).isNotNull();
+        assertThat(messages.getFirst().getParentMessageId()).isNull();
+    }
+
+    @Test
+    void testStartGeneralConversationUnauthorizedWithoutToken() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
+                POST,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void testSendMessageAuthenticated() {
         HttpHeaders headers = this.authHeaders("fake-token-message", "customer-1");
 
@@ -210,7 +270,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo("Respuesta simulada del asistente externo");
+        assertThat(response.getBody().getMessage()).isEqualTo("Respuesta simulada del asistente externo - testing");
     }
 
     @Test
