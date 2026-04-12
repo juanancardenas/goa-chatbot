@@ -16,6 +16,9 @@ import java.util.List;
 @Service
 @Profile({"dev", "test"})
 public class DatabaseSeederDev {
+    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
+    private static final String TYPE_GENERAL = "GENERAL";
+
     private static final Logger log = LogManager.getLogger(DatabaseSeederDev.class);
 
     private final ConversationRepository conversationRepository;
@@ -51,7 +54,7 @@ public class DatabaseSeederDev {
                 "customer-dev-001",
                 "engagement-dev-001",
                 ConversationStatus.ACTIVE,
-                "CONTEXTUAL",
+                TYPE_CONTEXTUAL,
                 baseTime
         );
         ConversationEntity conversation2 = new ConversationEntity(
@@ -59,7 +62,7 @@ public class DatabaseSeederDev {
                 "customer-dev-002",
                 "engagement-dev-002",
                 ConversationStatus.CLOSED,
-                "CONTEXTUAL",
+                TYPE_GENERAL,
                 baseTime.plusMinutes(10)
         );
         ConversationEntity conversation3 = new ConversationEntity(
@@ -67,7 +70,7 @@ public class DatabaseSeederDev {
                 "customer-dev-003",
                 null,
                 ConversationStatus.ARCHIVED,
-                "CONTEXTUAL",
+                TYPE_CONTEXTUAL,
                 baseTime.plusMinutes(20)
         );
 

@@ -1,0 +1,52 @@
+https://www.plantuml.com/
+
+@startuml
+package data {
+    package entities {
+      class ConversationEntity {
+        -String id*
+        -String userId
+        -String engagementLetterId
+        -ConversationStatus status
+        -String type
+        -LocalDateTime createdAt
+      }
+      class MessageEntity {
+        -String id*
+        -String conversationId
+        -MessageSenderType senderType
+        -MessageType messageType
+        -String content
+        -LocalDateTime timestamp
+        -Integer sequenceNumber
+        -String parentMessageId
+      }
+      class UserDto #FEFECE {
+        -UUID id*
+        -String mobile
+        -String firstName
+        -String familyName
+      }
+
+      ConversationEntity "1" --> "1..*" MessageEntity
+      ConversationEntity "1" --> "0..1" UserDto
+    }
+    package enums {
+      enum ConversationStatus {
+        active
+        closed
+        archived
+      }
+      enum MessageSenderType {
+        user
+        assistant
+        system
+      }
+      enum MessageType{
+        request
+        response
+        instruction
+      }
+    }
+  }
+@enduml
