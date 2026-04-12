@@ -18,6 +18,7 @@ public class ChatbotResource {
     public static final String CHATBOT = "/chatbot";
     public static final String MESSAGES = "/messages";
     public static final String CONTEXTUAL_CONVERSATIONS = "/conversations/contextual";
+    public static final String GENERAL_CONVERSATIONS = "/conversations/general";
 
     private final ChatbotService chatbotService;
 
@@ -31,6 +32,12 @@ public class ChatbotResource {
             @Valid @RequestBody ChatbotContextualConversationRequestDto requestDto
     ) {
         return this.chatbotService.startContextualConversation(requestDto);
+    }
+
+    @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
+    @PostMapping(GENERAL_CONVERSATIONS)
+    public ChatbotMessageResponseDto startGeneralConversation(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
+        return this.chatbotService.startGeneralConversation(requestDto);
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
