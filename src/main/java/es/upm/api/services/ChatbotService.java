@@ -1,12 +1,8 @@
 package es.upm.api.services;
 
 import es.upm.api.data.daos.ConversationRepository;
-import es.upm.api.data.daos.MessageRepository;
 import es.upm.api.data.entities.ConversationEntity;
 import es.upm.api.data.entities.ConversationStatus;
-import es.upm.api.data.entities.MessageEntity;
-import es.upm.api.data.entities.MessageSenderType;
-import es.upm.api.data.entities.MessageType;
 import es.upm.api.resources.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.resources.dtos.ChatbotMessageRequestDto;
@@ -25,14 +21,11 @@ public class ChatbotService {
     private static final String TYPE_GENERAL = "GENERAL";
 
     private final ConversationRepository conversationRepository;
-    private final MessageRepository messageRepository;
 
     public ChatbotService(
-            ConversationRepository conversationRepository,
-            MessageRepository messageRepository
+            ConversationRepository conversationRepository
     ) {
         this.conversationRepository = conversationRepository;
-        this.messageRepository = messageRepository;
     }
 
     public ChatbotContextualConversationResponseDto startContextualConversation(
@@ -81,23 +74,11 @@ public class ChatbotService {
                 )
         );
 
-        MessageEntity message = this.messageRepository.save(
-                MessageEntity.builder()
-                        .id(UUID.randomUUID().toString())
-                        .conversationId(conversation.getId())
-                        .senderType(MessageSenderType.USER)
-                        .messageType(MessageType.REQUEST)
-                        .content(text)
-                        .timestamp(date)
-                        .sequenceNumber(1)
-                        .build()
-        );
-
         return new ChatbotMessageResponseDto(
                 conversation.getId(),
-                message.getContent(),
+                text, //message.getContent(),
                 null,
-                message.getTimestamp().toString()
+                date.toString() //message.getTimestamp().toString()
         );
     }
 
@@ -108,7 +89,7 @@ public class ChatbotService {
 
         return new ChatbotMessageResponseDto(
                 conversationId,
-                "Respuesta simulada del asistente externo - testing",
+                "Respuesta simulada del asistente externo",
                 null,
                 LocalDateTime.now().toString()
         );
