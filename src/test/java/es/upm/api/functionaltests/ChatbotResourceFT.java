@@ -270,7 +270,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo("Respuesta simulada del asistente externo - testing");
+        assertThat(response.getBody().getMessage()).isEqualTo("Respuesta simulada del asistente externo");
     }
 
     @Test
