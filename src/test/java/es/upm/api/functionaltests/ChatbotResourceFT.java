@@ -125,12 +125,11 @@ class ChatbotResourceFT {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(OK);
-
-        List<ConversationEntity> conversations = this.conversationRepository.findAll();
-        assertThat(conversations).hasSize(1);
-        assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
-        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).contains("\"code\":400");
+        assertThat(response.getBody()).contains("engagementLetterId es obligatorio");
+        assertThat(this.conversationRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -141,26 +140,18 @@ class ChatbotResourceFT {
 
         HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<ChatbotContextualConversationResponseDto> response = restTemplate.exchange(
+        ResponseEntity<String> response = restTemplate.exchange(
                 "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
                 POST,
                 entity,
-                ChatbotContextualConversationResponseDto.class
+                String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getEngagementLetterId()).isNull();
-        assertThat(response.getBody().getCreatedAt()).isNotBlank();
-        assertThat(response.getBody().getError()).isNull();
-
-        List<ConversationEntity> conversations = this.conversationRepository.findAll();
-        assertThat(conversations).hasSize(1);
-        assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
-        assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
-        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo("CONTEXTUAL");
+        assertThat(response.getBody()).contains("\"code\":400");
+        assertThat(response.getBody()).contains("engagementLetterId es obligatorio");
+        assertThat(this.conversationRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -270,7 +261,9 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo("Respuesta simulada del asistente externo");
+        assertThat(response.getBody().getMessage()).isEqualTo("Hola chatbot");
+        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody().getCreatedAt()).isNotBlank();
     }
 
     @Test

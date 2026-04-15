@@ -20,14 +20,15 @@ import java.util.UUID;
 
 @Service
 public class ChatbotService {
-
+    // Constants
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
-    private static final String TEST_ASSISTANT_RESPONSE = "Respuesta simulada del asistente externo";
 
+    // Attributes
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
 
+    // Constructor
     public ChatbotService(
             ConversationRepository conversationRepository,
             MessageRepository messageRepository
@@ -36,6 +37,7 @@ public class ChatbotService {
         this.messageRepository = messageRepository;
     }
 
+    // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
     public ChatbotContextualConversationResponseDto startContextualConversation(
             ChatbotContextualConversationRequestDto requestDto
     ) {
@@ -109,7 +111,7 @@ public class ChatbotService {
 
         return new ChatbotMessageResponseDto(
                 conversationId,
-                TEST_ASSISTANT_RESPONSE,
+                requestDto.getMessage(),
                 null,
                 LocalDateTime.now().toString()
         );

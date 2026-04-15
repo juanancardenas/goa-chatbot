@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -62,13 +63,28 @@ public class ApiExceptionHandler {
             BadRequestException.class,
             org.springframework.dao.DuplicateKeyException.class,
             org.springframework.web.HttpRequestMethodNotSupportedException.class,
-            org.springframework.web.bind.MethodArgumentNotValidException.class,
             org.springframework.http.converter.HttpMessageNotReadableException.class,
             org.springframework.beans.FatalBeanException.class
     })
     @ResponseBody
     public ErrorMessage badRequest(Exception exception) {
         return new ErrorMessage(exception, HttpStatus.BAD_REQUEST.value());
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class
+    })
+    @ResponseBody
+    public ErrorMessage invalidArguments(MethodArgumentNotValidException exception) {
+        String detail = exception.getBindingResult().getFieldErrors().stream()
+                .map(fieldError -> fieldError.getDefaultMessage() != null
+                        ? fieldError.getDefaultMessage()
+                        : fieldError.getField() + " no es valido")
+                .distinct()
+                .reduce((first, second) -> first + "; " + second)
+                .orElse("La peticion contiene parametros no validos");
+        return new ErrorMessage(new BadRequestException(detail), HttpStatus.BAD_REQUEST.value());
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)

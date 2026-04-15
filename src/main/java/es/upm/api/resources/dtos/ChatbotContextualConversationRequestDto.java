@@ -1,5 +1,6 @@
 package es.upm.api.resources.dtos;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -7,6 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ChatbotContextualConversationRequestDto {
 
+    @NotBlank(message = "engagementLetterId es obligatorio")
     private String engagementLetterId;
 
     public void setEngagementLetterId(String engagementLetterId) {
