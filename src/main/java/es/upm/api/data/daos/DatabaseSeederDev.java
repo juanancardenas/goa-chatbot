@@ -1,10 +1,10 @@
 package es.upm.api.data.daos;
 
 import es.upm.api.data.entities.ConversationEntity;
-import es.upm.api.data.entities.ConversationStatus;
+import es.upm.api.data.enums.ConversationStatus;
 import es.upm.api.data.entities.MessageEntity;
-import es.upm.api.data.entities.MessageSenderType;
-import es.upm.api.data.entities.MessageType;
+import es.upm.api.data.enums.MessageSenderType;
+import es.upm.api.data.enums.MessageType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Profile;

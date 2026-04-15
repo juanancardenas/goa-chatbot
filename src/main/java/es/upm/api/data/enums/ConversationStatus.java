@@ -1,4 +1,4 @@
-package es.upm.api.data.entities;
+package es.upm.api.data.enums;
 
 public enum ConversationStatus {
     ACTIVE,

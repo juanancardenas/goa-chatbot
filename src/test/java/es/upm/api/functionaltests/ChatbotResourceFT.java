@@ -3,10 +3,10 @@ package es.upm.api.functionaltests;
 import es.upm.api.data.daos.ConversationRepository;
 import es.upm.api.data.daos.MessageRepository;
 import es.upm.api.data.entities.ConversationEntity;
-import es.upm.api.data.entities.ConversationStatus;
+import es.upm.api.data.enums.ConversationStatus;
 import es.upm.api.data.entities.MessageEntity;
-import es.upm.api.data.entities.MessageSenderType;
-import es.upm.api.data.entities.MessageType;
+import es.upm.api.data.enums.MessageSenderType;
+import es.upm.api.data.enums.MessageType;
 import es.upm.api.resources.ChatbotResource;
 import es.upm.api.resources.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
@@ -248,7 +248,23 @@ class ChatbotResourceFT {
     void testSendMessageAuthenticated() {
         HttpHeaders headers = this.authHeaders("fake-token-message", "customer-1");
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
+        ChatbotMessageRequestDto startRequest = new ChatbotMessageRequestDto(null, "Hola chatbot");
+        HttpEntity<ChatbotMessageRequestDto> startEntity = new HttpEntity<>(startRequest, headers);
+
+        ResponseEntity<ChatbotMessageResponseDto> startResponse = restTemplate.exchange(
+                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
+                POST,
+                startEntity,
+                ChatbotMessageResponseDto.class
+        );
+
+        assertThat(startResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(startResponse.getBody()).isNotNull();
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                startResponse.getBody().getConversationId(),
+                "Segundo mensaje"
+        );
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
         ResponseEntity<ChatbotMessageResponseDto> response = restTemplate.exchange(
@@ -260,10 +276,18 @@ class ChatbotResourceFT {
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo("Hola chatbot");
+        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
+        assertThat(response.getBody().getMessage()).isEqualTo("Segundo mensaje");
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
+
+        List<MessageEntity> messages = this.messageRepository
+                .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
+        assertThat(messages).hasSize(2);
+        assertThat(messages).extracting(MessageEntity::getContent)
+                .containsExactly("Hola chatbot", "Segundo mensaje");
+        assertThat(messages).extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2);
     }
 
     @Test

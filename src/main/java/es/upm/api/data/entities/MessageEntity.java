@@ -1,5 +1,7 @@
 package es.upm.api.data.entities;
 
+import es.upm.api.data.enums.MessageSenderType;
+import es.upm.api.data.enums.MessageType;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
