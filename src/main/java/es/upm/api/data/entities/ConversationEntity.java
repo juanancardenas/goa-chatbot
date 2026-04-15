@@ -1,5 +1,6 @@
 package es.upm.api.data.entities;
 
+import es.upm.api.data.enums.ConversationStatus;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;

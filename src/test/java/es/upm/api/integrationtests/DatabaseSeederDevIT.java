@@ -3,7 +3,7 @@ package es.upm.api.integrationtests;
 import es.upm.api.data.daos.ConversationRepository;
 import es.upm.api.data.daos.MessageRepository;
 import es.upm.api.data.entities.ConversationEntity;
-import es.upm.api.data.entities.ConversationStatus;
+import es.upm.api.data.enums.ConversationStatus;
 import es.upm.api.data.entities.MessageEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
