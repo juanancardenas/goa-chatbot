@@ -12,6 +12,9 @@ import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.resources.dtos.ChatbotMessageRequestDto;
 import es.upm.api.resources.dtos.ChatbotMessageResponseDto;
 import es.upm.api.services.exceptions.BadRequestException;
+import es.upm.api.services.exceptions.ConflictException;
+import es.upm.api.services.exceptions.ForbiddenException;
+import es.upm.api.services.exceptions.NotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,11 @@ public class ChatbotService {
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
+    private static final String GENERAL_START_REPLY =
+            "Conversación iniciada correctamente. ¿En qué puedo ayudarte?";
+    private static final String GENERIC_ASSISTANT_REPLY =
+            "He recibido tu mensaje. La integración con el asistente aún es simulada.";
+
     // Attributes
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
@@ -32,8 +40,7 @@ public class ChatbotService {
     // Constructor
     public ChatbotService(
             ConversationRepository conversationRepository,
-            MessageRepository messageRepository
-    ) {
+            MessageRepository messageRepository) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
     }
@@ -72,7 +79,6 @@ public class ChatbotService {
     // Starts General Conversation, this type of conversation is not linked to other process or entity
     public ChatbotMessageResponseDto startGeneralConversation(ChatbotMessageRequestDto requestDto) {
         String userId = this.authenticatedUserId();
-        String text = requestDto.getMessage();
         LocalDateTime date = LocalDateTime.now();
 
         ConversationEntity conversation = this.conversationRepository.save(
@@ -86,21 +92,31 @@ public class ChatbotService {
                 )
         );
 
-        this.messageRepository.save(
-                MessageEntity.builder()
-                        .id(UUID.randomUUID().toString())
-                        .conversationId(conversation.getId())
-                        .senderType(MessageSenderType.USER)
-                        .messageType(MessageType.REQUEST)
-                        .content(text)
-                        .timestamp(date)
-                        .sequenceNumber(1)
-                        .build()
+        MessageEntity userMessage = this.saveMessage(
+                conversation.getId(),
+                MessageSenderType.USER,
+                MessageType.REQUEST,
+                requestDto.getMessage(),
+                1,
+                null,
+                date
+        );
+
+        String assistantReply = GENERAL_START_REPLY;
+
+        this.saveMessage(
+                conversation.getId(),
+                MessageSenderType.ASSISTANT,
+                MessageType.RESPONSE,
+                assistantReply,
+                2,
+                userMessage.getId(),
+                date
         );
 
         return new ChatbotMessageResponseDto(
                 conversation.getId(),
-                text,
+                assistantReply,
                 null,
                 date.toString()
         );
@@ -111,54 +127,93 @@ public class ChatbotService {
 
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
-        ConversationEntity conversation = this.resolveConversation(requestDto.getConversationId(), userId, date);
 
-        Integer nextSequenceNumber = this.messageRepository
-                .findFirstByConversationIdOrderBySequenceNumberDesc(conversation.getId())
-                .map(message -> message.getSequenceNumber() + 1)
-                .orElse(1);
+        if (requestDto.getConversationId() == null || requestDto.getConversationId().isBlank()) {
+            throw new BadRequestException("conversationId es obligatorio para enviar mensajes");
+        }
 
-        this.messageRepository.save(
-                MessageEntity.builder()
-                        .id(UUID.randomUUID().toString())
-                        .conversationId(conversation.getId())
-                        .senderType(MessageSenderType.USER)
-                        .messageType(MessageType.REQUEST)
-                        .content(requestDto.getMessage())
-                        .timestamp(date)
-                        .sequenceNumber(nextSequenceNumber)
-                        .build()
+        ConversationEntity conversation = this.requireActiveOwnedConversation(
+                requestDto.getConversationId(),
+                userId
+        );
+
+        Integer nextSequence = this.nextSequenceNumber(conversation.getId());
+
+        MessageEntity userMessage = this.saveMessage(
+                conversation.getId(),
+                MessageSenderType.USER,
+                MessageType.REQUEST,
+                requestDto.getMessage(),
+                nextSequence,
+                null,
+                date
+        );
+
+        String assistantReply = GENERIC_ASSISTANT_REPLY;
+
+        this.saveMessage(
+                conversation.getId(),
+                MessageSenderType.ASSISTANT,
+                MessageType.RESPONSE,
+                assistantReply,
+                nextSequence + 1,
+                userMessage.getId(),
+                date
         );
 
         return new ChatbotMessageResponseDto(
                 conversation.getId(),
-                requestDto.getMessage(),
+                assistantReply,
                 null,
                 date.toString()
         );
     }
 
-    // Whether persists a new conversation or returns its Id if already exists
-    private ConversationEntity resolveConversation(String conversationId, String userId, LocalDateTime date) {
+    private ConversationEntity requireActiveOwnedConversation(String conversationId, String userId) {
+        ConversationEntity conversation = this.conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new NotFoundException("conversationId no corresponde a una conversacion existente"));
 
-        if (conversationId == null || conversationId.isBlank()) {
-            return this.conversationRepository.save(
-                    new ConversationEntity(
-                            UUID.randomUUID().toString(),
-                            userId,
-                            null,
-                            ConversationStatus.ACTIVE,
-                            TYPE_GENERAL,
-                            date
-                    )
-            );
+        if (!userId.equals(conversation.getUserId())) {
+            throw new ForbiddenException("No tienes permisos sobre esta conversacion");
         }
 
-        return this.conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new BadRequestException("conversationId no corresponde a una conversacion existente"));
+        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+            throw new ConflictException("La conversacion no esta activa");
+        }
+
+        return conversation;
     }
 
-    // Returns the name of the user from Authentication
+    private Integer nextSequenceNumber(String conversationId) {
+        return this.messageRepository
+                .findFirstByConversationIdOrderBySequenceNumberDesc(conversationId)
+                .map(message -> message.getSequenceNumber() + 1)
+                .orElse(1);
+    }
+
+    private MessageEntity saveMessage(
+            String conversationId,
+            MessageSenderType senderType,
+            MessageType messageType,
+            String content,
+            Integer sequenceNumber,
+            String parentMessageId,
+            LocalDateTime timestamp
+    ) {
+        return this.messageRepository.save(
+                MessageEntity.builder()
+                        .id(UUID.randomUUID().toString())
+                        .conversationId(conversationId)
+                        .senderType(senderType)
+                        .messageType(messageType)
+                        .content(content)
+                        .timestamp(timestamp)
+                        .sequenceNumber(sequenceNumber)
+                        .parentMessageId(parentMessageId)
+                        .build()
+        );
+    }
+
     private String authenticatedUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication.getName();
