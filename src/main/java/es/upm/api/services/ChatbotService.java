@@ -30,10 +30,15 @@ public class ChatbotService {
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
-    private static final String GENERAL_START_REPLY =
-            "Conversación iniciada correctamente. ¿En qué puedo ayudarte?";
-    private static final String GENERIC_ASSISTANT_REPLY =
-            "He recibido tu mensaje. La integración con el asistente aún es simulada.";
+    private static final String CLIENT_GENERAL_START_REPLY =
+            "Hola. Soy tu asistente virtual y puedo ayudarte con dudas sobre tu encargo, su estado o los próximos pasos.";
+    private static final String PROFESSIONAL_GENERAL_START_REPLY =
+            "Conversación iniciada correctamente. Puedes consultar dudas operativas, funcionales o de gestión relacionadas con el encargo y la plataforma.";
+
+    private static final String CLIENT_MESSAGE_REPLY =
+            "He recibido tu mensaje. De momento estoy en una versión inicial, pero intentaré ayudarte de forma clara con los siguientes pasos o con el estado de tu consulta.";
+    private static final String PROFESSIONAL_MESSAGE_REPLY =
+            "Mensaje recibido. La integración actual sigue siendo simulada, pero la respuesta se orienta a soporte operativo y gestión funcional del encargo.";
 
     // Attributes
     private final ConversationRepository conversationRepository;
@@ -106,7 +111,8 @@ public class ChatbotService {
                 date
         );
 
-        String assistantReply = GENERAL_START_REPLY;
+        ConversationProfile profile = this.resolveConversationProfile();
+        String assistantReply = this.generalStartReply(profile);
 
         this.saveMessage(
                 conversation.getId(),
@@ -155,7 +161,7 @@ public class ChatbotService {
         );
 
         ConversationProfile profile = this.resolveConversationProfile();
-        String assistantReply = GENERIC_ASSISTANT_REPLY;
+        String assistantReply = this.messageReply(profile);
 
         this.saveMessage(
                 conversation.getId(),
@@ -246,6 +252,20 @@ public class ChatbotService {
             return "";
         }
         return authority.replace("ROLE_", "").toUpperCase(Locale.ROOT);
+    }
+
+    private String generalStartReply(ConversationProfile profile) {
+        return switch (profile) {
+            case CLIENT -> CLIENT_GENERAL_START_REPLY;
+            case PROFESSIONAL -> PROFESSIONAL_GENERAL_START_REPLY;
+        };
+    }
+
+    private String messageReply(ConversationProfile profile) {
+        return switch (profile) {
+            case CLIENT -> CLIENT_MESSAGE_REPLY;
+            case PROFESSIONAL -> PROFESSIONAL_MESSAGE_REPLY;
+        };
     }
 
     private enum ConversationProfile {
