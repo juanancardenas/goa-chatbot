@@ -24,7 +24,7 @@ networks:
 
 #> ENTRAR A MONGODB
 #> -----------------
-#> Ejecutamos este comando:             docker exec -it chatbot-mongo mongosh
+#> Ejecutamos este comando:             docker exec -it mongodb-chatbot mongosh
 #> Visualizamos las DBs:                show dbs
 #> Usamos la DB:                        use (nombre_db)
 #> Visualizamos las collections:        show collections

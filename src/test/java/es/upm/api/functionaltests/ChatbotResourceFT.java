@@ -3,8 +3,8 @@ package es.upm.api.functionaltests;
 import es.upm.api.data.daos.ConversationRepository;
 import es.upm.api.data.daos.MessageRepository;
 import es.upm.api.data.entities.ConversationEntity;
-import es.upm.api.data.enums.ConversationStatus;
 import es.upm.api.data.entities.MessageEntity;
+import es.upm.api.data.enums.ConversationStatus;
 import es.upm.api.data.enums.MessageSenderType;
 import es.upm.api.data.enums.MessageType;
 import es.upm.api.resources.ChatbotResource;
@@ -18,13 +18,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +42,12 @@ import static org.springframework.http.HttpStatus.OK;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class ChatbotResourceFT {
+    private static final String TYPE_GENERAL = "GENERAL";
+    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
+    private static final String GENERAL_START_REPLY =
+            "Conversación iniciada correctamente. ¿En qué puedo ayudarte?";
+    private static final String GENERIC_ASSISTANT_REPLY =
+            "He recibido tu mensaje. La integración con el asistente aún es simulada.";
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -54,8 +66,8 @@ class ChatbotResourceFT {
 
     @BeforeEach
     void setUp() {
-        this.conversationRepository.deleteAll();
         this.messageRepository.deleteAll();
+        this.conversationRepository.deleteAll();
     }
 
     @Test
@@ -67,8 +79,8 @@ class ChatbotResourceFT {
 
         HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<ChatbotContextualConversationResponseDto> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+        ResponseEntity<ChatbotContextualConversationResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
                 POST,
                 entity,
                 ChatbotContextualConversationResponseDto.class
@@ -86,7 +98,7 @@ class ChatbotResourceFT {
         assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
         assertThat(conversations.getFirst().getEngagementLetterId()).isEqualTo("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
         assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo("CONTEXTUAL");
+        assertThat(conversations.getFirst().getType()).isEqualTo(TYPE_CONTEXTUAL);
     }
 
     @Test
@@ -99,8 +111,8 @@ class ChatbotResourceFT {
 
         HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
                 POST,
                 entity,
                 String.class
@@ -118,8 +130,8 @@ class ChatbotResourceFT {
 
         HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
                 POST,
                 entity,
                 String.class
@@ -140,8 +152,8 @@ class ChatbotResourceFT {
 
         HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
                 POST,
                 entity,
                 String.class
@@ -163,15 +175,15 @@ class ChatbotResourceFT {
 
         HttpEntity<ChatbotContextualConversationRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<ChatbotContextualConversationResponseDto> firstResponse = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+        ResponseEntity<ChatbotContextualConversationResponseDto> firstResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
                 POST,
                 entity,
                 ChatbotContextualConversationResponseDto.class
         );
 
-        ResponseEntity<ChatbotContextualConversationResponseDto> secondResponse = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+        ResponseEntity<ChatbotContextualConversationResponseDto> secondResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
                 POST,
                 entity,
                 ChatbotContextualConversationResponseDto.class
@@ -194,8 +206,8 @@ class ChatbotResourceFT {
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<ChatbotMessageResponseDto> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
+        ResponseEntity<ChatbotMessageResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
                 POST,
                 entity,
                 ChatbotMessageResponseDto.class
@@ -204,7 +216,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo("Hola chatbot");
+        assertThat(response.getBody().getMessage()).isEqualTo(GENERAL_START_REPLY);
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
 
@@ -213,17 +225,27 @@ class ChatbotResourceFT {
         assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
         assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
         assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo("GENERAL");
+        assertThat(conversations.getFirst().getType()).isEqualTo(TYPE_GENERAL);
 
-        List<MessageEntity> messages = this.messageRepository.findAll();
-        assertThat(messages).hasSize(1);
-        assertThat(messages.getFirst().getConversationId()).isEqualTo(conversations.getFirst().getId());
-        assertThat(messages.getFirst().getSenderType()).isEqualTo(MessageSenderType.USER);
-        assertThat(messages.getFirst().getMessageType()).isEqualTo(MessageType.REQUEST);
-        assertThat(messages.getFirst().getContent()).isEqualTo("Hola chatbot");
-        assertThat(messages.getFirst().getSequenceNumber()).isEqualTo(1);
-        assertThat(messages.getFirst().getTimestamp()).isNotNull();
-        assertThat(messages.getFirst().getParentMessageId()).isNull();
+        List<MessageEntity> messages = this.messageRepository
+                .findByConversationIdOrderBySequenceNumberAsc(conversations.getFirst().getId());
+        assertThat(messages).hasSize(2);
+
+        MessageEntity firstMessage = messages.get(0);
+        assertThat(firstMessage.getSenderType()).isEqualTo(MessageSenderType.USER);
+        assertThat(firstMessage.getMessageType()).isEqualTo(MessageType.REQUEST);
+        assertThat(firstMessage.getContent()).isEqualTo("Hola chatbot");
+        assertThat(firstMessage.getSequenceNumber()).isEqualTo(1);
+        assertThat(firstMessage.getTimestamp()).isNotNull();
+        assertThat(firstMessage.getParentMessageId()).isNull();
+
+        MessageEntity secondMessage = messages.get(1);
+        assertThat(secondMessage.getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
+        assertThat(secondMessage.getMessageType()).isEqualTo(MessageType.RESPONSE);
+        assertThat(secondMessage.getContent()).isEqualTo(GENERAL_START_REPLY);
+        assertThat(secondMessage.getSequenceNumber()).isEqualTo(2);
+        assertThat(secondMessage.getTimestamp()).isNotNull();
+        assertThat(secondMessage.getParentMessageId()).isEqualTo(firstMessage.getId());
     }
 
     @Test
@@ -234,8 +256,8 @@ class ChatbotResourceFT {
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
                 POST,
                 entity,
                 String.class
@@ -251,8 +273,8 @@ class ChatbotResourceFT {
         ChatbotMessageRequestDto startRequest = new ChatbotMessageRequestDto(null, "Hola chatbot");
         HttpEntity<ChatbotMessageRequestDto> startEntity = new HttpEntity<>(startRequest, headers);
 
-        ResponseEntity<ChatbotMessageResponseDto> startResponse = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
+        ResponseEntity<ChatbotMessageResponseDto> startResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
                 POST,
                 startEntity,
                 ChatbotMessageResponseDto.class
@@ -267,8 +289,8 @@ class ChatbotResourceFT {
         );
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<ChatbotMessageResponseDto> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+        ResponseEntity<ChatbotMessageResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
                 POST,
                 entity,
                 ChatbotMessageResponseDto.class
@@ -277,17 +299,101 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo("Segundo mensaje");
+        assertThat(response.getBody().getMessage()).isEqualTo(GENERIC_ASSISTANT_REPLY);
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
-        assertThat(messages).hasSize(2);
+        assertThat(messages).hasSize(4);
         assertThat(messages).extracting(MessageEntity::getContent)
-                .containsExactly("Hola chatbot", "Segundo mensaje");
+                .containsExactly(
+                        "Hola chatbot",
+                        GENERAL_START_REPLY,
+                        "Segundo mensaje",
+                        GENERIC_ASSISTANT_REPLY
+                );
         assertThat(messages).extracting(MessageEntity::getSequenceNumber)
-                .containsExactly(1, 2);
+                .containsExactly(1, 2, 3, 4);
+        assertThat(messages).extracting(MessageEntity::getSenderType)
+                .containsExactly(
+                        MessageSenderType.USER,
+                        MessageSenderType.ASSISTANT,
+                        MessageSenderType.USER,
+                        MessageSenderType.ASSISTANT
+                );
+        assertThat(messages.get(2).getParentMessageId()).isNull();
+        assertThat(messages.get(3).getParentMessageId()).isEqualTo(messages.get(2).getId());
+    }
+
+    @Test
+    void testSendMessageAuthenticatedWithoutConversationIdReturnsBadRequest() {
+        HttpHeaders headers = this.authHeaders("fake-token-message-without-conversation", "customer-1");
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Mensaje sin conversacion");
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                POST,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("conversationId es obligatorio para enviar mensajes");
+    }
+
+    @Test
+    void testSendMessageAuthenticatedToAnotherUsersConversationReturnsForbidden() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-owned-by-other-user",
+                "customer-2",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-forbidden", "customer-1");
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(conversationId, "Mensaje ajeno");
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                POST,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).contains("No tienes permisos sobre esta conversacion");
+    }
+
+    @Test
+    void testSendMessageAuthenticatedToClosedConversationReturnsConflict() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-closed",
+                "customer-1",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-conflict", "customer-1");
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(conversationId, "Mensaje en cerrada");
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                POST,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).contains("La conversacion no esta activa");
     }
 
     @Test
@@ -298,8 +404,8 @@ class ChatbotResourceFT {
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
                 POST,
                 entity,
                 String.class
@@ -317,8 +423,8 @@ class ChatbotResourceFT {
 
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                "http://localhost:" + port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
                 HttpMethod.OPTIONS,
                 entity,
                 String.class
@@ -347,5 +453,4 @@ class ChatbotResourceFT {
         headers.setBearerAuth(token);
         return headers;
     }
-
 }
