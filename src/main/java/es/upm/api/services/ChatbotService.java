@@ -16,10 +16,12 @@ import es.upm.api.services.exceptions.ConflictException;
 import es.upm.api.services.exceptions.ForbiddenException;
 import es.upm.api.services.exceptions.NotFoundException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -28,10 +30,15 @@ public class ChatbotService {
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
-    private static final String GENERAL_START_REPLY =
-            "Conversación iniciada correctamente. ¿En qué puedo ayudarte?";
-    private static final String GENERIC_ASSISTANT_REPLY =
-            "He recibido tu mensaje. La integración con el asistente aún es simulada.";
+    private static final String CLIENT_GENERAL_START_REPLY =
+            "Hola. Soy tu asistente virtual y puedo ayudarte con dudas sobre tu encargo, su estado o los próximos pasos.";
+    private static final String PROFESSIONAL_GENERAL_START_REPLY =
+            "Conversación iniciada correctamente. Puedes consultar dudas operativas, funcionales o de gestión relacionadas con el encargo y la plataforma.";
+
+    private static final String CLIENT_MESSAGE_REPLY =
+            "He recibido tu mensaje. De momento estoy en una versión inicial, pero intentaré ayudarte de forma clara con los siguientes pasos o con el estado de tu consulta.";
+    private static final String PROFESSIONAL_MESSAGE_REPLY =
+            "Mensaje recibido. La integración actual sigue siendo simulada, pero la respuesta se orienta a soporte operativo y gestión funcional del encargo.";
 
     // Attributes
     private final ConversationRepository conversationRepository;
@@ -77,7 +84,9 @@ public class ChatbotService {
     }
 
     // Starts General Conversation, this type of conversation is not linked to other process or entity
-    public ChatbotMessageResponseDto startGeneralConversation(ChatbotMessageRequestDto requestDto) {
+    public ChatbotMessageResponseDto startGeneralConversation(
+            ChatbotMessageRequestDto requestDto
+    ) {
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
 
@@ -102,7 +111,8 @@ public class ChatbotService {
                 date
         );
 
-        String assistantReply = GENERAL_START_REPLY;
+        ConversationProfile profile = this.resolveConversationProfile();
+        String assistantReply = this.generalStartReply(profile);
 
         this.saveMessage(
                 conversation.getId(),
@@ -123,8 +133,9 @@ public class ChatbotService {
     }
 
     // Starts General Conversation, this type of conversation is not linked to other process or entity
-    public ChatbotMessageResponseDto sendMessage(ChatbotMessageRequestDto requestDto) {
-
+    public ChatbotMessageResponseDto sendMessage(
+            ChatbotMessageRequestDto requestDto
+    ) {
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
 
@@ -149,7 +160,8 @@ public class ChatbotService {
                 date
         );
 
-        String assistantReply = GENERIC_ASSISTANT_REPLY;
+        ConversationProfile profile = this.resolveConversationProfile();
+        String assistantReply = this.messageReply(profile);
 
         this.saveMessage(
                 conversation.getId(),
@@ -169,7 +181,9 @@ public class ChatbotService {
         );
     }
 
-    private ConversationEntity requireActiveOwnedConversation(String conversationId, String userId) {
+    private ConversationEntity requireActiveOwnedConversation(
+            String conversationId, String userId
+    ) {
         ConversationEntity conversation = this.conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new NotFoundException("conversationId no corresponde a una conversacion existente"));
 
@@ -215,8 +229,48 @@ public class ChatbotService {
     }
 
     private String authenticatedUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication.getName();
+        return this.currentAuthentication().getName();
+    }
+
+    private ConversationProfile resolveConversationProfile() {
+        Authentication authentication = this.currentAuthentication();
+
+        boolean isCustomer = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .map(this::normalizeAuthority)
+                .anyMatch("CUSTOMER"::equals);
+
+        return isCustomer ? ConversationProfile.CLIENT : ConversationProfile.PROFESSIONAL;
+    }
+
+    private Authentication currentAuthentication() {
+        return SecurityContextHolder.getContext().getAuthentication();
+    }
+
+    private String normalizeAuthority(String authority) {
+        if (authority == null) {
+            return "";
+        }
+        return authority.replace("ROLE_", "").toUpperCase(Locale.ROOT);
+    }
+
+    private String generalStartReply(ConversationProfile profile) {
+        return switch (profile) {
+            case CLIENT -> CLIENT_GENERAL_START_REPLY;
+            case PROFESSIONAL -> PROFESSIONAL_GENERAL_START_REPLY;
+        };
+    }
+
+    private String messageReply(ConversationProfile profile) {
+        return switch (profile) {
+            case CLIENT -> CLIENT_MESSAGE_REPLY;
+            case PROFESSIONAL -> PROFESSIONAL_MESSAGE_REPLY;
+        };
+    }
+
+    private enum ConversationProfile {
+        CLIENT,
+        PROFESSIONAL
     }
 
 }
