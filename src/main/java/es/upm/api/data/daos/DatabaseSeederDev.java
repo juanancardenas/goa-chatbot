@@ -60,15 +60,16 @@ public class DatabaseSeederDev {
         ConversationEntity conversation2 = new ConversationEntity(
                 "conversation-dev-002",
                 "customer-dev-002",
-                "engagement-dev-002",
+                null,
                 ConversationStatus.CLOSED,
                 TYPE_GENERAL,
                 baseTime.plusMinutes(10)
         );
+
         ConversationEntity conversation3 = new ConversationEntity(
                 "conversation-dev-003",
                 "customer-dev-003",
-                null,
+                "engagement-dev-003",
                 ConversationStatus.ARCHIVED,
                 TYPE_CONTEXTUAL,
                 baseTime.plusMinutes(20)
@@ -111,7 +112,7 @@ public class DatabaseSeederDev {
                 .conversationId(conversation2.getId())
                 .senderType(MessageSenderType.USER)
                 .messageType(MessageType.REQUEST)
-                .content("Necesito revisar el estado de mi carta de encargo.")
+                .content("Quiero iniciar una conversacion general para resolver una duda.")
                 .timestamp(baseTime.plusMinutes(10).plusSeconds(10))
                 .sequenceNumber(1)
                 .build();
@@ -120,7 +121,7 @@ public class DatabaseSeederDev {
                 .conversationId(conversation2.getId())
                 .senderType(MessageSenderType.ASSISTANT)
                 .messageType(MessageType.RESPONSE)
-                .content("La carta de encargo fue revisada correctamente.")
+                .content("Perfecto, esta conversacion general queda disponible para tus consultas.")
                 .timestamp(baseTime.plusMinutes(10).plusSeconds(20))
                 .sequenceNumber(2)
                 .parentMessageId(message4.getId())
@@ -141,7 +142,7 @@ public class DatabaseSeederDev {
                 .conversationId(conversation3.getId())
                 .senderType(MessageSenderType.USER)
                 .messageType(MessageType.REQUEST)
-                .content("Quiero consultar una conversacion sin engagement letter.")
+                .content("Quiero consultar el contexto asociado a mi engagement letter.")
                 .timestamp(baseTime.plusMinutes(20).plusSeconds(10))
                 .sequenceNumber(1)
                 .build();
@@ -150,7 +151,7 @@ public class DatabaseSeederDev {
                 .conversationId(conversation3.getId())
                 .senderType(MessageSenderType.ASSISTANT)
                 .messageType(MessageType.RESPONSE)
-                .content("He recuperado la conversacion asociada al usuario.")
+                .content("He recuperado la conversacion asociada a tu engagement letter.")
                 .timestamp(baseTime.plusMinutes(20).plusSeconds(20))
                 .sequenceNumber(2)
                 .parentMessageId(message7.getId())

@@ -46,14 +46,20 @@ class DatabaseSeederDevIT {
         assertThat(this.conversationRepository.findById("conversation-dev-002"))
                 .isPresent()
                 .get()
-                .extracting(ConversationEntity::getStatus)
-                .isEqualTo(ConversationStatus.CLOSED);
+                .satisfies(conversation -> {
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
 
         assertThat(this.conversationRepository.findById("conversation-dev-003"))
                 .isPresent()
                 .get()
-                .extracting(ConversationEntity::getStatus)
-                .isEqualTo(ConversationStatus.ARCHIVED);
+                .satisfies(conversation -> {
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
+                    assertThat(conversation.getType()).isEqualTo("CONTEXTUAL");
+                    assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-dev-003");
+                });
 
         assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-001"))
                 .hasSize(3)
@@ -64,11 +70,23 @@ class DatabaseSeederDevIT {
                 .hasSize(3)
                 .extracting(MessageEntity::getSequenceNumber)
                 .containsExactly(1, 2, 3);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-002"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Quiero iniciar una conversacion general para resolver una duda.",
+                        "Perfecto, esta conversacion general queda disponible para tus consultas."
+                );
 
         assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-003"))
                 .hasSize(3)
                 .extracting(MessageEntity::getSequenceNumber)
                 .containsExactly(1, 2, 3);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-003"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Quiero consultar el contexto asociado a mi engagement letter.",
+                        "He recuperado la conversacion asociada a tu engagement letter."
+                );
 
         assertThat(messages)
                 .extracting(MessageEntity::getConversationId)
