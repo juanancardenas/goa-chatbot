@@ -44,10 +44,15 @@ import static org.springframework.http.HttpStatus.OK;
 class ChatbotResourceFT {
     private static final String TYPE_GENERAL = "GENERAL";
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
-    private static final String GENERAL_START_REPLY =
-            "Conversación iniciada correctamente. ¿En qué puedo ayudarte?";
-    private static final String GENERIC_ASSISTANT_REPLY =
-            "He recibido tu mensaje. La integración con el asistente aún es simulada.";
+    private static final String CLIENT_GENERAL_START_REPLY =
+            "Hola. Soy tu asistente virtual y puedo ayudarte con dudas sobre tu encargo, su estado o los próximos pasos.";
+    private static final String PROFESSIONAL_GENERAL_START_REPLY =
+            "Conversación iniciada correctamente. Puedes consultar dudas operativas, funcionales o de gestión relacionadas con el encargo y la plataforma.";
+
+    private static final String CLIENT_MESSAGE_REPLY =
+            "He recibido tu mensaje. De momento estoy en una versión inicial, pero intentaré ayudarte de forma clara con los siguientes pasos o con el estado de tu consulta.";
+    private static final String PROFESSIONAL_MESSAGE_REPLY =
+            "Mensaje recibido. La integración actual sigue siendo simulada, pero la respuesta se orienta a soporte operativo y gestión funcional del encargo.";
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -72,7 +77,7 @@ class ChatbotResourceFT {
 
     @Test
     void testStartContextualConversationAuthenticated() {
-        HttpHeaders headers = this.authHeaders("fake-token-contextual", "customer-1");
+        HttpHeaders headers = this.authHeaders("fake-token-contextual", "customer-1", List.of("customer"));
 
         ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
         request.setEngagementLetterId("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
@@ -123,7 +128,7 @@ class ChatbotResourceFT {
 
     @Test
     void testStartContextualConversationAuthenticatedWhenEngagementLetterIdIsBlank() {
-        HttpHeaders headers = this.authHeaders("fake-token-blank", "customer-1");
+        HttpHeaders headers = this.authHeaders("fake-token-blank", "customer-1", List.of("customer"));
 
         ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
         request.setEngagementLetterId("");
@@ -146,7 +151,7 @@ class ChatbotResourceFT {
 
     @Test
     void testStartContextualConversationAuthenticatedWithoutEngagementLetterId() {
-        HttpHeaders headers = this.authHeaders("fake-token-null", "customer-1");
+        HttpHeaders headers = this.authHeaders("fake-token-null", "customer-1", List.of("customer"));
 
         ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
 
@@ -168,7 +173,7 @@ class ChatbotResourceFT {
 
     @Test
     void testStartContextualConversationReusesSameConversationForSameUserAndEngagementLetter() {
-        HttpHeaders headers = this.authHeaders("fake-token-reuse", "customer-1");
+        HttpHeaders headers = this.authHeaders("fake-token-reuse", "customer-1", List.of("customer"));
 
         ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
         request.setEngagementLetterId("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
@@ -200,8 +205,8 @@ class ChatbotResourceFT {
     }
 
     @Test
-    void testStartGeneralConversationAuthenticated() {
-        HttpHeaders headers = this.authHeaders("fake-token-general", "customer-1");
+    void testStartGeneralConversationAuthenticatedAsCustomer() {
+        HttpHeaders headers = this.authHeaders("fake-token-general-customer", "customer-1", List.of("customer"));
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Hola chatbot");
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
@@ -216,7 +221,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo(GENERAL_START_REPLY);
+        assertThat(response.getBody().getMessage()).isEqualTo(CLIENT_GENERAL_START_REPLY);
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
 
@@ -242,10 +247,48 @@ class ChatbotResourceFT {
         MessageEntity secondMessage = messages.get(1);
         assertThat(secondMessage.getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
         assertThat(secondMessage.getMessageType()).isEqualTo(MessageType.RESPONSE);
-        assertThat(secondMessage.getContent()).isEqualTo(GENERAL_START_REPLY);
+        assertThat(secondMessage.getContent()).isEqualTo(CLIENT_GENERAL_START_REPLY);
         assertThat(secondMessage.getSequenceNumber()).isEqualTo(2);
         assertThat(secondMessage.getTimestamp()).isNotNull();
         assertThat(secondMessage.getParentMessageId()).isEqualTo(firstMessage.getId());
+    }
+
+    @Test
+    void testStartGeneralConversationAuthenticatedAsProfessional() {
+        HttpHeaders headers = this.authHeaders("fake-token-general-professional", "admin-1", List.of("admin"));
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Necesito soporte operativo");
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<ChatbotMessageResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
+                POST,
+                entity,
+                ChatbotMessageResponseDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isNotBlank();
+        assertThat(response.getBody().getMessage()).isEqualTo(PROFESSIONAL_GENERAL_START_REPLY);
+        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+
+        List<ConversationEntity> conversations = this.conversationRepository.findAll();
+        assertThat(conversations).hasSize(1);
+        assertThat(conversations.getFirst().getUserId()).isEqualTo("admin-1");
+        assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
+        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        assertThat(conversations.getFirst().getType()).isEqualTo(TYPE_GENERAL);
+
+        List<MessageEntity> messages = this.messageRepository
+                .findByConversationIdOrderBySequenceNumberAsc(conversations.getFirst().getId());
+        assertThat(messages).hasSize(2);
+        assertThat(messages).extracting(MessageEntity::getContent)
+                .containsExactly(
+                        "Necesito soporte operativo",
+                        PROFESSIONAL_GENERAL_START_REPLY
+                );
     }
 
     @Test
@@ -267,8 +310,8 @@ class ChatbotResourceFT {
     }
 
     @Test
-    void testSendMessageAuthenticated() {
-        HttpHeaders headers = this.authHeaders("fake-token-message", "customer-1");
+    void testSendMessageAuthenticatedAsCustomer() {
+        HttpHeaders headers = this.authHeaders("fake-token-message-customer", "customer-1", List.of("customer"));
 
         ChatbotMessageRequestDto startRequest = new ChatbotMessageRequestDto(null, "Hola chatbot");
         HttpEntity<ChatbotMessageRequestDto> startEntity = new HttpEntity<>(startRequest, headers);
@@ -299,7 +342,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(GENERIC_ASSISTANT_REPLY);
+        assertThat(response.getBody().getMessage()).isEqualTo(CLIENT_MESSAGE_REPLY);
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
 
@@ -309,9 +352,69 @@ class ChatbotResourceFT {
         assertThat(messages).extracting(MessageEntity::getContent)
                 .containsExactly(
                         "Hola chatbot",
-                        GENERAL_START_REPLY,
+                        CLIENT_GENERAL_START_REPLY,
                         "Segundo mensaje",
-                        GENERIC_ASSISTANT_REPLY
+                        CLIENT_MESSAGE_REPLY
+                );
+        assertThat(messages).extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2, 3, 4);
+        assertThat(messages).extracting(MessageEntity::getSenderType)
+                .containsExactly(
+                        MessageSenderType.USER,
+                        MessageSenderType.ASSISTANT,
+                        MessageSenderType.USER,
+                        MessageSenderType.ASSISTANT
+                );
+        assertThat(messages.get(2).getParentMessageId()).isNull();
+        assertThat(messages.get(3).getParentMessageId()).isEqualTo(messages.get(2).getId());
+    }
+
+    @Test
+    void testSendMessageAuthenticatedAsProfessional() {
+        HttpHeaders headers = this.authHeaders("fake-token-message-professional", "manager-1", List.of("manager"));
+
+        ChatbotMessageRequestDto startRequest = new ChatbotMessageRequestDto(null, "Necesito revisar el flujo");
+        HttpEntity<ChatbotMessageRequestDto> startEntity = new HttpEntity<>(startRequest, headers);
+
+        ResponseEntity<ChatbotMessageResponseDto> startResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
+                POST,
+                startEntity,
+                ChatbotMessageResponseDto.class
+        );
+
+        assertThat(startResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(startResponse.getBody()).isNotNull();
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                startResponse.getBody().getConversationId(),
+                "Segundo mensaje profesional"
+        );
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<ChatbotMessageResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                POST,
+                entity,
+                ChatbotMessageResponseDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
+        assertThat(response.getBody().getMessage()).isEqualTo(PROFESSIONAL_MESSAGE_REPLY);
+        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+
+        List<MessageEntity> messages = this.messageRepository
+                .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
+        assertThat(messages).hasSize(4);
+        assertThat(messages).extracting(MessageEntity::getContent)
+                .containsExactly(
+                        "Necesito revisar el flujo",
+                        PROFESSIONAL_GENERAL_START_REPLY,
+                        "Segundo mensaje profesional",
+                        PROFESSIONAL_MESSAGE_REPLY
                 );
         assertThat(messages).extracting(MessageEntity::getSequenceNumber)
                 .containsExactly(1, 2, 3, 4);
@@ -328,7 +431,11 @@ class ChatbotResourceFT {
 
     @Test
     void testSendMessageAuthenticatedWithoutConversationIdReturnsBadRequest() {
-        HttpHeaders headers = this.authHeaders("fake-token-message-without-conversation", "customer-1");
+        HttpHeaders headers = this.authHeaders(
+                "fake-token-message-without-conversation",
+                "customer-1",
+                List.of("customer")
+        );
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Mensaje sin conversacion");
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
@@ -355,7 +462,7 @@ class ChatbotResourceFT {
                 LocalDateTime.now()
         )).getId();
 
-        HttpHeaders headers = this.authHeaders("fake-token-forbidden", "customer-1");
+        HttpHeaders headers = this.authHeaders("fake-token-forbidden", "customer-1", List.of("customer"));
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(conversationId, "Mensaje ajeno");
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
@@ -381,7 +488,7 @@ class ChatbotResourceFT {
                 LocalDateTime.now()
         )).getId();
 
-        HttpHeaders headers = this.authHeaders("fake-token-conflict", "customer-1");
+        HttpHeaders headers = this.authHeaders("fake-token-conflict", "customer-1", List.of("customer"));
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(conversationId, "Mensaje en cerrada");
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
@@ -434,7 +541,7 @@ class ChatbotResourceFT {
         assertThat(response.getHeaders().getAccessControlAllowOrigin()).isEqualTo("http://localhost:4200");
     }
 
-    private HttpHeaders authHeaders(String token, String subject) {
+    private HttpHeaders authHeaders(String token, String subject, List<String> roles) {
         Jwt jwt = new Jwt(
                 token,
                 Instant.now(),
@@ -442,7 +549,7 @@ class ChatbotResourceFT {
                 Map.of("alg", "none"),
                 Map.of(
                         "sub", subject,
-                        "roles", List.of("customer")
+                        "roles", roles
                 )
         );
 
