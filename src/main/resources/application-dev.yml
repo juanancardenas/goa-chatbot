@@ -14,6 +14,8 @@ spring:
 goa:
   user:
     base-url: http://localhost:8080/api/goa-user/users
+  engagement:
+    base-url: http://localhost:8080/api/goa-engagement
 
 app:
   cors:
