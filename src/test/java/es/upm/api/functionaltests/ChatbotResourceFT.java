@@ -496,6 +496,111 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testCloseConversationAuthenticatedAsOwnerReturnsNoContent() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-to-close",
+                "customer-1",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-close", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<Void> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CLOSE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                entity,
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        ConversationEntity conversation = this.conversationRepository.findById(conversationId).orElseThrow();
+        assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+    }
+
+    @Test
+    void testCloseConversationOfAnotherUserReturnsForbidden() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-owned-by-other-user-to-close",
+                "customer-2",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-close-forbidden", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CLOSE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).contains("No tienes permisos sobre esta conversacion");
+    }
+
+    @Test
+    void testCloseConversationAlreadyClosedReturnsConflict() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-already-closed",
+                "customer-1",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-close-conflict", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CLOSE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).contains("La conversacion no esta activa");
+    }
+
+    @Test
+    void testCloseConversationUnauthorizedWithoutToken() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-unauthorized-close",
+                "customer-1",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CLOSE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void testSendMessageInContextualConversationAboutOtherCaseReturnsOutOfScopeReply() {
         HttpHeaders headers = this.authHeaders("fake-token-scope-contextual", "customer-1", List.of("customer"));
 

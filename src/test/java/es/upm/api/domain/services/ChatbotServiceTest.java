@@ -5,6 +5,8 @@ import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.exceptions.BadRequestException;
+import es.upm.api.domain.exceptions.ConflictException;
+import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.persistence.ConversationPersistence;
@@ -178,6 +180,67 @@ class ChatbotServiceTest {
 
         assertThat(response.getConversationId()).isEqualTo("conversation-99");
         assertThat(response.getMessage()).isEqualTo("safe reply");
+    }
+
+    @Test
+    void closeConversationShouldCloseOwnedActiveConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
+
+        chatbotService.closeConversation("conversation-1");
+
+        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+        verify(conversationPersistence).update(existingConversation);
+        verify(messagePersistence, never()).createAndReturnId(any(Message.class));
+    }
+
+    @Test
+    void closeConversationShouldRejectOtherUsersConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("customer-2")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
+
+        ForbiddenException exception = assertThrows(
+                ForbiddenException.class,
+                () -> chatbotService.closeConversation("conversation-1")
+        );
+
+        assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
+        verify(conversationPersistence, never()).update(any(Conversation.class));
+    }
+
+    @Test
+    void closeConversationShouldRejectClosedConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("customer-1")
+                .status(ConversationStatus.CLOSED)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
+
+        ConflictException exception = assertThrows(
+                ConflictException.class,
+                () -> chatbotService.closeConversation("conversation-1")
+        );
+
+        assertThat(exception).hasMessageContaining("La conversacion no esta activa");
+        verify(conversationPersistence, never()).update(any(Conversation.class));
     }
 
     private void authenticate(String userId, String... authorities) {

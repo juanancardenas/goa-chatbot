@@ -194,6 +194,15 @@ public class ChatbotService {
         );
     }
 
+    public void closeConversation(String conversationId) {
+        Conversation conversation = this.requireActiveOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+        conversation.setStatus(ConversationStatus.CLOSED);
+        this.conversationPersistence.update(conversation);
+    }
+
     // Crea un mensaje y devuelve su ID de BD
     private String saveMessage(
             String conversationId,
