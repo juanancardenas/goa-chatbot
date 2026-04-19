@@ -16,6 +16,9 @@ public final class ChatbotResponseMessages {
     public static final String PROFESSIONAL_MESSAGE_REPLY =
             "Mensaje recibido. La integración actual sigue siendo simulada, pero la respuesta se orienta a soporte operativo y gestión funcional del encargo.";
 
+    public static final String CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE =
+            "He revisado el contexto del encargo %s. Puedo responder de forma más precisa usando datos internos disponibles del caso, como información del encargo y sus hitos visibles en plataforma.";
+
     //ScopePolicy
 
     public static final String MISSING_CASE_CONTEXT_REPLY =

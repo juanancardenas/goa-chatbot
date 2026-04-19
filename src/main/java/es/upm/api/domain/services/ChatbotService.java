@@ -1,22 +1,22 @@
 package es.upm.api.domain.services;
 
+import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.MessageSenderType;
+import es.upm.api.domain.enums.MessageType;
+import es.upm.api.domain.exceptions.BadRequestException;
+import es.upm.api.domain.exceptions.ConflictException;
+import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.persistence.ConversationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
-import es.upm.api.domain.enums.ConversationStatus;
-import es.upm.api.domain.enums.MessageSenderType;
-import es.upm.api.domain.enums.MessageType;
+import es.upm.api.domain.services.policies.ChatbotScopeDecision;
+import es.upm.api.domain.services.policies.ChatbotScopePolicy;
+import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
-import es.upm.api.domain.services.policies.ChatbotScopeDecision;
-import es.upm.api.domain.services.policies.ChatbotScopePolicy;
-import es.upm.api.domain.exceptions.BadRequestException;
-import es.upm.api.domain.exceptions.ConflictException;
-import es.upm.api.domain.exceptions.ForbiddenException;
-import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -24,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -33,9 +34,12 @@ public class ChatbotService {
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
-    private final ChatbotScopePolicy chatbotScopePolicy;
+    private static final String RESPONSE_MODE_GENERAL = "GENERAL";
+    private static final String RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA = "CONTEXTUAL_PLATFORM_DATA";
+    private static final String RESPONSE_MODE_CONTEXTUAL_RESTRICTED = "CONTEXTUAL_RESTRICTED";
 
     // Attributes
+    private final ChatbotScopePolicy chatbotScopePolicy;
     private final ConversationPersistence conversationPersistence;
     private final MessagePersistence messagePersistence;
 
@@ -131,7 +135,10 @@ public class ChatbotService {
                 conversation.getId(),
                 assistantReply,
                 null,
-                date.toString()
+                date.toString(),
+                RESPONSE_MODE_GENERAL,
+                false,
+                List.of()
         );
     }
 
@@ -169,11 +176,32 @@ public class ChatbotService {
         );
 
         String assistantReply;
+        String responseMode;
+        boolean usedPlatformData;
+        List<String> sourcesSummary;
         if (scopeDecision.isAllowed()) {
-            ConversationProfile profile = this.resolveConversationProfile();
-            assistantReply = this.messageReply(profile);
+            if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
+                assistantReply = this.contextualPlatformReply(conversation);
+                responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
+                usedPlatformData = true;
+                sourcesSummary = List.of(
+                        "Encargo activo",
+                        "Hitos del encargo"
+                );
+            } else {
+                ConversationProfile profile = this.resolveConversationProfile();
+                assistantReply = this.messageReply(profile);
+                responseMode = RESPONSE_MODE_GENERAL;
+                usedPlatformData = false;
+                sourcesSummary = List.of();
+            }
         } else {
             assistantReply = scopeDecision.getSafeMessage();
+            responseMode = TYPE_CONTEXTUAL.equals(conversation.getType())
+                    ? RESPONSE_MODE_CONTEXTUAL_RESTRICTED
+                    : RESPONSE_MODE_GENERAL;
+            usedPlatformData = false;
+            sourcesSummary = List.of();
         }
 
         this.saveMessage(
@@ -190,7 +218,10 @@ public class ChatbotService {
                 conversation.getId(),
                 assistantReply,
                 null,
-                date.toString()
+                date.toString(),
+                responseMode,
+                usedPlatformData,
+                sourcesSummary
         );
     }
 
@@ -228,7 +259,8 @@ public class ChatbotService {
     }
 
     private Conversation requireActiveOwnedConversation(
-            String conversationId, String userId
+            String conversationId,
+            String userId
     ) {
         Conversation conversation = this.conversationPersistence.readById(conversationId);
 
@@ -286,6 +318,12 @@ public class ChatbotService {
             case CLIENT -> ChatbotResponseMessages.CLIENT_MESSAGE_REPLY;
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_MESSAGE_REPLY;
         };
+    }
+
+    private String contextualPlatformReply(Conversation conversation) {
+        return ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE.formatted(
+                conversation.getEngagementLetterId()
+        );
     }
 
     private enum ConversationProfile {
