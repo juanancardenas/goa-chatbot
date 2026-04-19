@@ -43,4 +43,10 @@ public class ConversationPersistenceMongodb implements ConversationPersistence {
         ConversationEntity entity = ConversationEntity.fromConversation(conversation);
         this.conversationRepository.save(entity);
     }
+
+    @Override
+    public void update(Conversation conversation) {
+        ConversationEntity entity = ConversationEntity.fromConversation(conversation);
+        this.conversationRepository.save(entity);
+    }
 }

@@ -8,6 +8,9 @@ import es.upm.api.domain.services.ChatbotService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +23,7 @@ public class ChatbotResource {
     public static final String MESSAGES = "/messages";
     public static final String CONTEXTUAL_CONVERSATIONS = "/conversations/contextual";
     public static final String GENERAL_CONVERSATIONS = "/conversations/general";
+    public static final String CLOSE_CONVERSATION = "/conversations/{conversationId}/close";
 
     private final ChatbotService chatbotService;
 
@@ -46,5 +50,12 @@ public class ChatbotResource {
     @PostMapping(MESSAGES)
     public ChatbotMessageResponseDto sendMessage(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
         return this.chatbotService.sendMessage(requestDto);
+    }
+
+    @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
+    @PatchMapping(CLOSE_CONVERSATION)
+    public ResponseEntity<Void> closeConversation(@PathVariable String conversationId) {
+        this.chatbotService.closeConversation(conversationId);
+        return ResponseEntity.noContent().build();
     }
 }

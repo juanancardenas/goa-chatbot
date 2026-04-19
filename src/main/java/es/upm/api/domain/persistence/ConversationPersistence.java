@@ -14,4 +14,6 @@ public interface ConversationPersistence {
 
     void create(Conversation conversation);
 
+    void update(Conversation conversation);
+
 }
