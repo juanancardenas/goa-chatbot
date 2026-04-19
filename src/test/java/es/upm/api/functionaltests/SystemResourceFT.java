@@ -1,6 +1,6 @@
 package es.upm.api.functionaltests;
 
-import es.upm.api.resources.SystemResource;
+import es.upm.api.infrastructure.resources.SystemResource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
