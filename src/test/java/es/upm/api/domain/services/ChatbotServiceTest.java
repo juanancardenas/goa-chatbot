@@ -9,6 +9,7 @@ import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
+import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
@@ -50,6 +51,9 @@ class ChatbotServiceTest {
 
     @Mock
     private ChatbotScopePolicy chatbotScopePolicy;
+
+    @Mock
+    private ChatbotPlatformContextService chatbotPlatformContextService;
 
     @InjectMocks
     private ChatbotService chatbotService;
@@ -180,6 +184,79 @@ class ChatbotServiceTest {
 
         assertThat(response.getConversationId()).isEqualTo("conversation-99");
         assertThat(response.getMessage()).isEqualTo("safe reply");
+    }
+
+    @Test
+    void sendMessageShouldUsePlatformContextForContextualConversation() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame contexto del caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100"))
+                .thenReturn(Optional.of(
+                        ChatbotPlatformContext.builder()
+                                .engagementLetterId("EL-100")
+                                .ownerDisplayName("Ana Ocaña")
+                                .procedureTitles(List.of("Reclamación civil"))
+                                .sourcesSummary(List.of("Hoja de encargo", "Procedimiento: Reclamación civil"))
+                                .build()
+                ));
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Dame contexto del caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getUsedPlatformData()).isTrue();
+        assertThat(response.getSourcesSummary()).contains("Hoja de encargo");
+        assertThat(response.getMessage()).contains("EL-100");
+        assertThat(response.getMessage()).contains("Ana Ocaña");
+        assertThat(response.getMessage()).contains("Reclamación civil");
+    }
+
+    @Test
+    void sendMessageShouldReturnRestrictedContextReplyWhenPlatformDataIsUnavailable() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame contexto del caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100"))
+                .thenReturn(Optional.empty());
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Dame contexto del caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getSourcesSummary()).isEmpty();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY);
     }
 
     @Test
