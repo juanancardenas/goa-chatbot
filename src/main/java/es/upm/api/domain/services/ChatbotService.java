@@ -8,6 +8,7 @@ import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
+import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -40,6 +42,7 @@ public class ChatbotService {
 
     // Attributes
     private final ChatbotScopePolicy chatbotScopePolicy;
+    private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ConversationPersistence conversationPersistence;
     private final MessagePersistence messagePersistence;
 
@@ -47,12 +50,13 @@ public class ChatbotService {
     @Autowired
     public ChatbotService(ConversationPersistence conversationPersistence,
                           MessagePersistence messagePersistence,
-                          ChatbotScopePolicy chatbotScopePolicy
-      //                    MessageRepository messageRepository
+                          ChatbotScopePolicy chatbotScopePolicy,
+                          ChatbotPlatformContextService chatbotPlatformContextService
     ) {
         this.conversationPersistence = conversationPersistence;
         this.messagePersistence = messagePersistence;
         this.chatbotScopePolicy = chatbotScopePolicy;
+        this.chatbotPlatformContextService = chatbotPlatformContextService;
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
@@ -179,15 +183,23 @@ public class ChatbotService {
         String responseMode;
         boolean usedPlatformData;
         List<String> sourcesSummary;
+
         if (scopeDecision.isAllowed()) {
             if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
-                assistantReply = this.contextualPlatformReply(conversation);
-                responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
-                usedPlatformData = true;
-                sourcesSummary = List.of(
-                        "Encargo activo",
-                        "Hitos del encargo"
-                );
+                Optional<ChatbotPlatformContext> platformContext = this.chatbotPlatformContextService
+                        .loadContext(conversation.getEngagementLetterId());
+
+                if (platformContext.isPresent()) {
+                    assistantReply = this.contextualPlatformReply(platformContext.get());
+                    responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
+                    usedPlatformData = true;
+                    sourcesSummary = platformContext.get().getSourcesSummary();
+                } else {
+                    assistantReply = ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY;
+                    responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
+                    usedPlatformData = false;
+                    sourcesSummary = List.of();
+                }
             } else {
                 ConversationProfile profile = this.resolveConversationProfile();
                 assistantReply = this.messageReply(profile);
@@ -320,10 +332,18 @@ public class ChatbotService {
         };
     }
 
-    private String contextualPlatformReply(Conversation conversation) {
-        return ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE.formatted(
-                conversation.getEngagementLetterId()
+    private String contextualPlatformReply(ChatbotPlatformContext platformContext) {
+        String base = ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE.formatted(
+                platformContext.getEngagementLetterId(),
+                platformContext.getOwnerDisplayName()
         );
+
+        if (platformContext.getProcedureTitles() == null || platformContext.getProcedureTitles().isEmpty()) {
+            return base;
+        }
+
+        String procedures = String.join(", ", platformContext.getProcedureTitles());
+        return base + " " + ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_PROCEDURES_TEMPLATE.formatted(procedures);
     }
 
     private enum ConversationProfile {

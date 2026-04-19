@@ -17,7 +17,14 @@ public final class ChatbotResponseMessages {
             "Mensaje recibido. La integración actual sigue siendo simulada, pero la respuesta se orienta a soporte operativo y gestión funcional del encargo.";
 
     public static final String CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE =
-            "He revisado el contexto del encargo %s. Puedo responder de forma más precisa usando datos internos disponibles del caso, como información del encargo y sus hitos visibles en plataforma.";
+            "He revisado la hoja de encargo %s. El encargo está asociado a %s y puedo apoyarme en información interna disponible del caso para responder con más precisión.";
+
+    public static final String CONTEXTUAL_PLATFORM_DATA_PROCEDURES_TEMPLATE =
+            "Los procedimientos visibles en este encargo incluyen: %s.";
+
+    public static final String CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY =
+            "No he podido recuperar en este momento el contexto actualizado del encargo activo. Puedo seguir ayudándote, pero ahora mismo no debo responder como si tuviera datos internos confirmados del caso.";
+
 
     //ScopePolicy
 
@@ -35,5 +42,4 @@ public final class ChatbotResponseMessages {
 
     public static final String AMBIGUOUS_CONTEXT_REPLY =
             "Tu consulta necesita más contexto para responder con seguridad. Si se refiere a un encargo concreto, abre el asistente desde esa hoja de encargo.";
-
 }
