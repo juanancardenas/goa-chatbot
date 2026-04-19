@@ -11,6 +11,8 @@ import es.upm.api.resources.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.resources.dtos.ChatbotMessageRequestDto;
 import es.upm.api.resources.dtos.ChatbotMessageResponseDto;
+import es.upm.api.services.policies.ChatbotScopeDecision;
+import es.upm.api.services.policies.ChatbotScopePolicy;
 import es.upm.api.services.exceptions.BadRequestException;
 import es.upm.api.services.exceptions.ConflictException;
 import es.upm.api.services.exceptions.ForbiddenException;
@@ -30,6 +32,8 @@ public class ChatbotService {
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
+    private final ChatbotScopePolicy chatbotScopePolicy;
+
     private static final String CLIENT_GENERAL_START_REPLY =
             "Hola. Soy tu asistente virtual y puedo ayudarte con dudas sobre tu encargo, su estado o los próximos pasos.";
     private static final String PROFESSIONAL_GENERAL_START_REPLY =
@@ -47,9 +51,12 @@ public class ChatbotService {
     // Constructor
     public ChatbotService(
             ConversationRepository conversationRepository,
-            MessageRepository messageRepository) {
+            MessageRepository messageRepository,
+            ChatbotScopePolicy chatbotScopePolicy
+    ) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
+        this.chatbotScopePolicy = chatbotScopePolicy;
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
@@ -160,8 +167,18 @@ public class ChatbotService {
                 date
         );
 
-        ConversationProfile profile = this.resolveConversationProfile();
-        String assistantReply = this.messageReply(profile);
+        ChatbotScopeDecision scopeDecision = this.chatbotScopePolicy.evaluate(
+                conversation,
+                requestDto.getMessage()
+        );
+
+        String assistantReply;
+        if (scopeDecision.isAllowed()) {
+            ConversationProfile profile = this.resolveConversationProfile();
+            assistantReply = this.messageReply(profile);
+        } else {
+            assistantReply = scopeDecision.getSafeMessage();
+        }
 
         this.saveMessage(
                 conversation.getId(),
