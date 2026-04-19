@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @Component
-public class TokenManager {  //TODO utilizar el estandar y casi resuelve esta gestion
+public class TokenManager {
     public static final String SCOPE_PROFILE = "profile";
     public static final String ROLE_URL_TOKEN = "url_token";
     private final String apiClientId;
