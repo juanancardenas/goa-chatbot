@@ -21,6 +21,7 @@ public class ConversationEntity {
     private String id;
     private String userId;
     private String engagementLetterId;
+    @Builder.Default
     @NotNull
     private ConversationStatus status = ConversationStatus.ACTIVE;
     @NotNull

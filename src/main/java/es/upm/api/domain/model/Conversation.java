@@ -19,6 +19,7 @@ public class Conversation {
     @NotNull
     private String userId;
     private String engagementLetterId;
+    @Builder.Default
     @NotNull
     private ConversationStatus status = ConversationStatus.ACTIVE;
     @NotNull
