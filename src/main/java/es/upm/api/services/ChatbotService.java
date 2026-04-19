@@ -11,10 +11,13 @@ import es.upm.api.resources.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.resources.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.resources.dtos.ChatbotMessageRequestDto;
 import es.upm.api.resources.dtos.ChatbotMessageResponseDto;
+import es.upm.api.services.policies.ChatbotScopeDecision;
+import es.upm.api.services.policies.ChatbotScopePolicy;
 import es.upm.api.services.exceptions.BadRequestException;
 import es.upm.api.services.exceptions.ConflictException;
 import es.upm.api.services.exceptions.ForbiddenException;
 import es.upm.api.services.exceptions.NotFoundException;
+import es.upm.api.services.support.ChatbotResponseMessages;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,15 +33,7 @@ public class ChatbotService {
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
-    private static final String CLIENT_GENERAL_START_REPLY =
-            "Hola. Soy tu asistente virtual y puedo ayudarte con dudas sobre tu encargo, su estado o los próximos pasos.";
-    private static final String PROFESSIONAL_GENERAL_START_REPLY =
-            "Conversación iniciada correctamente. Puedes consultar dudas operativas, funcionales o de gestión relacionadas con el encargo y la plataforma.";
-
-    private static final String CLIENT_MESSAGE_REPLY =
-            "He recibido tu mensaje. De momento estoy en una versión inicial, pero intentaré ayudarte de forma clara con los siguientes pasos o con el estado de tu consulta.";
-    private static final String PROFESSIONAL_MESSAGE_REPLY =
-            "Mensaje recibido. La integración actual sigue siendo simulada, pero la respuesta se orienta a soporte operativo y gestión funcional del encargo.";
+    private final ChatbotScopePolicy chatbotScopePolicy;
 
     // Attributes
     private final ConversationRepository conversationRepository;
@@ -47,9 +42,12 @@ public class ChatbotService {
     // Constructor
     public ChatbotService(
             ConversationRepository conversationRepository,
-            MessageRepository messageRepository) {
+            MessageRepository messageRepository,
+            ChatbotScopePolicy chatbotScopePolicy
+    ) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
+        this.chatbotScopePolicy = chatbotScopePolicy;
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
@@ -160,8 +158,18 @@ public class ChatbotService {
                 date
         );
 
-        ConversationProfile profile = this.resolveConversationProfile();
-        String assistantReply = this.messageReply(profile);
+        ChatbotScopeDecision scopeDecision = this.chatbotScopePolicy.evaluate(
+                conversation,
+                requestDto.getMessage()
+        );
+
+        String assistantReply;
+        if (scopeDecision.isAllowed()) {
+            ConversationProfile profile = this.resolveConversationProfile();
+            assistantReply = this.messageReply(profile);
+        } else {
+            assistantReply = scopeDecision.getSafeMessage();
+        }
 
         this.saveMessage(
                 conversation.getId(),
@@ -256,15 +264,15 @@ public class ChatbotService {
 
     private String generalStartReply(ConversationProfile profile) {
         return switch (profile) {
-            case CLIENT -> CLIENT_GENERAL_START_REPLY;
-            case PROFESSIONAL -> PROFESSIONAL_GENERAL_START_REPLY;
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_START_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY;
         };
     }
 
     private String messageReply(ConversationProfile profile) {
         return switch (profile) {
-            case CLIENT -> CLIENT_MESSAGE_REPLY;
-            case PROFESSIONAL -> PROFESSIONAL_MESSAGE_REPLY;
+            case CLIENT -> ChatbotResponseMessages.CLIENT_MESSAGE_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_MESSAGE_REPLY;
         };
     }
 
