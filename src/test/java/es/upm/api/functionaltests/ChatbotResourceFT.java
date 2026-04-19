@@ -787,6 +787,28 @@ class ChatbotResourceFT {
         assertThat(response.getHeaders().getAccessControlAllowOrigin()).isEqualTo("http://localhost:4200");
     }
 
+    @Test
+    void testPreflightOptionsIsAllowedForCloseConversationPatch() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.ORIGIN, "http://localhost:4200");
+        headers.add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "PATCH");
+        headers.add(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "content-type,authorization");
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT
+                        + ChatbotResource.CLOSE_CONVERSATION.replace("{conversationId}", "conversation-id"),
+                HttpMethod.OPTIONS,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getAccessControlAllowOrigin()).isEqualTo("http://localhost:4200");
+        assertThat(response.getHeaders().getAccessControlAllowMethods()).contains(HttpMethod.PATCH);
+    }
+
     private HttpHeaders authHeaders(String token, String subject, List<String> roles) {
         Jwt jwt = new Jwt(
                 token,
