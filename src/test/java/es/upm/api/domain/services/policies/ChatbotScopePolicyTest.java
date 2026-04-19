@@ -93,6 +93,45 @@ class ChatbotScopePolicyTest {
     }
 
     @Test
+    void evaluateShouldRejectMissingCaseContextInGeneralConversation() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                "¿Cuál es el estado de mi encargo?"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
+        assertThat(decision.getSafeMessage()).contains("no está asociada a un encargo concreto");
+        assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldRejectOutOfCaseScopeInContextualConversation() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("CONTEXTUAL"),
+                "¿Qué pasará con mi otro caso?"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.OUT_OF_CASE_SCOPE);
+        assertThat(decision.getSafeMessage()).contains("dentro del ámbito del encargo activo");
+        assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldRejectBindingLegalAdviceRequest() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                "Dime exactamente qué debo alegar jurídicamente"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.LEGAL_BINDING_ADVICE_REQUESTED);
+        assertThat(decision.getSafeMessage()).contains("No puedo emitir asesoramiento legal vinculante");
+        assertThat(decision.isRequiresHuman()).isTrue();
+    }
+
+    @Test
     void evaluateShouldAllowContextualMessageWithinScope() {
         ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
                 this.conversation("CONTEXTUAL"),

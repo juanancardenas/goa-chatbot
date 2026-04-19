@@ -1,7 +1,7 @@
 package es.upm.api.domain.services.policies;
 
 import es.upm.api.domain.model.Conversation;
-import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
+import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ChatbotScopeViolationReason;
 import org.springframework.stereotype.Service;
 
@@ -72,7 +72,7 @@ public class ChatbotScopePolicy {
         if (this.containsAny(normalizedMessage, LEGAL_BINDING_PATTERNS)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.LEGAL_BINDING_ADVICE_REQUESTED,
-                    "No puedo emitir asesoramiento legal vinculante ni indicar una estrategia jurídica definitiva. Puedo ofrecer orientación general y ayudarte a revisar la información disponible en la plataforma.",
+                    ChatbotResponseMessages.LEGAL_BINDING_ADVICE_REPLY,
                     true
             );
         }
@@ -81,7 +81,7 @@ public class ChatbotScopePolicy {
                 && this.containsAny(normalizedMessage, CONTEXT_REQUIRED_PATTERNS)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.MISSING_CASE_CONTEXT,
-                    "Esta conversación es general y no está asociada a un encargo concreto. Para responder sobre el estado, documentos o pasos de un caso, abre el asistente desde la hoja de encargo correspondiente.",
+                    ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY,
                     false
             );
         }
@@ -90,7 +90,7 @@ public class ChatbotScopePolicy {
                 && this.containsAny(normalizedMessage, OTHER_CASE_PATTERNS)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.OUT_OF_CASE_SCOPE,
-                    "Solo puedo responder dentro del ámbito del encargo activo. Si necesitas consultar otro caso, abre una conversación desde la hoja de encargo correspondiente.",
+                    ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY,
                     false
             );
         }
@@ -99,7 +99,7 @@ public class ChatbotScopePolicy {
                 && this.looksLikeUnsupportedFactualAssertion(normalizedMessage)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.UNSUPPORTED_FACTUAL_ASSERTION,
-                    "No debo afirmar hechos que no estén disponibles en el contexto actual. Puedo ayudarte con orientación general o con la información visible del encargo activo.",
+                    ChatbotResponseMessages.UNSUPPORTED_FACTUAL_ASSERTION_REPLY,
                     false
             );
         }
@@ -108,7 +108,7 @@ public class ChatbotScopePolicy {
                 && this.looksAmbiguous(normalizedMessage)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.AMBIGUOUS_CONTEXT,
-                    "Tu consulta necesita más contexto para responder con seguridad. Si se refiere a un encargo concreto, abre el asistente desde esa hoja de encargo.",
+                    ChatbotResponseMessages.AMBIGUOUS_CONTEXT_REPLY,
                     false
             );
         }
