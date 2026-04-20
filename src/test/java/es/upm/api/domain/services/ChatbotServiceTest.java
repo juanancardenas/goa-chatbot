@@ -1,9 +1,6 @@
 package es.upm.api.domain.services;
 
-import es.upm.api.domain.enums.ChatbotScopeViolationReason;
-import es.upm.api.domain.enums.ConversationStatus;
-import es.upm.api.domain.enums.MessageSenderType;
-import es.upm.api.domain.enums.MessageType;
+import es.upm.api.domain.enums.*;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
@@ -54,6 +51,9 @@ class ChatbotServiceTest {
 
     @Mock
     private ChatbotPlatformContextService chatbotPlatformContextService;
+
+    @Mock
+    private ChatbotQuestionClassifier chatbotQuestionClassifier;
 
     @InjectMocks
     private ChatbotService chatbotService;
@@ -306,6 +306,130 @@ class ChatbotServiceTest {
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getSourcesSummary()).isEmpty();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldReturnStatusReplyForEngagementQuestions() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        ChatbotPlatformContext context = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-100")
+                .ownerDisplayName("Ana Ocaña")
+                .procedureTitles(List.of("Reclamación civil"))
+                .recentEventSummaries(List.of("Vista programada [EVENT] - SCHEDULED"))
+                .sourcesSummary(List.of("Hoja de encargo"))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado del encargo")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
+        when(chatbotQuestionClassifier.classify("Cual es el estado del encargo"))
+                .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Cual es el estado del encargo");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getMessage()).contains("EL-100");
+        assertThat(response.getMessage()).contains("Ana Ocaña");
+        assertThat(response.getMessage()).contains("Reclamación civil");
+    }
+
+    @Test
+    void sendMessageShouldReturnTimelineReplyForEventQuestions() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        ChatbotPlatformContext context = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-100")
+                .ownerDisplayName("Ana Ocaña")
+                .procedureTitles(List.of("Reclamación civil"))
+                .recentEventSummaries(List.of(
+                        "Se registró escrito [MILESTONE] - OPEN",
+                        "Vista programada [EVENT] - SCHEDULED"
+                ))
+                .sourcesSummary(List.of("Hoja de encargo"))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos recientes tiene el caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
+        when(chatbotQuestionClassifier.classify("Que hitos recientes tiene el caso"))
+                .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que hitos recientes tiene el caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getMessage()).contains("Se registró escrito");
+        assertThat(response.getMessage()).contains("Vista programada");
+    }
+
+    @Test
+    void sendMessageShouldReturnDocumentSafeReplyForDocumentQuestions() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        ChatbotPlatformContext context = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-100")
+                .ownerDisplayName("Ana Ocaña")
+                .procedureTitles(List.of("Reclamación civil"))
+                .recentEventSummaries(List.of())
+                .sourcesSummary(List.of("Hoja de encargo"))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
+        when(chatbotQuestionClassifier.classify("Que documentos hay en el caso"))
+                .thenReturn(PlatformQuestionType.DOCUMENTS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que documentos hay en el caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getMessage()).contains("documentación del caso");
+        assertThat(response.getMessage()).contains("no debo inventar documentos");
     }
 
     @Test
