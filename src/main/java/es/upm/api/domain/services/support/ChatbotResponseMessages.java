@@ -52,6 +52,29 @@ public final class ChatbotResponseMessages {
     public static final String PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY =
             "He cargado contexto del encargo activo y puedo ayudarte con información general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma.";
 
+    public static final String CLIENT_CONTEXT_UNAVAILABLE_STATUS_REPLY =
+            "Ahora mismo no he podido recuperar el estado actualizado del encargo activo. Si lo deseas, vuelve a intentarlo en unos momentos o consulta la hoja de encargo directamente en la plataforma.";
+
+    public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_STATUS_REPLY =
+            "No he podido recuperar en este momento el contexto actualizado del encargo activo para responder sobre su estado. No debo responder como si tuviera datos confirmados del caso.";
+
+    public static final String CLIENT_CONTEXT_UNAVAILABLE_EVENTS_REPLY =
+            "Ahora mismo no he podido recuperar los hitos o pasos recientes del encargo activo. Puedes volver a intentarlo en unos momentos desde esta conversación contextual.";
+
+    public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_EVENTS_REPLY =
+            "No he podido recuperar en este momento los hitos o eventos recientes del encargo activo. No debo responder como si dispusiera de timeline confirmada.";
+
+    public static final String CLIENT_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY =
+            "Ahora mismo no he podido comprobar la documentación visible del caso. Solo debo apoyarme en documentos autorizados y confirmados por la plataforma.";
+
+    public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY =
+            "No he podido comprobar en este momento la documentación visible del caso. No debo afirmar accesos documentales ni inventar documentos no confirmados.";
+
+    public static final String CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY =
+            "Ahora mismo no he podido cargar el contexto actualizado del encargo activo. Puedo seguir ayudándote con orientación general, pero no debo responder como si tuviera datos confirmados del caso.";
+
+    public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_GENERAL_REPLY =
+            "No he podido cargar en este momento el contexto actualizado del encargo activo. Puedo continuar con orientación general, pero no debo responder como si dispusiera de datos internos confirmados.";
 
     // Chat contextual
 

@@ -193,15 +193,15 @@ public class ChatbotService {
             if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
                 Optional<ChatbotPlatformContext> platformContext = this.chatbotPlatformContextService
                         .loadContext(conversation.getEngagementLetterId());
+                ConversationProfileType profile = this.resolveConversationProfile();
 
                 if (platformContext.isPresent()) {
-                    ConversationProfileType profile = this.resolveConversationProfile();
                     assistantReply = this.contextualPlatformReply(profile, requestDto.getMessage(), platformContext.get());
                     responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
                     usedPlatformData = true;
                     sourcesSummary = platformContext.get().getSourcesSummary();
                 } else {
-                    assistantReply = ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY;
+                    assistantReply = this.contextualFallbackReply(profile, requestDto.getMessage());
                     responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
                     usedPlatformData = false;
                     sourcesSummary = List.of();
@@ -438,6 +438,48 @@ public class ChatbotService {
         }
 
         return reply.toString();
+    }
+
+    private String contextualFallbackReply(
+            ConversationProfileType profile,
+            String userMessage
+    ) {
+        PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
+
+        return switch (questionType) {
+            case ENGAGEMENT_STATUS -> this.buildContextUnavailableStatusReply(profile);
+            case TIMELINE_EVENTS -> this.buildContextUnavailableEventsReply(profile);
+            case DOCUMENTS -> this.buildContextUnavailableDocumentsReply(profile);
+            case GENERAL_CONTEXT -> this.buildContextUnavailableGeneralReply(profile);
+        };
+    }
+
+    private String buildContextUnavailableStatusReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_STATUS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_STATUS_REPLY;
+        };
+    }
+
+    private String buildContextUnavailableEventsReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_EVENTS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_EVENTS_REPLY;
+        };
+    }
+
+    private String buildContextUnavailableDocumentsReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY;
+        };
+    }
+
+    private String buildContextUnavailableGeneralReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_GENERAL_REPLY;
+        };
     }
 
 }
