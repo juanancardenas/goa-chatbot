@@ -343,8 +343,7 @@ public class ChatbotService {
             String userMessage,
             ChatbotPlatformContext platformContext
     ) {
-        PlatformQuestionType questionType = Optional.ofNullable(this.chatbotQuestionClassifier.classify(userMessage))
-                .orElse(PlatformQuestionType.GENERAL_CONTEXT);
+        PlatformQuestionType questionType = this.classifyQuestion(userMessage);
 
         return switch (questionType) {
             case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(profile, platformContext);
@@ -446,6 +445,10 @@ public class ChatbotService {
     ) {
         PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
 
+        if (questionType == null) {
+            return ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY;
+        }
+
         return switch (questionType) {
             case ENGAGEMENT_STATUS -> this.buildContextUnavailableStatusReply(profile);
             case TIMELINE_EVENTS -> this.buildContextUnavailableEventsReply(profile);
@@ -480,6 +483,11 @@ public class ChatbotService {
             case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY;
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_GENERAL_REPLY;
         };
+    }
+
+    private PlatformQuestionType classifyQuestion(String userMessage) {
+        return Optional.ofNullable(this.chatbotQuestionClassifier.classify(userMessage))
+                .orElse(PlatformQuestionType.GENERAL_CONTEXT);
     }
 
 }
