@@ -31,6 +31,25 @@ public final class ChatbotResponseMessages {
     public static final String CONTEXTUAL_PLATFORM_NO_EVENTS_TEMPLATE =
             "No se han encontrado hitos recientes visibles en este momento para el encargo activo.";
 
+    public static final String CONTEXTUAL_STATUS_REPLY_TEMPLATE =
+            "He revisado la hoja de encargo %s, asociada a %s. Puedo apoyarme en la información general del caso para darte una respuesta más precisa.";
+
+    public static final String CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE =
+            "Los procedimientos visibles asociados a este encargo son: %s.";
+
+    public static final String CONTEXTUAL_EVENTS_REPLY_TEMPLATE =
+            "Los hitos o eventos recientes visibles del encargo son: %s.";
+
+    public static final String CONTEXTUAL_NO_EVENTS_REPLY =
+            "Ahora mismo no veo hitos recientes visibles para este encargo en el contexto recuperado.";
+
+    public static final String CONTEXTUAL_DOCUMENTS_REPLY =
+            "Tu consulta parece referirse a documentación del caso. En esta fase puedo indicarte que la respuesta debe apoyarse solo en documentación autorizada y visible, pero no debo inventar documentos ni afirmar accesos no confirmados.";
+
+    public static final String CONTEXTUAL_GENERAL_SUMMARY_REPLY =
+            "He cargado contexto del encargo activo y puedo ayudarte con información general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma.";
+
+
     //ScopePolicy
 
     public static final String MISSING_CASE_CONTEXT_REPLY =

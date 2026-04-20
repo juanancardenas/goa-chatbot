@@ -3,6 +3,7 @@ package es.upm.api.domain.services;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
+import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
@@ -43,6 +44,7 @@ public class ChatbotService {
     // Attributes
     private final ChatbotScopePolicy chatbotScopePolicy;
     private final ChatbotPlatformContextService chatbotPlatformContextService;
+    private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ConversationPersistence conversationPersistence;
     private final MessagePersistence messagePersistence;
 
@@ -51,12 +53,14 @@ public class ChatbotService {
     public ChatbotService(ConversationPersistence conversationPersistence,
                           MessagePersistence messagePersistence,
                           ChatbotScopePolicy chatbotScopePolicy,
-                          ChatbotPlatformContextService chatbotPlatformContextService
+                          ChatbotPlatformContextService chatbotPlatformContextService,
+                          ChatbotQuestionClassifier chatbotQuestionClassifier
     ) {
         this.conversationPersistence = conversationPersistence;
         this.messagePersistence = messagePersistence;
         this.chatbotScopePolicy = chatbotScopePolicy;
         this.chatbotPlatformContextService = chatbotPlatformContextService;
+        this.chatbotQuestionClassifier = chatbotQuestionClassifier;
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
@@ -190,7 +194,7 @@ public class ChatbotService {
                         .loadContext(conversation.getEngagementLetterId());
 
                 if (platformContext.isPresent()) {
-                    assistantReply = this.contextualPlatformReply(platformContext.get());
+                    assistantReply = this.contextualPlatformReply(requestDto.getMessage(), platformContext.get());
                     responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
                     usedPlatformData = true;
                     sourcesSummary = platformContext.get().getSourcesSummary();
@@ -332,27 +336,63 @@ public class ChatbotService {
         };
     }
 
-    private String contextualPlatformReply(ChatbotPlatformContext platformContext) {
+    private String contextualPlatformReply(
+            String userMessage,
+            ChatbotPlatformContext platformContext
+    ) {
+        PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
+
+        return switch (questionType) {
+            case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(platformContext);
+            case TIMELINE_EVENTS -> this.buildTimelineReply(platformContext);
+            case DOCUMENTS -> ChatbotResponseMessages.CONTEXTUAL_DOCUMENTS_REPLY;
+            case GENERAL_CONTEXT -> this.buildGeneralContextReply(platformContext);
+        };
+    }
+
+    private String buildEngagementStatusReply(ChatbotPlatformContext platformContext) {
         StringBuilder reply = new StringBuilder(
-                ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE.formatted(
+                ChatbotResponseMessages.CONTEXTUAL_STATUS_REPLY_TEMPLATE.formatted(
                         platformContext.getEngagementLetterId(),
                         platformContext.getOwnerDisplayName()
                 )
         );
 
         if (platformContext.getProcedureTitles() != null && !platformContext.getProcedureTitles().isEmpty()) {
-            String procedures = String.join(", ", platformContext.getProcedureTitles());
             reply.append(" ")
-                    .append(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_PROCEDURES_TEMPLATE.formatted(procedures));
+                    .append(ChatbotResponseMessages.CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(
+                            String.join(", ", platformContext.getProcedureTitles())
+                    ));
+        }
+
+        return reply.toString();
+    }
+
+    private String buildTimelineReply(ChatbotPlatformContext platformContext) {
+        if (platformContext.getRecentEventSummaries() == null || platformContext.getRecentEventSummaries().isEmpty()) {
+            return ChatbotResponseMessages.CONTEXTUAL_NO_EVENTS_REPLY;
+        }
+
+        return ChatbotResponseMessages.CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(
+                String.join(", ", platformContext.getRecentEventSummaries())
+        );
+    }
+
+    private String buildGeneralContextReply(ChatbotPlatformContext platformContext) {
+        StringBuilder reply = new StringBuilder(ChatbotResponseMessages.CONTEXTUAL_GENERAL_SUMMARY_REPLY);
+
+        if (platformContext.getProcedureTitles() != null && !platformContext.getProcedureTitles().isEmpty()) {
+            reply.append(" ")
+                    .append(ChatbotResponseMessages.CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(
+                            String.join(", ", platformContext.getProcedureTitles())
+                    ));
         }
 
         if (platformContext.getRecentEventSummaries() != null && !platformContext.getRecentEventSummaries().isEmpty()) {
-            String recentEvents = String.join(", ", platformContext.getRecentEventSummaries());
             reply.append(" ")
-                    .append(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_EVENTS_TEMPLATE.formatted(recentEvents));
-        } else {
-            reply.append(" ")
-                    .append(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_NO_EVENTS_TEMPLATE);
+                    .append(ChatbotResponseMessages.CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(
+                            String.join(", ", platformContext.getRecentEventSummaries())
+                    ));
         }
 
         return reply.toString();
