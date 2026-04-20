@@ -7,6 +7,12 @@ import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
+import es.upm.api.domain.model.platform.EngagementEventPage;
+import es.upm.api.domain.model.platform.EngagementEventSummary;
+import es.upm.api.domain.model.platform.EngagementLetterSummary;
+import es.upm.api.domain.model.platform.LegalProcedureSummary;
+import es.upm.api.domain.model.platform.UserSummary;
+import es.upm.api.domain.webclients.EngagementWebClient;
 import es.upm.api.functionaltests.support.ChatbotTestMessages;
 import es.upm.api.infrastructure.resources.ChatbotResource;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
@@ -31,11 +37,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpStatus.OK;
@@ -60,6 +69,9 @@ class ChatbotResourceFT {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @MockitoBean
+    private EngagementWebClient engagementWebClient;
 
     @BeforeEach
     void setUp() {
@@ -649,6 +661,157 @@ class ChatbotResourceFT {
                 );
         assertThat(messages).extracting(MessageEntity::getSequenceNumber)
                 .containsExactly(1, 2);
+    }
+
+    @Test
+    void testSendMessageInContextualConversationUsesPlatformDataWhenContextIsAvailable() {
+        String engagementLetterId = "aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000";
+        when(this.engagementWebClient.readById(engagementLetterId))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.fromString(engagementLetterId),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        new UserSummary(
+                                UUID.fromString("bbbbbbb0-bbbb-cccc-dddd-eeeeffff0000"),
+                                "Ana",
+                                "Ocaña",
+                                "ana@example.com",
+                                "600000000"
+                        ),
+                        List.of(new LegalProcedureSummary(
+                                "Reclamación civil",
+                                LocalDate.of(2026, 4, 2),
+                                null,
+                                List.of("Revisión documental")
+                        ))
+                ));
+        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+                .thenReturn(new EngagementEventPage(List.of(
+                        new EngagementEventSummary(
+                                "MILESTONE",
+                                "OPEN",
+                                "Se registró escrito",
+                                "Escrito de demanda",
+                                LocalDate.of(2026, 4, 10)
+                        ),
+                        new EngagementEventSummary(
+                                "EVENT",
+                                "SCHEDULED",
+                                "Vista programada",
+                                "Vista inicial",
+                                LocalDate.of(2026, 4, 15)
+                        )
+                )));
+        HttpHeaders headers = this.authHeaders("fake-token-context-success", "customer-1", List.of("customer"));
+
+        ChatbotContextualConversationRequestDto startRequest = new ChatbotContextualConversationRequestDto();
+        startRequest.setEngagementLetterId(engagementLetterId);
+
+        HttpEntity<ChatbotContextualConversationRequestDto> startEntity = new HttpEntity<>(startRequest, headers);
+
+        ResponseEntity<ChatbotContextualConversationResponseDto> startResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                startEntity,
+                ChatbotContextualConversationResponseDto.class
+        );
+
+        assertThat(startResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(startResponse.getBody()).isNotNull();
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                startResponse.getBody().getConversationId(),
+                "Que hitos recientes tiene el caso"
+        );
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<ChatbotMessageResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                POST,
+                entity,
+                ChatbotMessageResponseDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
+        assertThat(response.getBody().getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getBody().getUsedPlatformData()).isTrue();
+        assertThat(response.getBody().getSourcesSummary())
+                .contains(
+                        "Hoja de encargo",
+                        "Procedimiento: Reclamación civil",
+                        "Hito/evento: Se registró escrito [MILESTONE] - OPEN"
+                );
+        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody().getMessage()).contains("Se registró escrito");
+        assertThat(response.getBody().getMessage()).contains("Vista programada");
+
+        List<MessageEntity> messages = this.messageRepository
+                .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
+
+        assertThat(messages).hasSize(2);
+        assertThat(messages).extracting(MessageEntity::getContent)
+                .containsExactly(
+                        "Que hitos recientes tiene el caso",
+                        response.getBody().getMessage()
+                );
+        assertThat(messages).extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2);
+    }
+
+    @Test
+    void testSendMessageInContextualConversationWhenPlatformContextIsUnavailableReturnsRestrictedReply() {
+        when(this.engagementWebClient.readById(anyString()))
+                .thenThrow(new IllegalStateException("platform unavailable"));
+        HttpHeaders headers = this.authHeaders("fake-token-context-unavailable", "customer-1", List.of("customer"));
+
+        ChatbotContextualConversationRequestDto startRequest = new ChatbotContextualConversationRequestDto();
+        startRequest.setEngagementLetterId("engagement-letter-without-platform-context");
+
+        HttpEntity<ChatbotContextualConversationRequestDto> startEntity = new HttpEntity<>(startRequest, headers);
+
+        ResponseEntity<ChatbotContextualConversationResponseDto> startResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                startEntity,
+                ChatbotContextualConversationResponseDto.class
+        );
+
+        assertThat(startResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(startResponse.getBody()).isNotNull();
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                startResponse.getBody().getConversationId(),
+                "Dame contexto del caso"
+        );
+        HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<ChatbotMessageResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                POST,
+                entity,
+                ChatbotMessageResponseDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
+        assertThat(response.getBody().getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getBody().getUsedPlatformData()).isFalse();
+        assertThat(response.getBody().getSourcesSummary()).isEmpty();
+        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody().getMessage()).contains("no he podido recuperar");
+
+        List<MessageEntity> messages = this.messageRepository
+                .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
+
+        assertThat(messages).hasSize(2);
+        assertThat(messages).extracting(MessageEntity::getContent)
+                .containsExactly(
+                        "Dame contexto del caso",
+                        response.getBody().getMessage()
+                );
     }
 
     @Test

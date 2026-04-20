@@ -16,6 +16,10 @@ spring:
       api-client-id: api-client-id
       api-client-secret: api-client-secret
 
+goa:
+  engagement:
+    base-url: http://localhost:8080/api/goa-engagement
+
 app:
   cors:
     allowed-origins: http://localhost:4200
