@@ -25,6 +25,11 @@ public final class ChatbotResponseMessages {
     public static final String CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY =
             "No he podido recuperar en este momento el contexto actualizado del encargo activo. Puedo seguir ayudándote, pero ahora mismo no debo responder como si tuviera datos internos confirmados del caso.";
 
+    public static final String CONTEXTUAL_PLATFORM_EVENTS_TEMPLATE =
+            "Los hitos o eventos recientes visibles del encargo son: %s.";
+
+    public static final String CONTEXTUAL_PLATFORM_NO_EVENTS_TEMPLATE =
+            "No se han encontrado hitos recientes visibles en este momento para el encargo activo.";
 
     //ScopePolicy
 

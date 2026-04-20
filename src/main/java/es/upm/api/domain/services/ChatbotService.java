@@ -333,17 +333,29 @@ public class ChatbotService {
     }
 
     private String contextualPlatformReply(ChatbotPlatformContext platformContext) {
-        String base = ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE.formatted(
-                platformContext.getEngagementLetterId(),
-                platformContext.getOwnerDisplayName()
+        StringBuilder reply = new StringBuilder(
+                ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE.formatted(
+                        platformContext.getEngagementLetterId(),
+                        platformContext.getOwnerDisplayName()
+                )
         );
 
-        if (platformContext.getProcedureTitles() == null || platformContext.getProcedureTitles().isEmpty()) {
-            return base;
+        if (platformContext.getProcedureTitles() != null && !platformContext.getProcedureTitles().isEmpty()) {
+            String procedures = String.join(", ", platformContext.getProcedureTitles());
+            reply.append(" ")
+                    .append(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_PROCEDURES_TEMPLATE.formatted(procedures));
         }
 
-        String procedures = String.join(", ", platformContext.getProcedureTitles());
-        return base + " " + ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_PROCEDURES_TEMPLATE.formatted(procedures);
+        if (platformContext.getRecentEventSummaries() != null && !platformContext.getRecentEventSummaries().isEmpty()) {
+            String recentEvents = String.join(", ", platformContext.getRecentEventSummaries());
+            reply.append(" ")
+                    .append(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_EVENTS_TEMPLATE.formatted(recentEvents));
+        } else {
+            reply.append(" ")
+                    .append(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_NO_EVENTS_TEMPLATE);
+        }
+
+        return reply.toString();
     }
 
     private enum ConversationProfile {
