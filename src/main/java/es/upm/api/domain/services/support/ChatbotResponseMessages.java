@@ -16,6 +16,45 @@ public final class ChatbotResponseMessages {
     public static final String PROFESSIONAL_MESSAGE_REPLY =
             "Mensaje recibido. La integración actual sigue siendo simulada, pero la respuesta se orienta a soporte operativo y gestión funcional del encargo.";
 
+    public static final String CLIENT_CONTEXTUAL_STATUS_REPLY_TEMPLATE =
+            "He revisado la hoja de encargo %s. Este encargo está asociado a %s y puedo darte una explicación más clara del caso con la información disponible en plataforma.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_STATUS_REPLY_TEMPLATE =
+            "He revisado la hoja de encargo %s, asociada a %s. Puedo apoyarme en la información operativa del caso para responder con más precisión.";
+
+    public static final String CLIENT_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE =
+            "Los procedimientos visibles relacionados con este encargo son: %s.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE =
+            "Los procedimientos visibles asociados a este encargo son: %s.";
+
+    public static final String CLIENT_CONTEXTUAL_EVENTS_REPLY_TEMPLATE =
+            "Los hitos o pasos recientes visibles del encargo son: %s.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_EVENTS_REPLY_TEMPLATE =
+            "Los hitos o eventos recientes visibles del encargo son: %s.";
+
+    public static final String CLIENT_CONTEXTUAL_NO_EVENTS_REPLY =
+            "Ahora mismo no veo pasos o hitos recientes visibles para este encargo en el contexto recuperado.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY =
+            "Ahora mismo no veo hitos recientes visibles para este encargo en el contexto recuperado.";
+
+    public static final String CLIENT_CONTEXTUAL_DOCUMENTS_REPLY =
+            "Tu consulta parece referirse a documentos del caso. En esta fase solo debo apoyarme en documentación autorizada y visible, sin asumir documentos no confirmados.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_DOCUMENTS_REPLY =
+            "Tu consulta parece referirse a documentación del caso. En esta fase la respuesta debe apoyarse solo en documentación autorizada y visible, sin inventar documentos ni afirmar accesos no confirmados.";
+
+    public static final String CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY =
+            "He cargado el contexto del encargo activo y puedo ayudarte con una explicación general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY =
+            "He cargado contexto del encargo activo y puedo ayudarte con información general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma.";
+
+
+    // Chat contextual
+
     public static final String CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE =
             "He revisado la hoja de encargo %s. El encargo está asociado a %s y puedo apoyarme en información interna disponible del caso para responder con más precisión.";
 

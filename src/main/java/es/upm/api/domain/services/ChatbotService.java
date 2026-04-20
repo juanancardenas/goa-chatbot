@@ -1,5 +1,6 @@
 package es.upm.api.domain.services;
 
+import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
@@ -126,7 +127,7 @@ public class ChatbotService {
                 date
         );
 
-        ConversationProfile profile = this.resolveConversationProfile();
+        ConversationProfileType profile = this.resolveConversationProfile();
         String assistantReply = this.generalStartReply(profile);
 
         this.saveMessage(
@@ -194,7 +195,8 @@ public class ChatbotService {
                         .loadContext(conversation.getEngagementLetterId());
 
                 if (platformContext.isPresent()) {
-                    assistantReply = this.contextualPlatformReply(requestDto.getMessage(), platformContext.get());
+                    ConversationProfileType profile = this.resolveConversationProfile();
+                    assistantReply = this.contextualPlatformReply(profile, requestDto.getMessage(), platformContext.get());
                     responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
                     usedPlatformData = true;
                     sourcesSummary = platformContext.get().getSourcesSummary();
@@ -205,7 +207,7 @@ public class ChatbotService {
                     sourcesSummary = List.of();
                 }
             } else {
-                ConversationProfile profile = this.resolveConversationProfile();
+                ConversationProfileType profile = this.resolveConversationProfile();
                 assistantReply = this.messageReply(profile);
                 responseMode = RESPONSE_MODE_GENERAL;
                 usedPlatformData = false;
@@ -300,7 +302,7 @@ public class ChatbotService {
         return this.currentAuthentication().getName();
     }
 
-    private ConversationProfile resolveConversationProfile() {
+    private ConversationProfileType resolveConversationProfile() {
         Authentication authentication = this.currentAuthentication();
 
         boolean isCustomer = authentication.getAuthorities().stream()
@@ -308,7 +310,7 @@ public class ChatbotService {
                 .map(this::normalizeAuthority)
                 .anyMatch("CUSTOMER"::equals);
 
-        return isCustomer ? ConversationProfile.CLIENT : ConversationProfile.PROFESSIONAL;
+        return isCustomer ? ConversationProfileType.CLIENT : ConversationProfileType.PROFESSIONAL;
     }
 
     private Authentication currentAuthentication() {
@@ -322,14 +324,14 @@ public class ChatbotService {
         return authority.replace("ROLE_", "").toUpperCase(Locale.ROOT);
     }
 
-    private String generalStartReply(ConversationProfile profile) {
+    private String generalStartReply(ConversationProfileType profile) {
         return switch (profile) {
             case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_START_REPLY;
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY;
         };
     }
 
-    private String messageReply(ConversationProfile profile) {
+    private String messageReply(ConversationProfileType profile) {
         return switch (profile) {
             case CLIENT -> ChatbotResponseMessages.CLIENT_MESSAGE_REPLY;
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_MESSAGE_REPLY;
@@ -337,69 +339,105 @@ public class ChatbotService {
     }
 
     private String contextualPlatformReply(
+            ConversationProfileType profile,
             String userMessage,
             ChatbotPlatformContext platformContext
     ) {
         PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
 
         return switch (questionType) {
-            case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(platformContext);
-            case TIMELINE_EVENTS -> this.buildTimelineReply(platformContext);
-            case DOCUMENTS -> ChatbotResponseMessages.CONTEXTUAL_DOCUMENTS_REPLY;
-            case GENERAL_CONTEXT -> this.buildGeneralContextReply(platformContext);
+            case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(profile, platformContext);
+            case TIMELINE_EVENTS -> this.buildTimelineReply(profile, platformContext);
+            case DOCUMENTS -> this.buildDocumentsReply(profile);
+            case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile, platformContext);
         };
     }
 
-    private String buildEngagementStatusReply(ChatbotPlatformContext platformContext) {
-        StringBuilder reply = new StringBuilder(
-                ChatbotResponseMessages.CONTEXTUAL_STATUS_REPLY_TEMPLATE.formatted(
-                        platformContext.getEngagementLetterId(),
-                        platformContext.getOwnerDisplayName()
-                )
-        );
+    private String buildEngagementStatusReply(
+            ConversationProfileType profile,
+            ChatbotPlatformContext platformContext
+    ) {
+        String base = switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_STATUS_REPLY_TEMPLATE.formatted(
+                    platformContext.getEngagementLetterId(),
+                    platformContext.getOwnerDisplayName()
+            );
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_STATUS_REPLY_TEMPLATE.formatted(
+                    platformContext.getEngagementLetterId(),
+                    platformContext.getOwnerDisplayName()
+            );
+        };
+
+        StringBuilder reply = new StringBuilder(base);
 
         if (platformContext.getProcedureTitles() != null && !platformContext.getProcedureTitles().isEmpty()) {
-            reply.append(" ")
-                    .append(ChatbotResponseMessages.CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(
-                            String.join(", ", platformContext.getProcedureTitles())
-                    ));
+            String procedures = String.join(", ", platformContext.getProcedureTitles());
+            String proceduresReply = switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
+            };
+            reply.append(" ").append(proceduresReply);
         }
 
         return reply.toString();
     }
 
-    private String buildTimelineReply(ChatbotPlatformContext platformContext) {
+    private String buildTimelineReply(
+            ConversationProfileType profile,
+            ChatbotPlatformContext platformContext
+    ) {
         if (platformContext.getRecentEventSummaries() == null || platformContext.getRecentEventSummaries().isEmpty()) {
-            return ChatbotResponseMessages.CONTEXTUAL_NO_EVENTS_REPLY;
+            return switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY;
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY;
+            };
         }
 
-        return ChatbotResponseMessages.CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(
-                String.join(", ", platformContext.getRecentEventSummaries())
-        );
+        String recentEvents = String.join(", ", platformContext.getRecentEventSummaries());
+
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
+        };
     }
 
-    private String buildGeneralContextReply(ChatbotPlatformContext platformContext) {
-        StringBuilder reply = new StringBuilder(ChatbotResponseMessages.CONTEXTUAL_GENERAL_SUMMARY_REPLY);
+    private String buildDocumentsReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_REPLY;
+        };
+    }
+
+    private String buildGeneralContextReply(
+            ConversationProfileType profile,
+            ChatbotPlatformContext platformContext
+    ) {
+        StringBuilder reply = new StringBuilder(
+                switch (profile) {
+                    case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY;
+                    case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY;
+                }
+        );
 
         if (platformContext.getProcedureTitles() != null && !platformContext.getProcedureTitles().isEmpty()) {
-            reply.append(" ")
-                    .append(ChatbotResponseMessages.CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(
-                            String.join(", ", platformContext.getProcedureTitles())
-                    ));
+            String procedures = String.join(", ", platformContext.getProcedureTitles());
+            String proceduresReply = switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
+            };
+            reply.append(" ").append(proceduresReply);
         }
 
         if (platformContext.getRecentEventSummaries() != null && !platformContext.getRecentEventSummaries().isEmpty()) {
-            reply.append(" ")
-                    .append(ChatbotResponseMessages.CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(
-                            String.join(", ", platformContext.getRecentEventSummaries())
-                    ));
+            String recentEvents = String.join(", ", platformContext.getRecentEventSummaries());
+            String eventsReply = switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
+            };
+            reply.append(" ").append(eventsReply);
         }
 
         return reply.toString();
     }
 
-    private enum ConversationProfile {
-        CLIENT,
-        PROFESSIONAL
-    }
 }
