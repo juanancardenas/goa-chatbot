@@ -11,5 +11,6 @@ public class ChatbotPlatformContext {
     private String engagementLetterId;
     private String ownerDisplayName;
     private List<String> procedureTitles;
+    private List<String> recentEventSummaries;
     private List<String> sourcesSummary;
 }
