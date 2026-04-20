@@ -343,7 +343,8 @@ public class ChatbotService {
             String userMessage,
             ChatbotPlatformContext platformContext
     ) {
-        PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
+        PlatformQuestionType questionType = Optional.ofNullable(this.chatbotQuestionClassifier.classify(userMessage))
+                .orElse(PlatformQuestionType.GENERAL_CONTEXT);
 
         return switch (questionType) {
             case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(profile, platformContext);
@@ -419,14 +420,7 @@ public class ChatbotService {
                 }
         );
 
-        if (platformContext.getProcedureTitles() != null && !platformContext.getProcedureTitles().isEmpty()) {
-            String procedures = String.join(", ", platformContext.getProcedureTitles());
-            String proceduresReply = switch (profile) {
-                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
-                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
-            };
-            reply.append(" ").append(proceduresReply);
-        }
+        reply.append(" ").append(this.buildEngagementStatusReply(profile, platformContext));
 
         if (platformContext.getRecentEventSummaries() != null && !platformContext.getRecentEventSummaries().isEmpty()) {
             String recentEvents = String.join(", ", platformContext.getRecentEventSummaries());
@@ -435,6 +429,12 @@ public class ChatbotService {
                 case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
             };
             reply.append(" ").append(eventsReply);
+        } else {
+            String noEventsReply = switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY;
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY;
+            };
+            reply.append(" ").append(noEventsReply);
         }
 
         return reply.toString();

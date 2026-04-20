@@ -35,16 +35,16 @@ public final class ChatbotResponseMessages {
             "Los hitos o eventos recientes visibles del encargo son: %s.";
 
     public static final String CLIENT_CONTEXTUAL_NO_EVENTS_REPLY =
-            "Ahora mismo no veo pasos o hitos recientes visibles para este encargo en el contexto recuperado.";
+            "No se han encontrado hitos recientes visibles en este momento para el encargo activo.";
 
     public static final String PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY =
-            "Ahora mismo no veo hitos recientes visibles para este encargo en el contexto recuperado.";
+            "No se han encontrado hitos recientes visibles en este momento para el encargo activo.";
 
     public static final String CLIENT_CONTEXTUAL_DOCUMENTS_REPLY =
             "Tu consulta parece referirse a documentos del caso. En esta fase solo debo apoyarme en documentación autorizada y visible, sin asumir documentos no confirmados.";
 
     public static final String PROFESSIONAL_CONTEXTUAL_DOCUMENTS_REPLY =
-            "Tu consulta parece referirse a documentación del caso. En esta fase la respuesta debe apoyarse solo en documentación autorizada y visible, sin inventar documentos ni afirmar accesos no confirmados.";
+            "Tu consulta parece referirse a documentación del caso. En esta fase la respuesta debe apoyarse solo en documentación autorizada y visible, sin inventar documentos: no debo inventar documentos ni afirmar accesos no confirmados.";
 
     public static final String CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY =
             "He cargado el contexto del encargo activo y puedo ayudarte con una explicación general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma.";
