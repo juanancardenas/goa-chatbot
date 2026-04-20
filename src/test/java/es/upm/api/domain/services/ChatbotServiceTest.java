@@ -277,6 +277,135 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldReturnClientStatusFallbackWhenContextIsUnavailable() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado de mi caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.empty());
+        when(chatbotQuestionClassifier.classify("Cual es el estado de mi caso"))
+                .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Cual es el estado de mi caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getSourcesSummary()).isEmpty();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_STATUS_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldReturnProfessionalEventsFallbackWhenContextIsUnavailable() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos recientes tiene el caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.empty());
+        when(chatbotQuestionClassifier.classify("Que hitos recientes tiene el caso"))
+                .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que hitos recientes tiene el caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_EVENTS_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldReturnProfessionalDocumentsFallbackWhenContextIsUnavailable() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.empty());
+        when(chatbotQuestionClassifier.classify("Que documentos hay en el expediente"))
+                .thenReturn(PlatformQuestionType.DOCUMENTS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que documentos hay en el expediente");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldReturnClientGeneralFallbackWhenContextIsUnavailable() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame un resumen del caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.empty());
+        when(chatbotQuestionClassifier.classify("Dame un resumen del caso"))
+                .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Dame un resumen del caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY);
+    }
+
+    @Test
     void sendMessageShouldReturnRestrictedContextReplyWhenPlatformDataIsUnavailable() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
