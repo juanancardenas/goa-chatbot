@@ -433,6 +433,86 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldReturnClientFriendlyStatusReplyForContextualQuestion() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        ChatbotPlatformContext context = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-100")
+                .ownerDisplayName("Ana Ocaña")
+                .procedureTitles(List.of("Reclamación civil"))
+                .recentEventSummaries(List.of("Vista programada [EVENT] - SCHEDULED"))
+                .sourcesSummary(List.of("Hoja de encargo"))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado de mi caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
+        when(chatbotQuestionClassifier.classify("Cual es el estado de mi caso"))
+                .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Cual es el estado de mi caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getMessage()).contains("puedo darte una explicación más clara");
+        assertThat(response.getMessage()).contains("procedimientos visibles relacionados");
+    }
+
+    @Test
+    void sendMessageShouldReturnProfessionalDocumentReplyForContextualQuestion() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        ChatbotPlatformContext context = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-100")
+                .ownerDisplayName("Ana Ocaña")
+                .procedureTitles(List.of("Reclamación civil"))
+                .recentEventSummaries(List.of())
+                .sourcesSummary(List.of("Hoja de encargo"))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
+        when(chatbotQuestionClassifier.classify("Que documentos hay en el expediente"))
+                .thenReturn(PlatformQuestionType.DOCUMENTS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que documentos hay en el expediente");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getMessage()).contains("documentación del caso");
+        assertThat(response.getMessage()).contains("sin inventar documentos");
+    }
+
+    @Test
     void closeConversationShouldCloseOwnedActiveConversation() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
         Conversation existingConversation = Conversation.builder()
