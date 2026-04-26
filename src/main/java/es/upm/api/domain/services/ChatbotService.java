@@ -257,6 +257,22 @@ public class ChatbotService {
                 .toList();
     }
 
+    public ChatbotConversationResponseDto readConversation(String conversationId) {
+        Conversation conversation = this.requireOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+
+        return new ChatbotConversationResponseDto(
+                conversation.getId(),
+                conversation.getUserId(),
+                conversation.getEngagementLetterId(),
+                conversation.getStatus().name(),
+                conversation.getType(),
+                conversation.getCreatedAt().toString()
+        );
+    }
+
     public void closeConversation(String conversationId) {
         Conversation conversation = this.requireActiveOwnedConversation(
                 conversationId,
@@ -294,14 +310,23 @@ public class ChatbotService {
             String conversationId,
             String userId
     ) {
+        Conversation conversation = this.requireOwnedConversation(conversationId, userId);
+
+        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+            throw new ConflictException("La conversacion no esta activa");
+        }
+
+        return conversation;
+    }
+
+    private Conversation requireOwnedConversation(
+            String conversationId,
+            String userId
+    ) {
         Conversation conversation = this.conversationPersistence.readById(conversationId);
 
         if (!userId.equals(conversation.getUserId())) {
             throw new ForbiddenException("No tienes permisos sobre esta conversacion");
-        }
-
-        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
-            throw new ConflictException("La conversacion no esta activa");
         }
 
         return conversation;

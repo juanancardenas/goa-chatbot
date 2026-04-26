@@ -603,6 +603,90 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testReadConversationAuthenticatedAsOwnerReturnsConversation() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-to-read",
+                "customer-1",
+                "engagement-1",
+                ConversationStatus.CLOSED,
+                TYPE_CONTEXTUAL,
+                LocalDateTime.of(2026, 4, 20, 9, 0)
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-read-one", "customer-1", List.of("customer"));
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<ChatbotConversationResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.GET,
+                entity,
+                ChatbotConversationResponseDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isEqualTo(conversationId);
+        assertThat(response.getBody().getUserId()).isEqualTo("customer-1");
+        assertThat(response.getBody().getEngagementLetterId()).isEqualTo("engagement-1");
+        assertThat(response.getBody().getStatus()).isEqualTo("CLOSED");
+        assertThat(response.getBody().getType()).isEqualTo(TYPE_CONTEXTUAL);
+        assertThat(response.getBody().getCreatedAt()).isEqualTo("2026-04-20T09:00");
+    }
+
+    @Test
+    void testReadConversationOfAnotherUserReturnsForbidden() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-owned-by-other-user-to-read",
+                "customer-2",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-read-one-forbidden", "customer-1", List.of("customer"));
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.GET,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).contains("No tienes permisos sobre esta conversacion");
+    }
+
+    @Test
+    void testReadConversationUnauthorizedWithoutToken() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-unauthorized-read",
+                "customer-1",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.GET,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void testCloseConversationOfAnotherUserReturnsForbidden() {
         String conversationId = this.conversationRepository.save(new ConversationEntity(
                 "conversation-owned-by-other-user-to-close",

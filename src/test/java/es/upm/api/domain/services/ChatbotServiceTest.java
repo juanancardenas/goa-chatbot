@@ -676,6 +676,49 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void readConversationShouldReturnOwnedConversationById() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation conversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("customer-1")
+                .engagementLetterId("EL-1")
+                .status(ConversationStatus.CLOSED)
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 20, 9, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-1")).thenReturn(conversation);
+
+        var response = chatbotService.readConversation("conversation-1");
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-1");
+        assertThat(response.getUserId()).isEqualTo("customer-1");
+        assertThat(response.getEngagementLetterId()).isEqualTo("EL-1");
+        assertThat(response.getStatus()).isEqualTo("CLOSED");
+        assertThat(response.getType()).isEqualTo("CONTEXTUAL");
+        assertThat(response.getCreatedAt()).isEqualTo("2026-04-20T09:00");
+    }
+
+    @Test
+    void readConversationShouldRejectOtherUsersConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation conversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("customer-2")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 20, 9, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-1")).thenReturn(conversation);
+
+        ForbiddenException exception = assertThrows(
+                ForbiddenException.class,
+                () -> chatbotService.readConversation("conversation-1")
+        );
+
+        assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
+    }
+
+    @Test
     void closeConversationShouldCloseOwnedActiveConversation() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
         Conversation existingConversation = Conversation.builder()

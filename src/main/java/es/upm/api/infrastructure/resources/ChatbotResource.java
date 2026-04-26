@@ -26,6 +26,7 @@ public class ChatbotResource {
     public static final String CHATBOT = "/chatbot";
     public static final String MESSAGES = "/messages";
     public static final String CONVERSATIONS = "/conversations";
+    public static final String CONVERSATION = "/conversations/{conversationId}";
     public static final String CONTEXTUAL_CONVERSATIONS = "/conversations/contextual";
     public static final String GENERAL_CONVERSATIONS = "/conversations/general";
     public static final String CLOSE_CONVERSATION = "/conversations/{conversationId}/close";
@@ -61,6 +62,12 @@ public class ChatbotResource {
     @GetMapping(CONVERSATIONS)
     public List<ChatbotConversationResponseDto> readUserConversations() {
         return this.chatbotService.readUserConversations();
+    }
+
+    @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
+    @GetMapping(CONVERSATION)
+    public ChatbotConversationResponseDto readConversation(@PathVariable String conversationId) {
+        return this.chatbotService.readConversation(conversationId);
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
