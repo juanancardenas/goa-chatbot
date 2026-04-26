@@ -31,6 +31,7 @@ public class ChatbotResource {
     public static final String CONVERSATION_MESSAGES = "/conversations/{conversationId}/messages";
     public static final String CONTEXTUAL_CONVERSATIONS = "/conversations/contextual";
     public static final String GENERAL_CONVERSATIONS = "/conversations/general";
+    public static final String CLOSE_CONVERSATION_EMPTY = "/conversations/close";
     public static final String CLOSE_CONVERSATION = "/conversations/{conversationId}/close";
 
     private final ChatbotService chatbotService;
@@ -79,8 +80,11 @@ public class ChatbotResource {
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
-    @PatchMapping(CLOSE_CONVERSATION)
-    public ResponseEntity<Void> closeConversation(@PathVariable String conversationId) {
+    @PatchMapping({CLOSE_CONVERSATION_EMPTY, CLOSE_CONVERSATION})
+    public ResponseEntity<Void> closeConversation(@PathVariable(required = false) String conversationId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            return ResponseEntity.noContent().build();
+        }
         this.chatbotService.closeConversation(conversationId);
         return ResponseEntity.noContent().build();
     }

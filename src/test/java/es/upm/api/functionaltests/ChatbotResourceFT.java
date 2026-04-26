@@ -604,6 +604,32 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testCloseConversationWithoutConversationIdReturnsNoContentAndDoesNothing() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-unchanged-on-empty-close",
+                "customer-1",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-close-empty", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<Void> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CLOSE_CONVERSATION_EMPTY,
+                HttpMethod.PATCH,
+                entity,
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        ConversationEntity conversation = this.conversationRepository.findById(conversationId).orElseThrow();
+        assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+    }
+
+    @Test
     void testReadConversationAuthenticatedAsOwnerReturnsConversation() {
         String conversationId = this.conversationRepository.save(new ConversationEntity(
                 "conversation-to-read",
