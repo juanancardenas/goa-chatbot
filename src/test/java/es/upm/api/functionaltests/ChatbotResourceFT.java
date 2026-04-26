@@ -14,6 +14,7 @@ import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.webclients.EngagementWebClient;
 import es.upm.api.functionaltests.support.ChatbotTestMessages;
+import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.resources.ChatbotResource;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
@@ -306,6 +307,73 @@ class ChatbotResourceFT {
         ResponseEntity<String> response = this.restTemplate.exchange(
                 "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.GENERAL_CONVERSATIONS,
                 POST,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void testReadUserConversationsAuthenticatedReturnsOnlyOwnedConversations() {
+        this.conversationRepository.saveAll(List.of(
+                new ConversationEntity(
+                        "conversation-read-1",
+                        "customer-1",
+                        "engagement-1",
+                        ConversationStatus.ACTIVE,
+                        TYPE_CONTEXTUAL,
+                        LocalDateTime.of(2026, 4, 20, 9, 0)
+                ),
+                new ConversationEntity(
+                        "conversation-read-2",
+                        "customer-1",
+                        null,
+                        ConversationStatus.CLOSED,
+                        TYPE_GENERAL,
+                        LocalDateTime.of(2026, 4, 21, 10, 30)
+                ),
+                new ConversationEntity(
+                        "conversation-read-3",
+                        "customer-2",
+                        null,
+                        ConversationStatus.ACTIVE,
+                        TYPE_GENERAL,
+                        LocalDateTime.of(2026, 4, 22, 11, 45)
+                )
+        ));
+
+        HttpHeaders headers = this.authHeaders("fake-token-read-conversations", "customer-1", List.of("customer"));
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<ChatbotConversationResponseDto[]> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATIONS,
+                HttpMethod.GET,
+                entity,
+                ChatbotConversationResponseDto[].class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).hasSize(2);
+        assertThat(response.getBody()[0].getConversationId()).isEqualTo("conversation-read-2");
+        assertThat(response.getBody()[0].getUserId()).isEqualTo("customer-1");
+        assertThat(response.getBody()[0].getStatus()).isEqualTo("CLOSED");
+        assertThat(response.getBody()[0].getType()).isEqualTo(TYPE_GENERAL);
+        assertThat(response.getBody()[1].getConversationId()).isEqualTo("conversation-read-1");
+        assertThat(response.getBody()[1].getUserId()).isEqualTo("customer-1");
+        assertThat(response.getBody()[1].getEngagementLetterId()).isEqualTo("engagement-1");
+    }
+
+    @Test
+    void testReadUserConversationsUnauthorizedWithoutToken() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATIONS,
+                HttpMethod.GET,
                 entity,
                 String.class
         );

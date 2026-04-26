@@ -3,12 +3,15 @@ package es.upm.api.domain.persistence;
 import es.upm.api.domain.model.Conversation;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ConversationPersistence {
 
     Conversation readById(String conversationId);
+
+    List<Conversation> findByUserId(String userId);
 
     Optional<Conversation> findContextualConversation(String userId, String engagementLetterId, String type);
 

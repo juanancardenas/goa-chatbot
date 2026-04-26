@@ -642,6 +642,40 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void readUserConversationsShouldReturnAuthenticatedUserConversations() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation firstConversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("customer-1")
+                .engagementLetterId("EL-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 20, 9, 0))
+                .build();
+        Conversation secondConversation = Conversation.builder()
+                .id("conversation-2")
+                .userId("customer-1")
+                .status(ConversationStatus.CLOSED)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 18, 30))
+                .build();
+        when(conversationPersistence.findByUserId("customer-1"))
+                .thenReturn(List.of(firstConversation, secondConversation));
+
+        var response = chatbotService.readUserConversations();
+
+        assertThat(response).hasSize(2);
+        assertThat(response.get(0).getConversationId()).isEqualTo("conversation-1");
+        assertThat(response.get(0).getUserId()).isEqualTo("customer-1");
+        assertThat(response.get(0).getEngagementLetterId()).isEqualTo("EL-1");
+        assertThat(response.get(0).getStatus()).isEqualTo("ACTIVE");
+        assertThat(response.get(0).getType()).isEqualTo("CONTEXTUAL");
+        assertThat(response.get(0).getCreatedAt()).isEqualTo("2026-04-20T09:00");
+        assertThat(response.get(1).getConversationId()).isEqualTo("conversation-2");
+        assertThat(response.get(1).getStatus()).isEqualTo("CLOSED");
+    }
+
+    @Test
     void closeConversationShouldCloseOwnedActiveConversation() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
         Conversation existingConversation = Conversation.builder()

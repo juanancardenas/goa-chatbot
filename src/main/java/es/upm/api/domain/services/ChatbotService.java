@@ -18,6 +18,7 @@ import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -241,6 +242,19 @@ public class ChatbotService {
                 usedPlatformData,
                 sourcesSummary
         );
+    }
+
+    public List<ChatbotConversationResponseDto> readUserConversations() {
+        return this.conversationPersistence.findByUserId(this.authenticatedUserId()).stream()
+                .map(conversation -> new ChatbotConversationResponseDto(
+                        conversation.getId(),
+                        conversation.getUserId(),
+                        conversation.getEngagementLetterId(),
+                        conversation.getStatus().name(),
+                        conversation.getType(),
+                        conversation.getCreatedAt().toString()
+                ))
+                .toList();
     }
 
     public void closeConversation(String conversationId) {
