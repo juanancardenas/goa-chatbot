@@ -846,7 +846,7 @@ class ChatbotResourceFT {
     }
 
     @Test
-    void testCloseConversationAlreadyClosedReturnsConflict() {
+    void testCloseConversationAlreadyClosedReturnsNoContent() {
         String conversationId = this.conversationRepository.save(new ConversationEntity(
                 "conversation-already-closed",
                 "customer-1",
@@ -867,8 +867,10 @@ class ChatbotResourceFT {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).contains("La conversacion no esta activa");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ConversationEntity conversation = this.conversationRepository.findById(conversationId).orElseThrow();
+        assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
     }
 
     @Test
