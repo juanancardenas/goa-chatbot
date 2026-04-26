@@ -18,6 +18,8 @@ import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationMessageResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -243,6 +245,59 @@ public class ChatbotService {
         );
     }
 
+    public List<ChatbotConversationResponseDto> readUserConversations() {
+        return this.conversationPersistence.findByUserId(this.authenticatedUserId()).stream()
+                .map(conversation -> new ChatbotConversationResponseDto(
+                        conversation.getId(),
+                        conversation.getUserId(),
+                        conversation.getEngagementLetterId(),
+                        conversation.getStatus().name(),
+                        conversation.getType(),
+                        conversation.getCreatedAt().toString()
+                ))
+                .toList();
+    }
+
+    public ChatbotConversationResponseDto readConversation(String conversationId) {
+        Conversation conversation = this.requireOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+
+        return this.toConversationResponse(conversation);
+    }
+
+    public List<ChatbotConversationMessageResponseDto> readConversationMessages(String conversationId) {
+        this.requireOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+
+        return this.messagePersistence.findByConversationId(conversationId).stream()
+                .map(message -> new ChatbotConversationMessageResponseDto(
+                        message.getId(),
+                        message.getConversationId(),
+                        message.getSenderType().name(),
+                        message.getMessageType().name(),
+                        message.getContent(),
+                        message.getTimestamp().toString(),
+                        message.getSequenceNumber(),
+                        message.getParentMessageId()
+                ))
+                .toList();
+    }
+
+    private ChatbotConversationResponseDto toConversationResponse(Conversation conversation) {
+        return new ChatbotConversationResponseDto(
+                conversation.getId(),
+                conversation.getUserId(),
+                conversation.getEngagementLetterId(),
+                conversation.getStatus().name(),
+                conversation.getType(),
+                conversation.getCreatedAt().toString()
+        );
+    }
+
     public void closeConversation(String conversationId) {
         Conversation conversation = this.requireActiveOwnedConversation(
                 conversationId,
@@ -280,14 +335,23 @@ public class ChatbotService {
             String conversationId,
             String userId
     ) {
+        Conversation conversation = this.requireOwnedConversation(conversationId, userId);
+
+        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+            throw new ConflictException("La conversacion no esta activa");
+        }
+
+        return conversation;
+    }
+
+    private Conversation requireOwnedConversation(
+            String conversationId,
+            String userId
+    ) {
         Conversation conversation = this.conversationPersistence.readById(conversationId);
 
         if (!userId.equals(conversation.getUserId())) {
             throw new ForbiddenException("No tienes permisos sobre esta conversacion");
-        }
-
-        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
-            throw new ConflictException("La conversacion no esta activa");
         }
 
         return conversation;

@@ -8,6 +8,7 @@ import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -25,6 +26,13 @@ public class ConversationPersistenceMongodb implements ConversationPersistence {
         return this.conversationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("conversationId no corresponde a una conversacion existente"))
                 .toConversation();
+    }
+
+    @Override
+    public List<Conversation> findByUserId(String userId) {
+        return this.conversationRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(ConversationEntity::toConversation)
+                .toList();
     }
 
     @Override
