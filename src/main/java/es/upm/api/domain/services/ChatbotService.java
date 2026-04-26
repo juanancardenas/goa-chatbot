@@ -299,10 +299,15 @@ public class ChatbotService {
     }
 
     public void closeConversation(String conversationId) {
-        Conversation conversation = this.requireActiveOwnedConversation(
+        Conversation conversation = this.requireOwnedConversation(
                 conversationId,
                 this.authenticatedUserId()
         );
+
+        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+            return;
+        }
+
         conversation.setStatus(ConversationStatus.CLOSED);
         this.conversationPersistence.update(conversation);
     }

@@ -2,7 +2,6 @@ package es.upm.api.domain.services;
 
 import es.upm.api.domain.enums.*;
 import es.upm.api.domain.exceptions.BadRequestException;
-import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
@@ -823,7 +822,7 @@ class ChatbotServiceTest {
     }
 
     @Test
-    void closeConversationShouldRejectClosedConversation() {
+    void closeConversationShouldDoNothingWhenConversationIsAlreadyClosed() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
         Conversation existingConversation = Conversation.builder()
                 .id("conversation-1")
@@ -834,12 +833,9 @@ class ChatbotServiceTest {
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
 
-        ConflictException exception = assertThrows(
-                ConflictException.class,
-                () -> chatbotService.closeConversation("conversation-1")
-        );
+        chatbotService.closeConversation("conversation-1");
 
-        assertThat(exception).hasMessageContaining("La conversacion no esta activa");
+        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         verify(conversationPersistence, never()).update(any(Conversation.class));
     }
 
