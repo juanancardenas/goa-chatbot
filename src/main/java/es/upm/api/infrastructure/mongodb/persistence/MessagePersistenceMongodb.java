@@ -7,6 +7,8 @@ import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public class MessagePersistenceMongodb implements MessagePersistence {
 
@@ -27,6 +29,13 @@ public class MessagePersistenceMongodb implements MessagePersistence {
     public String createAndReturnId(Message message) {
         this.create(message);
         return message.getId();
+    }
+
+    @Override
+    public List<Message> findByConversationId(String conversationId) {
+        return this.messageRepository.findByConversationIdOrderBySequenceNumberAsc(conversationId).stream()
+                .map(MessageEntity::toMessage)
+                .toList();
     }
 
     @Override

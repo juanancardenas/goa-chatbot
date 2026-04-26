@@ -719,6 +719,70 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void readConversationMessagesShouldReturnOrderedMessagesForOwnedConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation conversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("customer-1")
+                .status(ConversationStatus.CLOSED)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 20, 9, 0))
+                .build();
+        Message firstMessage = Message.builder()
+                .id("message-1")
+                .conversationId("conversation-1")
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Hola")
+                .timestamp(LocalDateTime.of(2026, 4, 20, 9, 1))
+                .sequenceNumber(1)
+                .build();
+        Message secondMessage = Message.builder()
+                .id("message-2")
+                .conversationId("conversation-1")
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("Buenos dias")
+                .timestamp(LocalDateTime.of(2026, 4, 20, 9, 2))
+                .sequenceNumber(2)
+                .parentMessageId("message-1")
+                .build();
+        when(conversationPersistence.readById("conversation-1")).thenReturn(conversation);
+        when(messagePersistence.findByConversationId("conversation-1")).thenReturn(List.of(firstMessage, secondMessage));
+
+        var response = chatbotService.readConversationMessages("conversation-1");
+
+        assertThat(response).hasSize(2);
+        assertThat(response.get(0).getMessageId()).isEqualTo("message-1");
+        assertThat(response.get(0).getSenderType()).isEqualTo("USER");
+        assertThat(response.get(0).getMessageType()).isEqualTo("REQUEST");
+        assertThat(response.get(0).getTimestamp()).isEqualTo("2026-04-20T09:01");
+        assertThat(response.get(1).getMessageId()).isEqualTo("message-2");
+        assertThat(response.get(1).getParentMessageId()).isEqualTo("message-1");
+    }
+
+    @Test
+    void readConversationMessagesShouldRejectOtherUsersConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation conversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("customer-2")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 20, 9, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-1")).thenReturn(conversation);
+
+        ForbiddenException exception = assertThrows(
+                ForbiddenException.class,
+                () -> chatbotService.readConversationMessages("conversation-1")
+        );
+
+        assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
+        verify(messagePersistence, never()).findByConversationId(any());
+    }
+
+    @Test
     void closeConversationShouldCloseOwnedActiveConversation() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
         Conversation existingConversation = Conversation.builder()

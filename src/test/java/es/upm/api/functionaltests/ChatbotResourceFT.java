@@ -14,6 +14,7 @@ import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.webclients.EngagementWebClient;
 import es.upm.api.functionaltests.support.ChatbotTestMessages;
+import es.upm.api.infrastructure.dtos.ChatbotConversationMessageResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.resources.ChatbotResource;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
@@ -677,6 +678,112 @@ class ChatbotResourceFT {
 
         ResponseEntity<String> response = this.restTemplate.exchange(
                 "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.GET,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void testReadConversationMessagesAuthenticatedAsOwnerReturnsOrderedMessages() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-messages-read",
+                "customer-1",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                LocalDateTime.of(2026, 4, 20, 9, 0)
+        )).getId();
+        this.messageRepository.saveAll(List.of(
+                MessageEntity.builder()
+                        .id("message-read-1")
+                        .conversationId(conversationId)
+                        .senderType(MessageSenderType.USER)
+                        .messageType(MessageType.REQUEST)
+                        .content("Hola")
+                        .timestamp(LocalDateTime.of(2026, 4, 20, 9, 1))
+                        .sequenceNumber(1)
+                        .build(),
+                MessageEntity.builder()
+                        .id("message-read-2")
+                        .conversationId(conversationId)
+                        .senderType(MessageSenderType.ASSISTANT)
+                        .messageType(MessageType.RESPONSE)
+                        .content("Buenos dias")
+                        .timestamp(LocalDateTime.of(2026, 4, 20, 9, 2))
+                        .sequenceNumber(2)
+                        .parentMessageId("message-read-1")
+                        .build()
+        ));
+
+        HttpHeaders headers = this.authHeaders("fake-token-read-messages", "customer-1", List.of("customer"));
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<ChatbotConversationMessageResponseDto[]> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATION_MESSAGES
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.GET,
+                entity,
+                ChatbotConversationMessageResponseDto[].class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).hasSize(2);
+        assertThat(response.getBody()[0].getMessageId()).isEqualTo("message-read-1");
+        assertThat(response.getBody()[0].getConversationId()).isEqualTo(conversationId);
+        assertThat(response.getBody()[0].getSenderType()).isEqualTo("USER");
+        assertThat(response.getBody()[0].getMessageType()).isEqualTo("REQUEST");
+        assertThat(response.getBody()[1].getMessageId()).isEqualTo("message-read-2");
+        assertThat(response.getBody()[1].getParentMessageId()).isEqualTo("message-read-1");
+    }
+
+    @Test
+    void testReadConversationMessagesOfAnotherUserReturnsForbidden() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-messages-forbidden",
+                "customer-2",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-read-messages-forbidden", "customer-1", List.of("customer"));
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATION_MESSAGES
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.GET,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).contains("No tienes permisos sobre esta conversacion");
+    }
+
+    @Test
+    void testReadConversationMessagesUnauthorizedWithoutToken() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-messages-unauthorized",
+                "customer-1",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATION_MESSAGES
                         .replace("{conversationId}", conversationId),
                 HttpMethod.GET,
                 entity,

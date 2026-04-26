@@ -18,6 +18,7 @@ import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationMessageResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
@@ -263,6 +264,30 @@ public class ChatbotService {
                 this.authenticatedUserId()
         );
 
+        return this.toConversationResponse(conversation);
+    }
+
+    public List<ChatbotConversationMessageResponseDto> readConversationMessages(String conversationId) {
+        this.requireOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+
+        return this.messagePersistence.findByConversationId(conversationId).stream()
+                .map(message -> new ChatbotConversationMessageResponseDto(
+                        message.getId(),
+                        message.getConversationId(),
+                        message.getSenderType().name(),
+                        message.getMessageType().name(),
+                        message.getContent(),
+                        message.getTimestamp().toString(),
+                        message.getSequenceNumber(),
+                        message.getParentMessageId()
+                ))
+                .toList();
+    }
+
+    private ChatbotConversationResponseDto toConversationResponse(Conversation conversation) {
         return new ChatbotConversationResponseDto(
                 conversation.getId(),
                 conversation.getUserId(),
