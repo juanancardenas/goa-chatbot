@@ -5,6 +5,7 @@ import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
+import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
@@ -47,6 +48,9 @@ class ChatbotServiceTest {
 
     @Mock
     private ChatbotScopePolicy chatbotScopePolicy;
+
+    @Mock
+    private ChatbotDocumentContextService chatbotDocumentContextService;
 
     @Mock
     private ChatbotPlatformContextService chatbotPlatformContextService;
@@ -225,6 +229,55 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldUseDocumentStubReplyWhenDocumentsIntegrationIsNotAvailable() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        ChatbotPlatformContext context = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-100")
+                .ownerDisplayName("Ana Ocaña")
+                .procedureTitles(List.of("Reclamación civil"))
+                .recentEventSummaries(List.of())
+                .sourcesSummary(List.of("Hoja de encargo"))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
+        when(chatbotQuestionClassifier.classify("Que documentos hay en el expediente"))
+                .thenReturn(PlatformQuestionType.DOCUMENTS);
+        when(chatbotDocumentContextService.loadDocumentContext(existingConversation))
+                .thenReturn(
+                        ChatbotDocumentContext.builder()
+                                .available(false)
+                                .authorizedSourceConfigured(false)
+                                .visibleDocumentTitles(List.of())
+                                .sourcesSummary(List.of())
+                                .build()
+                );
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que documentos hay en el expediente");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getMessage()).contains("integración documental real aún no está disponible");
+        assertThat(response.getMessage()).contains("Reclamación civil");
+    }
+
+    @Test
     void sendMessageShouldUsePlatformContextForContextualConversation() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
@@ -369,7 +422,7 @@ class ChatbotServiceTest {
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
         assertThat(response.getUsedPlatformData()).isFalse();
-        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY);
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_STUB_REPLY);
     }
 
     @Test
@@ -556,8 +609,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
-        assertThat(response.getMessage()).contains("documentación del caso");
-        assertThat(response.getMessage()).contains("no debo inventar documentos");
+        assertThat(response.getMessage()).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
     }
 
     @Test
@@ -636,8 +688,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
-        assertThat(response.getMessage()).contains("documentación del caso");
-        assertThat(response.getMessage()).contains("sin inventar documentos");
+        assertThat(response.getMessage()).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
     }
 
     @Test

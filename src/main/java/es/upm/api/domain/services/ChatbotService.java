@@ -503,7 +503,9 @@ public class ChatbotService {
             );
         }
 
-        if (documentContext.getVisibleDocumentTitles() != null && !documentContext.getVisibleDocumentTitles().isEmpty()) {
+        if (documentContext != null
+                && documentContext.getVisibleDocumentTitles() != null
+                && !documentContext.getVisibleDocumentTitles().isEmpty()) {
             reply.append(" Documentos visibles preparados para futura integración: ")
                     .append(String.join(", ", documentContext.getVisibleDocumentTitles()))
                     .append(".");
