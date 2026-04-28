@@ -76,6 +76,24 @@ public final class ChatbotResponseMessages {
     public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_GENERAL_REPLY =
             "No he podido cargar en este momento el contexto actualizado del encargo activo. Puedo continuar con orientación general, pero no debo responder como si dispusiera de datos internos confirmados.";
 
+    public static final String CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY =
+            "Tu consulta parece referirse a documentos del caso. La integración documental real aún no está disponible en esta versión, así que solo puedo orientarte de forma segura sin afirmar documentos concretos no confirmados.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY =
+            "Tu consulta parece referirse a documentación del caso. La integración documental real aún no está disponible en esta versión, por lo que no debo afirmar documentos concretos ni accesos no confirmados.";
+
+    public static final String CLIENT_CONTEXT_UNAVAILABLE_DOCUMENTS_STUB_REPLY =
+            "Todavía no dispongo de integración documental real para comprobar documentos visibles del caso. Solo puedo mantener una respuesta segura y no inventada.";
+
+    public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_STUB_REPLY =
+            "La integración documental real aún no está disponible en esta versión. No debo afirmar accesos documentales, documentos visibles ni metadatos no confirmados.";
+
+    public static final String CLIENT_GENERAL_DOCUMENTS_STUB_REPLY =
+            "Puedo orientarte de forma general sobre documentación, pero en esta versión todavía no tengo integración documental real para consultar documentos concretos del caso.";
+
+    public static final String PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY =
+            "Puedo orientar de forma general sobre documentación, pero en esta versión todavía no dispongo de integración documental real para consultar documentos concretos del caso.";
+
     // Chat contextual
 
     public static final String CONTEXTUAL_PLATFORM_DATA_REPLY_TEMPLATE =
