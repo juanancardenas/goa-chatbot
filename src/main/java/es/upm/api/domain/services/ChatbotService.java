@@ -45,9 +45,10 @@ public class ChatbotService {
     private static final String RESPONSE_MODE_CONTEXTUAL_RESTRICTED = "CONTEXTUAL_RESTRICTED";
 
     // Attributes
-    private final ChatbotScopePolicy chatbotScopePolicy;
+    private final ChatbotDocumentContextService chatbotDocumentContextService;
     private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
+    private final ChatbotScopePolicy chatbotScopePolicy;
     private final ConversationPersistence conversationPersistence;
     private final MessagePersistence messagePersistence;
 
@@ -57,13 +58,15 @@ public class ChatbotService {
                           MessagePersistence messagePersistence,
                           ChatbotScopePolicy chatbotScopePolicy,
                           ChatbotPlatformContextService chatbotPlatformContextService,
-                          ChatbotQuestionClassifier chatbotQuestionClassifier
+                          ChatbotQuestionClassifier chatbotQuestionClassifier,
+                          ChatbotDocumentContextService chatbotDocumentContextService
     ) {
         this.conversationPersistence = conversationPersistence;
         this.messagePersistence = messagePersistence;
         this.chatbotScopePolicy = chatbotScopePolicy;
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
+        this.chatbotDocumentContextService = chatbotDocumentContextService;
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
@@ -198,7 +201,12 @@ public class ChatbotService {
                 ConversationProfileType profile = this.resolveConversationProfile();
 
                 if (platformContext.isPresent()) {
-                    assistantReply = this.contextualPlatformReply(profile, requestDto.getMessage(), platformContext.get());
+                    assistantReply = this.contextualPlatformReply(
+                            profile,
+                            requestDto.getMessage(),
+                            conversation,
+                            platformContext.get()
+                    );
                     responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
                     usedPlatformData = true;
                     sourcesSummary = platformContext.get().getSourcesSummary();
@@ -410,6 +418,7 @@ public class ChatbotService {
     private String contextualPlatformReply(
             ConversationProfileType profile,
             String userMessage,
+            Conversation conversation,
             ChatbotPlatformContext platformContext
     ) {
         PlatformQuestionType questionType = this.classifyQuestion(userMessage);
@@ -417,7 +426,7 @@ public class ChatbotService {
         return switch (questionType) {
             case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(profile, platformContext);
             case TIMELINE_EVENTS -> this.buildTimelineReply(profile, platformContext);
-            case DOCUMENTS -> this.buildDocumentsReply(profile);
+            case DOCUMENTS -> this.buildDocumentsReply(profile, conversation, platformContext);
             case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile, platformContext);
         };
     }
@@ -470,11 +479,39 @@ public class ChatbotService {
         };
     }
 
-    private String buildDocumentsReply(ConversationProfileType profile) {
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_REPLY;
-        };
+    private String buildDocumentsReply(
+            ConversationProfileType profile,
+            Conversation conversation,
+            ChatbotPlatformContext platformContext
+    ) {
+        var documentContext = this.chatbotDocumentContextService.loadDocumentContext(conversation);
+
+        StringBuilder reply = new StringBuilder(
+                switch (profile) {
+                    case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY;
+                    case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY;
+                }
+        );
+
+        if (platformContext.getProcedureTitles() != null && !platformContext.getProcedureTitles().isEmpty()) {
+            String procedures = String.join(", ", platformContext.getProcedureTitles());
+            reply.append(" ").append(
+                    switch (profile) {
+                        case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
+                        case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
+                    }
+            );
+        }
+
+        if (documentContext != null
+                && documentContext.getVisibleDocumentTitles() != null
+                && !documentContext.getVisibleDocumentTitles().isEmpty()) {
+            reply.append(" Documentos visibles preparados para futura integración: ")
+                    .append(String.join(", ", documentContext.getVisibleDocumentTitles()))
+                    .append(".");
+        }
+
+        return reply.toString();
     }
 
     private String buildGeneralContextReply(
@@ -542,8 +579,15 @@ public class ChatbotService {
 
     private String buildContextUnavailableDocumentsReply(ConversationProfileType profile) {
         return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY;
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_DOCUMENTS_STUB_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_STUB_REPLY;
+        };
+    }
+
+    private String buildGeneralDocumentsReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_DOCUMENTS_STUB_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY;
         };
     }
 
