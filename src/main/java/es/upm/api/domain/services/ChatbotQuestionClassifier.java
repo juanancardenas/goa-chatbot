@@ -3,6 +3,7 @@ package es.upm.api.domain.services;
 import es.upm.api.domain.enums.PlatformQuestionType;
 import org.springframework.stereotype.Service;
 
+import java.text.Normalizer;
 import java.util.Locale;
 
 @Service
@@ -12,20 +13,23 @@ public class ChatbotQuestionClassifier {
 
         if (containsAny(normalized,
                 "documento", "documentos", "archivo", "archivos", "adjunto", "adjuntos",
-                "escrito", "escritos", "pdf", "demanda", "contrato")) {
+                "escrito", "escritos", "pdf", "demanda", "contrato", "contratos",
+                "evidencia", "evidencias")) {
             return PlatformQuestionType.DOCUMENTS;
         }
 
         if (containsAny(normalized,
                 "hito", "hitos", "evento", "eventos", "timeline", "linea temporal",
-                "línea temporal", "proximo paso", "próximo paso", "proximos pasos", "próximos pasos",
-                "siguiente paso", "siguientes pasos", "fecha", "fechas", "plazo", "plazos")) {
+                "proximo paso", "proximos pasos", "siguiente paso", "siguientes pasos",
+                "fecha", "fechas", "plazo", "plazos", "cuando es", "cuando vence",
+                "que sigue", "como sigue", "que toca", "que viene")) {
             return PlatformQuestionType.TIMELINE_EVENTS;
         }
 
         if (containsAny(normalized,
                 "estado", "encargo", "caso", "procedimiento", "procedimientos",
-                "resumen", "contexto", "situacion", "situación")) {
+                "resumen", "contexto", "situacion", "como va", "en que esta",
+                "en que estado", "avance")) {
             return PlatformQuestionType.ENGAGEMENT_STATUS;
         }
 
@@ -42,6 +46,11 @@ public class ChatbotQuestionClassifier {
     }
 
     private String normalize(String value) {
-        return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
+        if (value == null) {
+            return "";
+        }
+        String lowered = value.toLowerCase(Locale.ROOT).trim();
+        return Normalizer.normalize(lowered, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
     }
 }

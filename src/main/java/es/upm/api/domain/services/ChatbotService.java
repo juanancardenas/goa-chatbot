@@ -218,7 +218,7 @@ public class ChatbotService {
                 }
             } else {
                 ConversationProfileType profile = this.resolveConversationProfile();
-                assistantReply = this.messageReply(profile);
+                assistantReply = this.generalFaqReply(profile, requestDto.getMessage());
                 responseMode = RESPONSE_MODE_GENERAL;
                 usedPlatformData = false;
                 sourcesSummary = List.of();
@@ -408,13 +408,6 @@ public class ChatbotService {
         };
     }
 
-    private String messageReply(ConversationProfileType profile) {
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_MESSAGE_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_MESSAGE_REPLY;
-        };
-    }
-
     private String contextualPlatformReply(
             ConversationProfileType profile,
             String userMessage,
@@ -584,13 +577,6 @@ public class ChatbotService {
         };
     }
 
-    private String buildGeneralDocumentsReply(ConversationProfileType profile) {
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_DOCUMENTS_STUB_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY;
-        };
-    }
-
     private String buildContextUnavailableGeneralReply(ConversationProfileType profile) {
         return switch (profile) {
             case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY;
@@ -603,4 +589,45 @@ public class ChatbotService {
                 .orElse(PlatformQuestionType.GENERAL_CONTEXT);
     }
 
+    private String generalFaqReply(
+            ConversationProfileType profile,
+            String userMessage
+    ) {
+        PlatformQuestionType questionType = this.classifyQuestion(userMessage);
+
+        return switch (questionType) {
+            case ENGAGEMENT_STATUS -> this.buildGeneralStatusReply(profile);
+            case TIMELINE_EVENTS -> this.buildGeneralTimelineReply(profile);
+            case DOCUMENTS -> this.buildGeneralDocumentsReply(profile);
+            case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile);
+        };
+    }
+
+    private String buildGeneralStatusReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_STATUS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_STATUS_REPLY;
+        };
+    }
+
+    private String buildGeneralTimelineReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_TIMELINE_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_REPLY;
+        };
+    }
+
+    private String buildGeneralDocumentsReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_DOCUMENTS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_REPLY;
+        };
+    }
+
+    private String buildGeneralContextReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_CONTEXT_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_CONTEXT_REPLY;
+        };
+    }
 }
