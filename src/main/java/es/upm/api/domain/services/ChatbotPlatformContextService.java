@@ -5,6 +5,7 @@ import es.upm.api.domain.model.platform.EngagementEventPage;
 import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
+import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.webclients.EngagementWebClient;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +15,8 @@ import java.util.Optional;
 
 @Service
 public class ChatbotPlatformContextService {
+    private static final String DEFAULT_OWNER = "usuario del encargo";
+
     private final EngagementWebClient engagementWebClient;
 
     public ChatbotPlatformContextService(EngagementWebClient engagementWebClient) {
@@ -25,59 +28,74 @@ public class ChatbotPlatformContextService {
             return Optional.empty();
         }
 
+        Optional<EngagementLetterSummary> engagementLetter = this.readEngagementLetterSafely(engagementLetterId);
+        List<String> recentEventSummaries = this.readRecentEventSummaries(engagementLetterId);
+
+        String ownerDisplayName = engagementLetter
+                .map(EngagementLetterSummary::getOwner)
+                .map(UserSummary::displayName)
+                .filter(name -> name != null && !name.isBlank())
+                .orElse(DEFAULT_OWNER);
+
+        List<String> procedureTitles = engagementLetter
+                .map(EngagementLetterSummary::getLegalProcedures)
+                .orElse(List.of())
+                .stream()
+                .map(LegalProcedureSummary::getTitle)
+                .filter(title -> title != null && !title.isBlank())
+                .distinct()
+                .toList();
+
+        if (procedureTitles.isEmpty() && recentEventSummaries.isEmpty() && engagementLetter.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<String> sourcesSummary = new ArrayList<>();
+        sourcesSummary.add("Hoja de encargo " + engagementLetterId);
+
+        procedureTitles.stream()
+                .limit(2)
+                .map(title -> "Procedimiento: " + title)
+                .forEach(sourcesSummary::add);
+
+        recentEventSummaries.stream()
+                .limit(2)
+                .map(event -> "Hito/evento: " + event)
+                .forEach(sourcesSummary::add);
+
+        return Optional.of(
+                ChatbotPlatformContext.builder()
+                        .engagementLetterId(engagementLetterId)
+                        .ownerDisplayName(ownerDisplayName)
+                        .procedureTitles(procedureTitles)
+                        .recentEventSummaries(recentEventSummaries)
+                        .sourcesSummary(sourcesSummary)
+                        .build()
+        );
+    }
+
+    private Optional<EngagementLetterSummary> readEngagementLetterSafely(String engagementLetterId) {
         try {
-            EngagementLetterSummary engagementLetter = this.engagementWebClient.readById(engagementLetterId);
-            EngagementEventPage eventsPage = this.readEventsSafely(engagementLetterId);
-
-            List<String> procedureTitles = Optional.ofNullable(engagementLetter.getLegalProcedures())
-                    .orElse(List.of())
-                    .stream()
-                    .map(LegalProcedureSummary::getTitle)
-                    .filter(title -> title != null && !title.isBlank())
-                    .toList();
-
-            List<String> recentEventSummaries = Optional.ofNullable(eventsPage)
-                    .map(EngagementEventPage::getContent)
-                    .orElse(List.of())
-                    .stream()
-                    .map(EngagementEventSummary::displayText)
-                    .limit(3)
-                    .toList();
-
-            List<String> sourcesSummary = new ArrayList<>();
-            sourcesSummary.add("Hoja de encargo");
-            procedureTitles.stream()
-                    .limit(2)
-                    .map(title -> "Procedimiento: " + title)
-                    .forEach(sourcesSummary::add);
-            recentEventSummaries.stream()
-                    .limit(2)
-                    .map(event -> "Hito/evento: " + event)
-                    .forEach(sourcesSummary::add);
-
-            return Optional.of(
-                    ChatbotPlatformContext.builder()
-                            .engagementLetterId(engagementLetterId)
-                            .ownerDisplayName(
-                                    engagementLetter.getOwner() == null
-                                            ? "usuario del encargo"
-                                            : engagementLetter.getOwner().displayName()
-                            )
-                            .procedureTitles(procedureTitles)
-                            .recentEventSummaries(recentEventSummaries)
-                            .sourcesSummary(sourcesSummary)
-                            .build()
-            );
+            return Optional.ofNullable(this.engagementWebClient.readById(engagementLetterId));
         } catch (RuntimeException ignored) {
             return Optional.empty();
         }
     }
 
-    private EngagementEventPage readEventsSafely(String engagementLetterId) {
+    private List<String> readRecentEventSummaries(String engagementLetterId) {
         try {
-            return this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5);
+            EngagementEventPage eventsPage = this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5);
+
+            return Optional.ofNullable(eventsPage)
+                    .map(EngagementEventPage::getContent)
+                    .orElse(List.of())
+                    .stream()
+                    .map(EngagementEventSummary::displayText)
+                    .filter(text -> text != null && !text.isBlank())
+                    .limit(3)
+                    .toList();
         } catch (RuntimeException ignored) {
-            return new EngagementEventPage(List.of());
+            return List.of();
         }
     }
 }

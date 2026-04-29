@@ -15,6 +15,12 @@ public interface ConversationPersistence {
 
     Optional<Conversation> findContextualConversation(String userId, String engagementLetterId, String type);
 
+    Optional<Conversation> findActiveContextualConversation(
+            String userId,
+            String engagementLetterId,
+            String type
+    );
+
     void create(Conversation conversation);
 
     void update(Conversation conversation);

@@ -86,7 +86,7 @@ public class ChatbotService {
 
     private Conversation findOrCreateContextualConversation(String userId, String engagementLetterId) {
         return this.conversationPersistence
-                .findContextualConversation(userId, engagementLetterId, TYPE_CONTEXTUAL)
+                .findActiveContextualConversation(userId, engagementLetterId, TYPE_CONTEXTUAL)
                 .orElseGet(() -> {
                     Conversation conversation = Conversation.builder()
                             .id(UUID.randomUUID().toString())
@@ -457,19 +457,42 @@ public class ChatbotService {
             ConversationProfileType profile,
             ChatbotPlatformContext platformContext
     ) {
-        if (platformContext.getRecentEventSummaries() == null || platformContext.getRecentEventSummaries().isEmpty()) {
-            return switch (profile) {
-                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY;
-                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY;
-            };
+        boolean hasRecentEvents = platformContext.getRecentEventSummaries() != null
+                && !platformContext.getRecentEventSummaries().isEmpty();
+
+        boolean hasProcedures = platformContext.getProcedureTitles() != null
+                && !platformContext.getProcedureTitles().isEmpty();
+
+        StringBuilder reply = new StringBuilder();
+
+        if (hasRecentEvents) {
+            String recentEvents = String.join(", ", platformContext.getRecentEventSummaries());
+            reply.append(
+                    switch (profile) {
+                        case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
+                        case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
+                    }
+            );
+        } else {
+            reply.append(
+                    switch (profile) {
+                        case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY;
+                        case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY;
+                    }
+            );
         }
 
-        String recentEvents = String.join(", ", platformContext.getRecentEventSummaries());
+        if (hasProcedures) {
+            String procedures = String.join(", ", platformContext.getProcedureTitles());
+            reply.append(" ").append(
+                    switch (profile) {
+                        case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
+                        case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE.formatted(procedures);
+                    }
+            );
+        }
 
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_EVENTS_REPLY_TEMPLATE.formatted(recentEvents);
-        };
+        return reply.toString();
     }
 
     private String buildDocumentsReply(
@@ -619,8 +642,8 @@ public class ChatbotService {
 
     private String buildGeneralDocumentsReply(ConversationProfileType profile) {
         return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_DOCUMENTS_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_REPLY;
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_DOCUMENTS_STUB_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY;
         };
     }
 

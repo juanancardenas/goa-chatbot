@@ -1,5 +1,6 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
+import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.NotFoundException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.persistence.ConversationPersistence;
@@ -43,6 +44,22 @@ public class ConversationPersistenceMongodb implements ConversationPersistence {
     ) {
         return this.conversationRepository
                 .findByUserIdAndEngagementLetterIdAndType(userId, engagementLetterId, type)
+                .map(ConversationEntity::toConversation);
+    }
+
+    @Override
+    public Optional<Conversation> findActiveContextualConversation(
+            String userId,
+            String engagementLetterId,
+            String type
+    ) {
+        return this.conversationRepository
+                .findByUserIdAndEngagementLetterIdAndTypeAndStatus(
+                        userId,
+                        engagementLetterId,
+                        type,
+                        ConversationStatus.ACTIVE
+                )
                 .map(ConversationEntity::toConversation);
     }
 
