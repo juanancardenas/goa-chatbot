@@ -7,10 +7,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MessageRepository extends MongoRepository<MessageEntity, String> {
-
     List<MessageEntity> findByConversationIdOrderBySequenceNumberAsc(String conversationId);
 
     Optional<MessageEntity> findFirstByConversationIdOrderBySequenceNumberDesc(String conversationId);
+
+    Optional<MessageEntity> findFirstByConversationIdOrderByTimestampDesc(String conversationId);
 
     List<MessageEntity> findByConversationId(String conversationId);
 

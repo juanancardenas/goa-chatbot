@@ -14,7 +14,6 @@ import java.util.Optional;
 
 @Repository
 public class ConversationPersistenceMongodb implements ConversationPersistence {
-
     private final ConversationRepository conversationRepository;
 
     @Autowired
@@ -61,6 +60,30 @@ public class ConversationPersistenceMongodb implements ConversationPersistence {
                         ConversationStatus.ACTIVE
                 )
                 .map(ConversationEntity::toConversation);
+    }
+
+    @Override
+    public List<Conversation> findByUserIdAndTypeOrderByCreatedAtDesc(
+            String userId,
+            String type
+    ) {
+        return this.conversationRepository.findByUserIdAndTypeOrderByCreatedAtDesc(userId, type)
+                .stream()
+                .map(ConversationEntity::toConversation)
+                .toList();
+    }
+
+    @Override
+    public List<Conversation> findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+            String userId,
+            String engagementLetterId,
+            String type
+    ) {
+        return this.conversationRepository
+                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(userId, engagementLetterId, type)
+                .stream()
+                .map(ConversationEntity::toConversation)
+                .toList();
     }
 
     @Override

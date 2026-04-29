@@ -4,6 +4,7 @@ import es.upm.api.domain.model.Message;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MessagePersistence {
@@ -15,4 +16,6 @@ public interface MessagePersistence {
     List<Message> findByConversationId(String conversationId);
 
     Integer nextSequenceNumber(String conversationId);
+
+    Optional<Message> findLatestByConversationId(String conversationId);
 }

@@ -23,4 +23,15 @@ public interface ConversationRepository extends MongoRepository<ConversationEnti
             String type,
             ConversationStatus status
     );
+
+    List<ConversationEntity> findByUserIdAndTypeOrderByCreatedAtDesc(
+            String userId,
+            String type
+    );
+
+    List<ConversationEntity> findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+            String userId,
+            String engagementLetterId,
+            String type
+    );
 }
