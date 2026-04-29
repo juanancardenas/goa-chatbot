@@ -1,5 +1,6 @@
 package es.upm.api.infrastructure.mongodb.daos;
 
+import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
@@ -16,4 +17,10 @@ public interface ConversationRepository extends MongoRepository<ConversationEnti
             String type
     );
 
+    Optional<ConversationEntity> findByUserIdAndEngagementLetterIdAndTypeAndStatus(
+            String userId,
+            String engagementLetterId,
+            String type,
+            ConversationStatus status
+    );
 }

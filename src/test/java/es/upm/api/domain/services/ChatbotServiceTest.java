@@ -112,10 +112,11 @@ class ChatbotServiceTest {
                 .id("conversation-1")
                 .userId("customer-42")
                 .engagementLetterId("EL-1")
+                .status(ConversationStatus.ACTIVE)
                 .type("CONTEXTUAL")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
-        when(conversationPersistence.findContextualConversation("customer-42", "EL-1", "CONTEXTUAL"))
+        when(conversationPersistence.findActiveContextualConversation("customer-42", "EL-1", "CONTEXTUAL"))
                 .thenReturn(Optional.of(existingConversation));
 
         ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
@@ -689,6 +690,163 @@ class ChatbotServiceTest {
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getMessage()).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldReturnGeneralStatusFaqForCustomer() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        String userMessage = "¿Cómo puedo consultar el estado de un encargo?";
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-general")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotQuestionClassifier.classify(userMessage))
+                .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-general",
+                userMessage
+        );
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-general");
+        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_GENERAL_STATUS_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldReturnMissingCaseContextWhenCustomerAsksForOwnEngagementStatusInGeneralConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        String userMessage = "¿Cuál es el estado de mi encargo?";
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-general")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
+                .thenReturn(ChatbotScopeDecision.reject(
+                        ChatbotScopeViolationReason.MISSING_CASE_CONTEXT,
+                        ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY,
+                        false
+                ));
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-general",
+                userMessage
+        );
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-general");
+        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY);
+        verify(chatbotQuestionClassifier, never()).classify(any());
+    }
+
+    @Test
+    void sendMessageShouldReturnTimelineReplyWithEventsAndProceduresWhenContextExists() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx-events")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-200")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 30))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx-events")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx-events")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("¿Qué hitos recientes tiene este caso?")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-200"))
+                .thenReturn(Optional.of(
+                        ChatbotPlatformContext.builder()
+                                .engagementLetterId("EL-200")
+                                .ownerDisplayName("Ana Ocaña")
+                                .procedureTitles(List.of("Reclamación civil"))
+                                .recentEventSummaries(List.of("Presentación de escrito [PROCEDURE] - OPEN"))
+                                .sourcesSummary(List.of("Hoja de encargo EL-200"))
+                                .build()
+                ));
+
+        ChatbotMessageRequestDto request =
+                new ChatbotMessageRequestDto("conversation-ctx-events", "¿Qué hitos recientes tiene este caso?");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getUsedPlatformData()).isTrue();
+        assertThat(response.getMessage()).contains("Presentación de escrito");
+        assertThat(response.getMessage()).contains("Reclamación civil");
+    }
+
+    @Test
+    void sendMessageShouldReturnDocumentsReplyWithProceduresWhenContextExists() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx-docs")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-300")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 11, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx-docs")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx-docs")).thenReturn(7);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("¿Qué documentos hay en este caso?")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-300"))
+                .thenReturn(Optional.of(
+                        ChatbotPlatformContext.builder()
+                                .engagementLetterId("EL-300")
+                                .ownerDisplayName("Ana Ocaña")
+                                .procedureTitles(List.of("Procedimiento laboral"))
+                                .recentEventSummaries(List.of())
+                                .sourcesSummary(List.of("Hoja de encargo EL-300"))
+                                .build()
+                ));
+        when(chatbotQuestionClassifier.classify("¿Qué documentos hay en este caso?"))
+                .thenReturn(PlatformQuestionType.DOCUMENTS);
+
+        ChatbotMessageRequestDto request =
+                new ChatbotMessageRequestDto("conversation-ctx-docs", "¿Qué documentos hay en este caso?");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getUsedPlatformData()).isTrue();
+        assertThat(response.getMessage()).contains("documentación del caso");
+        assertThat(response.getMessage()).contains("Procedimiento laboral");
     }
 
     @Test

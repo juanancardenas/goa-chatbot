@@ -211,6 +211,71 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testStartContextualConversationAfterCloseCreatesNewActiveConversation() {
+        HttpHeaders headers = this.authHeaders("fake-token-reopen", "customer-1", List.of("customer"));
+
+        ChatbotContextualConversationRequestDto startRequest = new ChatbotContextualConversationRequestDto();
+        startRequest.setEngagementLetterId("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
+        HttpEntity<ChatbotContextualConversationRequestDto> startEntity = new HttpEntity<>(startRequest, headers);
+
+        ResponseEntity<ChatbotContextualConversationResponseDto> firstStartResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                startEntity,
+                ChatbotContextualConversationResponseDto.class
+        );
+
+        assertThat(firstStartResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(firstStartResponse.getBody()).isNotNull();
+
+        ResponseEntity<Void> closeResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CLOSE_CONVERSATION
+                        .replace("{conversationId}", firstStartResponse.getBody().getConversationId()),
+                HttpMethod.PATCH,
+                new HttpEntity<>(headers),
+                Void.class
+        );
+
+        assertThat(closeResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<ChatbotContextualConversationResponseDto> secondStartResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONTEXTUAL_CONVERSATIONS,
+                POST,
+                startEntity,
+                ChatbotContextualConversationResponseDto.class
+        );
+
+        assertThat(secondStartResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(secondStartResponse.getBody()).isNotNull();
+        assertThat(secondStartResponse.getBody().getConversationId())
+                .isNotEqualTo(firstStartResponse.getBody().getConversationId());
+
+        ChatbotMessageRequestDto messageRequest = new ChatbotMessageRequestDto(
+                secondStartResponse.getBody().getConversationId(),
+                "Dame contexto del caso"
+        );
+        HttpEntity<ChatbotMessageRequestDto> messageEntity = new HttpEntity<>(messageRequest, headers);
+
+        ResponseEntity<ChatbotMessageResponseDto> messageResponse = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.MESSAGES,
+                POST,
+                messageEntity,
+                ChatbotMessageResponseDto.class
+        );
+
+        assertThat(messageResponse.getStatusCode()).isEqualTo(OK);
+        assertThat(messageResponse.getBody()).isNotNull();
+        assertThat(messageResponse.getBody().getConversationId())
+                .isEqualTo(secondStartResponse.getBody().getConversationId());
+
+        List<ConversationEntity> conversations = this.conversationRepository.findAll();
+        assertThat(conversations).hasSize(2);
+        assertThat(conversations)
+                .anySatisfy(conversation -> assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED))
+                .anySatisfy(conversation -> assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE));
+    }
+
+    @Test
     void testStartGeneralConversationAuthenticatedAsCustomer() {
         HttpHeaders headers = this.authHeaders("fake-token-general-customer", "customer-1", List.of("customer"));
 
@@ -401,7 +466,7 @@ class ChatbotResourceFT {
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
                 startResponse.getBody().getConversationId(),
-                "Segundo mensaje"
+                "¿Cómo puedo consultar el estado de un encargo?"
         );
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
@@ -415,7 +480,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.CLIENT_MESSAGE_REPLY);
+        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY);
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
 
@@ -426,8 +491,8 @@ class ChatbotResourceFT {
                 .containsExactly(
                         "Hola chatbot",
                         ChatbotTestMessages.CLIENT_GENERAL_START_REPLY,
-                        "Segundo mensaje",
-                        ChatbotTestMessages.CLIENT_MESSAGE_REPLY
+                        "¿Cómo puedo consultar el estado de un encargo?",
+                        ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY
                 );
         assertThat(messages).extracting(MessageEntity::getSequenceNumber)
                 .containsExactly(1, 2, 3, 4);
@@ -461,7 +526,7 @@ class ChatbotResourceFT {
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
                 startResponse.getBody().getConversationId(),
-                "Segundo mensaje profesional"
+                "Necesito saber cómo revisar el estado de un encargo"
         );
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
@@ -475,7 +540,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.PROFESSIONAL_MESSAGE_REPLY);
+        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY);
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
 
@@ -486,8 +551,8 @@ class ChatbotResourceFT {
                 .containsExactly(
                         "Necesito revisar el flujo",
                         ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY,
-                        "Segundo mensaje profesional",
-                        ChatbotTestMessages.PROFESSIONAL_MESSAGE_REPLY
+                        "Necesito saber cómo revisar el estado de un encargo",
+                        ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY
                 );
         assertThat(messages).extracting(MessageEntity::getSequenceNumber)
                 .containsExactly(1, 2, 3, 4);
@@ -1025,8 +1090,8 @@ class ChatbotResourceFT {
         assertThat(response.getBody().getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getBody().getUsedPlatformData()).isTrue();
         assertThat(response.getBody().getSourcesSummary())
+                .anySatisfy(source -> assertThat(source).startsWith("Hoja de encargo"))
                 .contains(
-                        "Hoja de encargo",
                         "Procedimiento: Reclamación civil",
                         "Hito/evento: Se registró escrito [MILESTONE] - OPEN"
                 );
