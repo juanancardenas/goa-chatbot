@@ -18,6 +18,7 @@ import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationMessageResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
@@ -84,6 +85,22 @@ public class ChatbotService {
         );
     }
 
+    public List<ChatbotConversationSummaryDto> readConversationHistoryList(
+            String type,
+            String engagementLetterId
+    ) {
+        String normalizedType = this.normalizeConversationType(type);
+        String userId = this.authenticatedUserId();
+
+        List<Conversation> conversations = TYPE_CONTEXTUAL.equals(normalizedType)
+                ? this.readContextualConversations(userId, engagementLetterId)
+                : this.conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
+
+        return conversations.stream()
+                .map(this::toConversationSummaryDto)
+                .toList();
+    }
+
     private Conversation findOrCreateContextualConversation(String userId, String engagementLetterId) {
         return this.conversationPersistence
                 .findActiveContextualConversation(userId, engagementLetterId, TYPE_CONTEXTUAL)
@@ -100,6 +117,46 @@ public class ChatbotService {
                     this.conversationPersistence.create(conversation);
                     return conversation;
                 });
+    }
+
+    private List<Conversation> readContextualConversations(String userId, String engagementLetterId) {
+        if (engagementLetterId == null || engagementLetterId.isBlank()) {
+            throw new BadRequestException("engagementLetterId es obligatorio para listar conversaciones contextuales");
+        }
+
+        return this.conversationPersistence.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+                userId,
+                engagementLetterId,
+                TYPE_CONTEXTUAL
+        );
+    }
+
+    private String normalizeConversationType(String type) {
+        if (type == null || type.isBlank()) {
+            throw new BadRequestException("type es obligatorio");
+        }
+
+        String normalizedType = type.trim().toUpperCase(Locale.ROOT);
+
+        if (!TYPE_GENERAL.equals(normalizedType) && !TYPE_CONTEXTUAL.equals(normalizedType)) {
+            throw new BadRequestException("type debe ser GENERAL o CONTEXTUAL");
+        }
+
+        return normalizedType;
+    }
+
+    private ChatbotConversationSummaryDto toConversationSummaryDto(Conversation conversation) {
+        Optional<Message> latestMessage = this.messagePersistence.findLatestByConversationId(conversation.getId());
+
+        return ChatbotConversationSummaryDto.builder()
+                .conversationId(conversation.getId())
+                .type(conversation.getType())
+                .status(conversation.getStatus().name())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .createdAt(conversation.getCreatedAt().toString())
+                .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
+                .preview(latestMessage.map(Message::getContent).orElse(null))
+                .build();
     }
 
     // Starts General Conversation, this type of conversation is not linked to other process or entity
@@ -320,6 +377,20 @@ public class ChatbotService {
         this.conversationPersistence.update(conversation);
     }
 
+    public void reopenConversation(String conversationId) {
+        Conversation conversation = this.requireOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+
+        if (conversation.getStatus() == ConversationStatus.ACTIVE) {
+            return;
+        }
+
+        conversation.setStatus(ConversationStatus.ACTIVE);
+        this.conversationPersistence.update(conversation);
+    }
+
     // Crea un mensaje y devuelve su ID de BD
     private String saveMessage(
             String conversationId,
@@ -344,19 +415,6 @@ public class ChatbotService {
         );
     }
 
-    private Conversation requireActiveOwnedConversation(
-            String conversationId,
-            String userId
-    ) {
-        Conversation conversation = this.requireOwnedConversation(conversationId, userId);
-
-        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
-            throw new ConflictException("La conversacion no esta activa");
-        }
-
-        return conversation;
-    }
-
     private Conversation requireOwnedConversation(
             String conversationId,
             String userId
@@ -365,6 +423,19 @@ public class ChatbotService {
 
         if (!userId.equals(conversation.getUserId())) {
             throw new ForbiddenException("No tienes permisos sobre esta conversacion");
+        }
+
+        return conversation;
+    }
+
+    private Conversation requireActiveOwnedConversation(
+            String conversationId,
+            String userId
+    ) {
+        Conversation conversation = this.requireOwnedConversation(conversationId, userId);
+
+        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+            throw new ConflictException("La conversacion no esta activa");
         }
 
         return conversation;
