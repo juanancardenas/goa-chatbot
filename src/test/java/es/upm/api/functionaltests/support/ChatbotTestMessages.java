@@ -14,6 +14,30 @@ public final class ChatbotTestMessages {
     public static final String PROFESSIONAL_MESSAGE_REPLY =
             "Mensaje recibido. La integración actual sigue siendo simulada, pero la respuesta se orienta a soporte operativo y gestión funcional del encargo.";
 
+    public static final String CLIENT_GENERAL_STATUS_REPLY =
+            "Puedo ayudarte a entender el estado general de un encargo, pero para darte datos concretos necesito que abras el asistente desde la hoja de encargo correspondiente.";
+
+    public static final String PROFESSIONAL_GENERAL_STATUS_REPLY =
+            "Puedo orientarte sobre el estado de un encargo, pero para responder con datos confirmados del caso necesito una conversación contextual abierta desde la hoja de encargo.";
+
+    public static final String CLIENT_GENERAL_TIMELINE_REPLY =
+            "Puedo orientarte sobre próximos pasos, hitos o plazos, pero para darte información concreta necesito que abras el asistente desde la hoja de encargo correspondiente.";
+
+    public static final String PROFESSIONAL_GENERAL_TIMELINE_REPLY =
+            "Puedo orientar sobre próximos pasos, hitos o plazos, pero para responder con datos verificables necesito una conversación contextual asociada al encargo.";
+
+    public static final String CLIENT_GENERAL_DOCUMENTS_REPLY =
+            "Puedo resolver dudas generales sobre documentación, pero solo puedo hablar de documentos concretos si la conversación está abierta desde el encargo correspondiente.";
+
+    public static final String PROFESSIONAL_GENERAL_DOCUMENTS_REPLY =
+            "Puedo resolver dudas generales sobre documentación, pero solo debo responder sobre documentos concretos cuando exista contexto del encargo y acceso autorizado.";
+
+    public static final String CLIENT_GENERAL_CONTEXT_REPLY =
+            "Puedo ayudarte con dudas frecuentes sobre el estado del encargo, próximos pasos o documentación general. Si necesitas datos concretos de un caso, abre el asistente desde la hoja de encargo correspondiente.";
+
+    public static final String PROFESSIONAL_GENERAL_CONTEXT_REPLY =
+            "Puedo ayudarte con dudas frecuentes sobre estado, próximos pasos y documentación a nivel general. Para responder con datos internos confirmados necesito una conversación contextual.";
+
     public static final String MISSING_CASE_CONTEXT_REPLY =
             "Esta conversación es general y no está asociada a un encargo concreto. Para responder sobre el estado, documentos o pasos de un caso, abre el asistente desde la hoja de encargo correspondiente.";
 

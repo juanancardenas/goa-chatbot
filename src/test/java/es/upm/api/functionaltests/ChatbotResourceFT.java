@@ -401,7 +401,7 @@ class ChatbotResourceFT {
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
                 startResponse.getBody().getConversationId(),
-                "Segundo mensaje"
+                "¿Cómo puedo consultar el estado de un encargo?"
         );
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
@@ -415,7 +415,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.CLIENT_MESSAGE_REPLY);
+        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY);
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
 
@@ -426,8 +426,8 @@ class ChatbotResourceFT {
                 .containsExactly(
                         "Hola chatbot",
                         ChatbotTestMessages.CLIENT_GENERAL_START_REPLY,
-                        "Segundo mensaje",
-                        ChatbotTestMessages.CLIENT_MESSAGE_REPLY
+                        "¿Cómo puedo consultar el estado de un encargo?",
+                        ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY
                 );
         assertThat(messages).extracting(MessageEntity::getSequenceNumber)
                 .containsExactly(1, 2, 3, 4);
@@ -461,7 +461,7 @@ class ChatbotResourceFT {
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
                 startResponse.getBody().getConversationId(),
-                "Segundo mensaje profesional"
+                "Necesito saber cómo revisar el estado de un encargo"
         );
         HttpEntity<ChatbotMessageRequestDto> entity = new HttpEntity<>(request, headers);
 
@@ -475,7 +475,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.PROFESSIONAL_MESSAGE_REPLY);
+        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY);
         assertThat(response.getBody().getError()).isNull();
         assertThat(response.getBody().getCreatedAt()).isNotBlank();
 
@@ -486,8 +486,8 @@ class ChatbotResourceFT {
                 .containsExactly(
                         "Necesito revisar el flujo",
                         ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY,
-                        "Segundo mensaje profesional",
-                        ChatbotTestMessages.PROFESSIONAL_MESSAGE_REPLY
+                        "Necesito saber cómo revisar el estado de un encargo",
+                        ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY
                 );
         assertThat(messages).extracting(MessageEntity::getSequenceNumber)
                 .containsExactly(1, 2, 3, 4);
