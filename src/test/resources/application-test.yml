@@ -15,6 +15,9 @@ spring:
       token-uri: http://localhost:8080/api/goa-user/oauth2/token
       api-client-id: api-client-id
       api-client-secret: api-client-secret
+  data:
+    mongodb:
+      auto-index-creation: true
 
 goa:
   engagement:

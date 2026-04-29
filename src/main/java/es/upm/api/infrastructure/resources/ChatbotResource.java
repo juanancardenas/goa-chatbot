@@ -72,8 +72,12 @@ public class ChatbotResource {
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @GetMapping(CONVERSATION_MESSAGES)
-    public ChatbotConversationHistoryResponseDto readConversationHistory(@PathVariable String conversationId) {
-        return this.chatbotService.readConversationHistory(conversationId);
+    public ChatbotConversationHistoryResponseDto readConversationHistory(
+            @PathVariable String conversationId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
+    ) {
+        return this.chatbotService.readConversationHistory(conversationId, page, size);
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)

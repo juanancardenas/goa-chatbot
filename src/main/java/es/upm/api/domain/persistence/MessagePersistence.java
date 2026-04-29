@@ -1,6 +1,7 @@
 package es.upm.api.domain.persistence;
 
 import es.upm.api.domain.model.Message;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,4 +21,6 @@ public interface MessagePersistence {
     Optional<Message> findLatestByConversationId(String conversationId);
 
     List<Message> findByConversationIdOrdered(String conversationId);
+
+    Page<Message> findByConversationIdOrderedDesc(String conversationId, int page, int size);
 }

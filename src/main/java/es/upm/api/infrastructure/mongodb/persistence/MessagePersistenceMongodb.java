@@ -5,6 +5,8 @@ import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -58,5 +60,12 @@ public class MessagePersistenceMongodb implements MessagePersistence {
                 .stream()
                 .map(MessageEntity::toMessage)
                 .toList();
+    }
+
+    @Override
+    public Page<Message> findByConversationIdOrderedDesc(String conversationId, int page, int size) {
+        return this.messageRepository
+                .findByConversationIdOrderBySequenceNumberDesc(conversationId, PageRequest.of(page, size))
+                .map(MessageEntity::toMessage);
     }
 }

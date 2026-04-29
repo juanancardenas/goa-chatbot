@@ -16,5 +16,9 @@ public class ChatbotConversationHistoryResponseDto {
     private String engagementLetterId;
     private String type;
     private String status;
+    private Integer page;
+    private Integer size;
+    private Boolean hasMore;
+    private Long totalMessages;
     private List<ChatbotHistoryMessageDto> messages;
 }
