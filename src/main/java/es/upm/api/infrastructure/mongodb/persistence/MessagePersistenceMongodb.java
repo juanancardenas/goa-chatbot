@@ -51,4 +51,12 @@ public class MessagePersistenceMongodb implements MessagePersistence {
         return this.messageRepository.findFirstByConversationIdOrderByTimestampDesc(conversationId)
                 .map(MessageEntity::toMessage);
     }
+
+    @Override
+    public List<Message> findByConversationIdOrdered(String conversationId) {
+        return this.messageRepository.findByConversationIdOrderBySequenceNumberAsc(conversationId)
+                .stream()
+                .map(MessageEntity::toMessage)
+                .toList();
+    }
 }

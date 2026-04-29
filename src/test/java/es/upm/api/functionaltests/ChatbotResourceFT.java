@@ -18,6 +18,7 @@ import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.resources.ChatbotResource;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
@@ -458,6 +459,66 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testReadConversationHistoryAuthenticatedReturnsOrderedMessages() {
+        String conversationId = "conversation-history-001";
+        String userId = "customer-1";
+
+        this.conversationRepository.save(new ConversationEntity(
+                conversationId,
+                userId,
+                "eng-001",
+                ConversationStatus.CLOSED,
+                TYPE_CONTEXTUAL,
+                LocalDateTime.now().minusHours(1)
+        ));
+
+        this.messageRepository.saveAll(List.of(
+                MessageEntity.builder()
+                        .id("history-msg-2")
+                        .conversationId(conversationId)
+                        .senderType(MessageSenderType.ASSISTANT)
+                        .messageType(MessageType.RESPONSE)
+                        .content("Respuesta del asistente")
+                        .timestamp(LocalDateTime.now().minusMinutes(9))
+                        .sequenceNumber(2)
+                        .parentMessageId("history-msg-1")
+                        .build(),
+                MessageEntity.builder()
+                        .id("history-msg-1")
+                        .conversationId(conversationId)
+                        .senderType(MessageSenderType.USER)
+                        .messageType(MessageType.REQUEST)
+                        .content("Consulta inicial")
+                        .timestamp(LocalDateTime.now().minusMinutes(10))
+                        .sequenceNumber(1)
+                        .build()
+        ));
+
+        HttpHeaders headers = this.authHeaders("fake-token-history", userId, List.of("customer"));
+
+        ResponseEntity<ChatbotConversationHistoryResponseDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT
+                        + ChatbotResource.CONVERSATION_MESSAGES.replace("{conversationId}", conversationId),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                ChatbotConversationHistoryResponseDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getConversationId()).isEqualTo(conversationId);
+        assertThat(response.getBody().getType()).isEqualTo(TYPE_CONTEXTUAL);
+        assertThat(response.getBody().getStatus()).isEqualTo(ConversationStatus.CLOSED.name());
+        assertThat(response.getBody().getMessages()).hasSize(2);
+        assertThat(response.getBody().getMessages())
+                .extracting(message -> message.getSequenceNumber())
+                .containsExactly(1, 2);
+        assertThat(response.getBody().getMessages())
+                .extracting(message -> message.getContent())
+                .containsExactly("Consulta inicial", "Respuesta del asistente");
+    }
+
+    @Test
     void testReadContextualConversationHistoryListWithoutEngagementLetterReturnsBadRequest() {
         HttpHeaders headers = this.authHeaders("fake-token-contextual-list-bad-request", "customer-1", List.of("customer"));
 
@@ -666,57 +727,6 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-    }
-
-    @Test
-    void testReadUserConversationsAuthenticatedReturnsOnlyOwnedConversations() {
-        this.conversationRepository.saveAll(List.of(
-                new ConversationEntity(
-                        "conversation-read-1",
-                        "customer-1",
-                        "engagement-1",
-                        ConversationStatus.ACTIVE,
-                        TYPE_CONTEXTUAL,
-                        LocalDateTime.of(2026, 4, 20, 9, 0)
-                ),
-                new ConversationEntity(
-                        "conversation-read-2",
-                        "customer-1",
-                        null,
-                        ConversationStatus.CLOSED,
-                        TYPE_GENERAL,
-                        LocalDateTime.of(2026, 4, 21, 10, 30)
-                ),
-                new ConversationEntity(
-                        "conversation-read-3",
-                        "customer-2",
-                        null,
-                        ConversationStatus.ACTIVE,
-                        TYPE_GENERAL,
-                        LocalDateTime.of(2026, 4, 22, 11, 45)
-                )
-        ));
-
-        HttpHeaders headers = this.authHeaders("fake-token-read-conversations", "customer-1", List.of("customer"));
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-        ResponseEntity<ChatbotConversationResponseDto[]> response = this.restTemplate.exchange(
-                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATIONS,
-                HttpMethod.GET,
-                entity,
-                ChatbotConversationResponseDto[].class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).hasSize(2);
-        assertThat(response.getBody()[0].getConversationId()).isEqualTo("conversation-read-2");
-        assertThat(response.getBody()[0].getUserId()).isEqualTo("customer-1");
-        assertThat(response.getBody()[0].getStatus()).isEqualTo("CLOSED");
-        assertThat(response.getBody()[0].getType()).isEqualTo(TYPE_GENERAL);
-        assertThat(response.getBody()[1].getConversationId()).isEqualTo("conversation-read-1");
-        assertThat(response.getBody()[1].getUserId()).isEqualTo("customer-1");
-        assertThat(response.getBody()[1].getEngagementLetterId()).isEqualTo("engagement-1");
     }
 
     @Test

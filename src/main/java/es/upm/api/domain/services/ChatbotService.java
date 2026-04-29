@@ -18,6 +18,8 @@ import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotHistoryMessageDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationMessageResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
@@ -101,6 +103,23 @@ public class ChatbotService {
                 .toList();
     }
 
+    public ChatbotConversationHistoryResponseDto readConversationHistory(String conversationId) {
+        Conversation conversation = this.requireOwnedConversation(conversationId, this.authenticatedUserId());
+
+        List<ChatbotHistoryMessageDto> messages = this.messagePersistence.findByConversationIdOrdered(conversationId)
+                .stream()
+                .map(this::toHistoryMessageDto)
+                .toList();
+
+        return ChatbotConversationHistoryResponseDto.builder()
+                .conversationId(conversation.getId())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .type(conversation.getType())
+                .status(conversation.getStatus().name())
+                .messages(messages)
+                .build();
+    }
+
     private Conversation findOrCreateContextualConversation(String userId, String engagementLetterId) {
         return this.conversationPersistence
                 .findActiveContextualConversation(userId, engagementLetterId, TYPE_CONTEXTUAL)
@@ -156,6 +175,19 @@ public class ChatbotService {
                 .createdAt(conversation.getCreatedAt().toString())
                 .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
                 .preview(latestMessage.map(Message::getContent).orElse(null))
+                .build();
+    }
+
+    private ChatbotHistoryMessageDto toHistoryMessageDto(Message message) {
+        return ChatbotHistoryMessageDto.builder()
+                .id(message.getId())
+                .conversationId(message.getConversationId())
+                .senderType(message.getSenderType().name())
+                .messageType(message.getMessageType().name())
+                .content(message.getContent())
+                .timestamp(message.getTimestamp().toString())
+                .sequenceNumber(message.getSequenceNumber())
+                .parentMessageId(message.getParentMessageId())
                 .build();
     }
 

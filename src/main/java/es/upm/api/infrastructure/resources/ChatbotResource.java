@@ -3,9 +3,8 @@ package es.upm.api.infrastructure.resources;
 import es.upm.api.domain.services.ChatbotService;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
-import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
-import es.upm.api.infrastructure.dtos.ChatbotConversationMessageResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import jakarta.validation.Valid;
@@ -31,6 +30,7 @@ public class ChatbotResource {
     public static final String MESSAGES = "/messages";
     public static final String CONTEXTUAL_CONVERSATIONS = "/conversations/contextual";
     public static final String GENERAL_CONVERSATIONS = "/conversations/general";
+    public static final String CONVERSATION_MESSAGES = "/conversations/{conversationId}/messages";
     public static final String CLOSE_CONVERSATION = "/conversations/{conversationId}/close";
     public static final String REOPEN_CONVERSATION = "/conversations/{conversationId}/reopen";
 
@@ -68,6 +68,12 @@ public class ChatbotResource {
     @PostMapping(MESSAGES)
     public ChatbotMessageResponseDto sendMessage(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
         return this.chatbotService.sendMessage(requestDto);
+    }
+
+    @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
+    @GetMapping(CONVERSATION_MESSAGES)
+    public ChatbotConversationHistoryResponseDto readConversationHistory(@PathVariable String conversationId) {
+        return this.chatbotService.readConversationHistory(conversationId);
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)

@@ -18,4 +18,6 @@ public interface MessagePersistence {
     Integer nextSequenceNumber(String conversationId);
 
     Optional<Message> findLatestByConversationId(String conversationId);
+
+    List<Message> findByConversationIdOrdered(String conversationId);
 }
