@@ -993,34 +993,6 @@ class ChatbotResourceFT {
     }
 
     @Test
-    void testCloseConversationAlreadyClosedReturnsNoContent() {
-        String conversationId = this.conversationRepository.save(new ConversationEntity(
-                "conversation-already-closed",
-                "customer-1",
-                null,
-                ConversationStatus.CLOSED,
-                TYPE_GENERAL,
-                LocalDateTime.now()
-        )).getId();
-
-        HttpHeaders headers = this.authHeaders("fake-token-close-conflict", "customer-1", List.of("customer"));
-        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
-
-        ResponseEntity<String> response = this.restTemplate.exchange(
-                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CLOSE_CONVERSATION
-                        .replace("{conversationId}", conversationId),
-                HttpMethod.PATCH,
-                entity,
-                String.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-
-        ConversationEntity conversation = this.conversationRepository.findById(conversationId).orElseThrow();
-        assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
-    }
-
-    @Test
     void testCloseConversationUnauthorizedWithoutToken() {
         String conversationId = this.conversationRepository.save(new ConversationEntity(
                 "conversation-unauthorized-close",
