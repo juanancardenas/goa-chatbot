@@ -1115,6 +1115,46 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void deleteConversationShouldDeleteOwnedConversationAndItsMessages() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-delete")
+                .userId("customer-1")
+                .status(ConversationStatus.CLOSED)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-delete")).thenReturn(existingConversation);
+
+        chatbotService.deleteConversation("conversation-delete");
+
+        verify(messagePersistence).deleteByConversationId("conversation-delete");
+        verify(conversationPersistence).delete("conversation-delete");
+    }
+
+    @Test
+    void deleteConversationShouldRejectOtherUsersConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-delete")
+                .userId("customer-2")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-delete")).thenReturn(existingConversation);
+
+        ForbiddenException exception = assertThrows(
+                ForbiddenException.class,
+                () -> chatbotService.deleteConversation("conversation-delete")
+        );
+
+        assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
+        verify(messagePersistence, never()).deleteByConversationId(any());
+        verify(conversationPersistence, never()).delete(any());
+    }
+
+    @Test
     void sendMessageShouldRejectClosedConversation() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 

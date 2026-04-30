@@ -97,6 +97,13 @@ class MessagePersistenceMongodbTest {
         assertThat(page.getContent().get(0).getSequenceNumber()).isEqualTo(10);
     }
 
+    @Test
+    void deleteByConversationIdShouldDelegateToRepository() {
+        messagePersistenceMongodb.deleteByConversationId("conversation-1");
+
+        verify(messageRepository).deleteByConversationId("conversation-1");
+    }
+
     private Message message(String id, String conversationId, int sequence) {
         return Message.builder()
                 .id(id)

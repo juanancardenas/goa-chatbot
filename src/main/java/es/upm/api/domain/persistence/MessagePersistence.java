@@ -23,4 +23,6 @@ public interface MessagePersistence {
     List<Message> findByConversationIdOrdered(String conversationId);
 
     Page<Message> findByConversationIdOrderedDesc(String conversationId, int page, int size);
+
+    void deleteByConversationId(String conversationId);
 }

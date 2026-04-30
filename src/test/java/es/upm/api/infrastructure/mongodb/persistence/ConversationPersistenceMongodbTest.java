@@ -116,6 +116,13 @@ class ConversationPersistenceMongodbTest {
         assertThat(saved.get(0).getType()).isEqualTo("CONTEXTUAL");
     }
 
+    @Test
+    void deleteShouldDelegateToRepository() {
+        conversationPersistenceMongodb.delete("conversation-11");
+
+        verify(conversationRepository).deleteById("conversation-11");
+    }
+
     private ConversationEntity conversationEntity(String id, String userId, String engagementLetterId, String type) {
         return new ConversationEntity(
                 id,

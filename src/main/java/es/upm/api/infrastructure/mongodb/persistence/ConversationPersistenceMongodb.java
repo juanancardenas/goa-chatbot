@@ -97,4 +97,9 @@ public class ConversationPersistenceMongodb implements ConversationPersistence {
         ConversationEntity entity = ConversationEntity.fromConversation(conversation);
         this.conversationRepository.save(entity);
     }
+
+    @Override
+    public void delete(String conversationId) {
+        this.conversationRepository.deleteById(conversationId);
+    }
 }

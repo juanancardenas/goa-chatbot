@@ -389,6 +389,12 @@ public class ChatbotService {
         this.conversationPersistence.update(conversation);
     }
 
+    public void deleteConversation(String conversationId) {
+        this.requireOwnedConversation(conversationId, this.authenticatedUserId());
+        this.messagePersistence.deleteByConversationId(conversationId);
+        this.conversationPersistence.delete(conversationId);
+    }
+
     public void reopenConversation(String conversationId) {
         Conversation conversation = this.requireOwnedConversation(
                 conversationId,

@@ -967,6 +967,107 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testDeleteConversationAuthenticatedAsOwnerReturnsNoContentAndRemovesMessages() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-to-delete",
+                "customer-1",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+        this.messageRepository.saveAll(List.of(
+                MessageEntity.builder()
+                        .id("message-delete-1")
+                        .conversationId(conversationId)
+                        .senderType(MessageSenderType.USER)
+                        .messageType(MessageType.REQUEST)
+                        .content("Hola")
+                        .timestamp(LocalDateTime.now().minusMinutes(2))
+                        .sequenceNumber(1)
+                        .build(),
+                MessageEntity.builder()
+                        .id("message-delete-2")
+                        .conversationId(conversationId)
+                        .senderType(MessageSenderType.ASSISTANT)
+                        .messageType(MessageType.RESPONSE)
+                        .content("Respuesta")
+                        .timestamp(LocalDateTime.now().minusMinutes(1))
+                        .sequenceNumber(2)
+                        .build()
+        ));
+
+        HttpHeaders headers = this.authHeaders("fake-token-delete", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<Void> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.DELETE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.DELETE,
+                entity,
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(this.conversationRepository.findById(conversationId)).isEmpty();
+        assertThat(this.messageRepository.findByConversationId(conversationId)).isEmpty();
+    }
+
+    @Test
+    void testDeleteConversationOfAnotherUserReturnsForbidden() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-owned-by-other-user-to-delete",
+                "customer-2",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-delete-forbidden", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.DELETE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.DELETE,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).contains("No tienes permisos sobre esta conversacion");
+        assertThat(this.conversationRepository.findById(conversationId)).isPresent();
+    }
+
+    @Test
+    void testDeleteConversationUnauthorizedWithoutToken() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-unauthorized-delete",
+                "customer-1",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.DELETE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.DELETE,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(this.conversationRepository.findById(conversationId)).isPresent();
+    }
+
+    @Test
     void testCloseConversationOfAnotherUserReturnsForbidden() {
         String conversationId = this.conversationRepository.save(new ConversationEntity(
                 "conversation-owned-by-other-user-to-close",

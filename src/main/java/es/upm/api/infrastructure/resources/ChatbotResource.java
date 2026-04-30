@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +32,7 @@ public class ChatbotResource {
     public static final String CONTEXTUAL_CONVERSATIONS = "/conversations/contextual";
     public static final String GENERAL_CONVERSATIONS = "/conversations/general";
     public static final String CONVERSATION_MESSAGES = "/conversations/{conversationId}/messages";
+    public static final String DELETE_CONVERSATION = "/conversations/{conversationId}";
     public static final String CLOSE_CONVERSATION = "/conversations/{conversationId}/close";
     public static final String REOPEN_CONVERSATION = "/conversations/{conversationId}/reopen";
 
@@ -78,6 +80,13 @@ public class ChatbotResource {
             @RequestParam(required = false) Integer size
     ) {
         return this.chatbotService.readConversationHistory(conversationId, page, size);
+    }
+
+    @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
+    @DeleteMapping(DELETE_CONVERSATION)
+    public ResponseEntity<Void> deleteConversation(@PathVariable String conversationId) {
+        this.chatbotService.deleteConversation(conversationId);
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
