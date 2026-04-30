@@ -2,6 +2,7 @@ package es.upm.api.domain.services;
 
 import es.upm.api.domain.enums.*;
 import es.upm.api.domain.exceptions.BadRequestException;
+import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
@@ -21,6 +22,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -129,6 +132,228 @@ class ChatbotServiceTest {
         assertThat(response.getConversationId()).isEqualTo("conversation-1");
         assertThat(response.getEngagementLetterId()).isEqualTo("EL-1");
         assertThat(response.getCreatedAt()).isEqualTo(existingConversation.getCreatedAt().toString());
+    }
+
+    @Test
+    void startContextualConversationShouldCreateConversationWhenNoActiveConversationExists() {
+        this.authenticate("customer-77", "ROLE_CUSTOMER");
+        when(conversationPersistence.findActiveContextualConversation("customer-77", "EL-77", "CONTEXTUAL"))
+                .thenReturn(Optional.empty());
+
+        ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
+        request.setEngagementLetterId("EL-77");
+
+        var response = chatbotService.startContextualConversation(request);
+
+        ArgumentCaptor<Conversation> conversationCaptor = ArgumentCaptor.forClass(Conversation.class);
+        verify(conversationPersistence).create(conversationCaptor.capture());
+        Conversation savedConversation = conversationCaptor.getValue();
+
+        assertThat(savedConversation.getUserId()).isEqualTo("customer-77");
+        assertThat(savedConversation.getEngagementLetterId()).isEqualTo("EL-77");
+        assertThat(savedConversation.getType()).isEqualTo("CONTEXTUAL");
+        assertThat(savedConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        assertThat(response.getConversationId()).isEqualTo(savedConversation.getId());
+        assertThat(response.getEngagementLetterId()).isEqualTo("EL-77");
+        assertThat(response.getCreatedAt()).isEqualTo(savedConversation.getCreatedAt().toString());
+    }
+
+    @Test
+    void readConversationHistoryListShouldReturnGeneralSummariesWithLatestMessagePreview() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation latestConversation = Conversation.builder()
+                .id("conversation-1")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 9, 0))
+                .build();
+        Conversation olderConversation = Conversation.builder()
+                .id("conversation-2")
+                .userId("professional-1")
+                .status(ConversationStatus.CLOSED)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 20, 9, 0))
+                .build();
+
+        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL"))
+                .thenReturn(List.of(latestConversation, olderConversation));
+        when(messagePersistence.findLatestByConversationId("conversation-1"))
+                .thenReturn(Optional.of(
+                        Message.builder()
+                                .id("message-1")
+                                .conversationId("conversation-1")
+                                .content("Resumen reciente")
+                                .timestamp(LocalDateTime.of(2026, 4, 21, 10, 15))
+                                .build()
+                ));
+        when(messagePersistence.findLatestByConversationId("conversation-2"))
+                .thenReturn(Optional.empty());
+
+        var response = chatbotService.readConversationHistoryList(" general ", null);
+
+        assertThat(response).hasSize(2);
+        assertThat(response.get(0).getConversationId()).isEqualTo("conversation-1");
+        assertThat(response.get(0).getPreview()).isEqualTo("Resumen reciente");
+        assertThat(response.get(0).getLastMessageAt()).isEqualTo("2026-04-21T10:15");
+        assertThat(response.get(1).getConversationId()).isEqualTo("conversation-2");
+        assertThat(response.get(1).getPreview()).isNull();
+        assertThat(response.get(1).getLastMessageAt()).isNull();
+    }
+
+    @Test
+    void readConversationHistoryListShouldUseContextualFinderWhenTypeRequiresEngagementLetter() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-ctx-1")
+                .userId("customer-1")
+                .engagementLetterId("EL-9")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 12, 0))
+                .build();
+
+        when(conversationPersistence.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+                "customer-1",
+                "EL-9",
+                "CONTEXTUAL"
+        )).thenReturn(List.of(conversation));
+        when(messagePersistence.findLatestByConversationId("conversation-ctx-1")).thenReturn(Optional.empty());
+
+        var response = chatbotService.readConversationHistoryList(" contextual ", "EL-9");
+
+        assertThat(response).hasSize(1);
+        assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-ctx-1");
+        verify(conversationPersistence, never()).findByUserIdAndTypeOrderByCreatedAtDesc(any(), eq("CONTEXTUAL"));
+    }
+
+    @Test
+    void readConversationHistoryListShouldRejectUnsupportedConversationType() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> chatbotService.readConversationHistoryList("other", null)
+        );
+
+        assertThat(exception).hasMessageContaining("type debe ser GENERAL o CONTEXTUAL");
+        verify(conversationPersistence, never()).findByUserIdAndTypeOrderByCreatedAtDesc(any(), any());
+    }
+
+    @Test
+    void readConversationHistoryListShouldRequireEngagementLetterIdForContextualType() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> chatbotService.readConversationHistoryList("CONTEXTUAL", " ")
+        );
+
+        assertThat(exception).hasMessageContaining("engagementLetterId es obligatorio");
+        verify(conversationPersistence, never())
+                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(any(), any(), any());
+    }
+
+    @Test
+    void readConversationHistoryShouldSortMessagesAscendingAndApplyDefaultPagination() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-history")
+                .userId("customer-1")
+                .engagementLetterId("EL-10")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
+                .build();
+
+        Message newestInPage = Message.builder()
+                .id("message-2")
+                .conversationId("conversation-history")
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("Segundo")
+                .timestamp(LocalDateTime.of(2026, 4, 21, 9, 30))
+                .sequenceNumber(2)
+                .parentMessageId("message-1")
+                .build();
+        Message oldestInPage = Message.builder()
+                .id("message-1")
+                .conversationId("conversation-history")
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Primero")
+                .timestamp(LocalDateTime.of(2026, 4, 21, 9, 0))
+                .sequenceNumber(1)
+                .build();
+
+        when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
+        when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 10))
+                .thenReturn(new PageImpl<>(
+                        List.of(newestInPage, oldestInPage),
+                        PageRequest.of(0, 10),
+                        12
+                ));
+
+        var response = chatbotService.readConversationHistory("conversation-history", null, null);
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-history");
+        assertThat(response.getEngagementLetterId()).isEqualTo("EL-10");
+        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getSize()).isEqualTo(10);
+        assertThat(response.getHasMore()).isTrue();
+        assertThat(response.getTotalMessages()).isEqualTo(12);
+        assertThat(response.getMessages()).hasSize(2);
+        assertThat(response.getMessages().get(0).getId()).isEqualTo("message-1");
+        assertThat(response.getMessages().get(0).getSequenceNumber()).isEqualTo(1);
+        assertThat(response.getMessages().get(1).getId()).isEqualTo("message-2");
+        assertThat(response.getMessages().get(1).getSequenceNumber()).isEqualTo(2);
+    }
+
+    @Test
+    void readConversationHistoryShouldRejectNegativePage() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-history")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> chatbotService.readConversationHistory("conversation-history", -1, 10)
+        );
+
+        assertThat(exception).hasMessageContaining("page debe ser mayor o igual que 0");
+        verify(messagePersistence, never()).findByConversationIdOrderedDesc(any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void readConversationHistoryShouldRejectSizeOutsideSupportedRange() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-history")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> chatbotService.readConversationHistory("conversation-history", 0, 101)
+        );
+
+        assertThat(exception).hasMessageContaining("size debe estar entre 1 y 100");
+        verify(messagePersistence, never()).findByConversationIdOrderedDesc(any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test
@@ -886,6 +1111,64 @@ class ChatbotServiceTest {
         );
 
         assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
+        verify(conversationPersistence, never()).update(any(Conversation.class));
+    }
+
+    @Test
+    void sendMessageShouldRejectClosedConversation() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-closed")
+                .userId("professional-1")
+                .status(ConversationStatus.CLOSED)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 11, 30))
+                .build();
+        when(conversationPersistence.readById("conversation-closed")).thenReturn(existingConversation);
+
+        ConflictException exception = assertThrows(
+                ConflictException.class,
+                () -> chatbotService.sendMessage(new ChatbotMessageRequestDto("conversation-closed", "Hola"))
+        );
+
+        assertThat(exception).hasMessageContaining("La conversacion no esta activa");
+        verify(messagePersistence, never()).createAndReturnId(any(Message.class));
+        verify(chatbotScopePolicy, never()).evaluate(any(), any());
+    }
+
+    @Test
+    void reopenConversationShouldReopenClosedConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-closed")
+                .userId("customer-1")
+                .status(ConversationStatus.CLOSED)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-closed")).thenReturn(existingConversation);
+
+        chatbotService.reopenConversation("conversation-closed");
+
+        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        verify(conversationPersistence).update(existingConversation);
+    }
+
+    @Test
+    void reopenConversationShouldNotUpdateWhenConversationIsAlreadyActive() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-active")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-active")).thenReturn(existingConversation);
+
+        chatbotService.reopenConversation("conversation-active");
+
         verify(conversationPersistence, never()).update(any(Conversation.class));
     }
 

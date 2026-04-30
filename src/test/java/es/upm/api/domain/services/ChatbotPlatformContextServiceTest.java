@@ -107,4 +107,73 @@ class ChatbotPlatformContextServiceTest {
 
         assertThat(service.loadContext(engagementLetterId)).isEmpty();
     }
+
+    @Test
+    void loadContextShouldKeepEngagementDataWhenEventsCannotBeLoaded() {
+        String engagementLetterId = "eng-004";
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+
+        when(this.engagementWebClient.readById(engagementLetterId))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 5),
+                        null,
+                        null,
+                        List.of(
+                                new LegalProcedureSummary("Procedimiento A", LocalDate.of(2026, 4, 6), null, List.of()),
+                                new LegalProcedureSummary(" ", LocalDate.of(2026, 4, 7), null, List.of()),
+                                new LegalProcedureSummary("Procedimiento B", LocalDate.of(2026, 4, 8), null, List.of())
+                        )
+                ));
+        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+                .thenThrow(new IllegalStateException("events unavailable"));
+
+        var result = service.loadContext(engagementLetterId);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getOwnerDisplayName()).isEqualTo("usuario del encargo");
+        assertThat(result.get().getProcedureTitles()).containsExactly("Procedimiento A", "Procedimiento B");
+        assertThat(result.get().getRecentEventSummaries()).isEmpty();
+        assertThat(result.get().getSourcesSummary()).containsExactly(
+                "Hoja de encargo " + engagementLetterId,
+                "Procedimiento: Procedimiento A",
+                "Procedimiento: Procedimiento B"
+        );
+    }
+
+    @Test
+    void loadContextShouldUseFallbackTitleForBlankEventsAndLimitSourcesSummaryToTwoEvents() {
+        String engagementLetterId = "eng-005";
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+
+        when(this.engagementWebClient.readById(engagementLetterId))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        new UserSummary(UUID.randomUUID(), "Lucia", "Perez", "lucia@goa.es", "600000001"),
+                        List.of()
+                ));
+        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+                .thenReturn(new EngagementEventPage(List.of(
+                        new EngagementEventSummary("EVENT", "OPEN", " ", null, LocalDate.of(2026, 4, 10)),
+                        new EngagementEventSummary("EVENT", "OPEN", "Evento 1", null, LocalDate.of(2026, 4, 11)),
+                        new EngagementEventSummary("MILESTONE", "DONE", "Evento 2", null, LocalDate.of(2026, 4, 12)),
+                        new EngagementEventSummary("TASK", "OPEN", "Evento 3", null, LocalDate.of(2026, 4, 13))
+                )));
+
+        var result = service.loadContext(engagementLetterId);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getRecentEventSummaries()).hasSize(3);
+        assertThat(result.get().getRecentEventSummaries().get(0)).startsWith("Evento sin");
+        assertThat(result.get().getRecentEventSummaries().get(0)).contains("[EVENT] - OPEN");
+        assertThat(result.get().getRecentEventSummaries().get(1)).isEqualTo("Evento 1 [EVENT] - OPEN");
+        assertThat(result.get().getRecentEventSummaries().get(2)).isEqualTo("Evento 2 [MILESTONE] - DONE");
+        assertThat(result.get().getSourcesSummary()).hasSize(3);
+        assertThat(result.get().getSourcesSummary().get(0)).isEqualTo("Hoja de encargo " + engagementLetterId);
+        assertThat(result.get().getSourcesSummary().get(1)).startsWith("Hito/evento: Evento sin");
+        assertThat(result.get().getSourcesSummary().get(1)).contains("[EVENT] - OPEN");
+        assertThat(result.get().getSourcesSummary().get(2)).isEqualTo("Hito/evento: Evento 1 [EVENT] - OPEN");
+    }
 }
