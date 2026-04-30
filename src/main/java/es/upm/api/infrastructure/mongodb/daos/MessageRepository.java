@@ -20,4 +20,6 @@ public interface MessageRepository extends MongoRepository<MessageEntity, String
     List<MessageEntity> findByConversationId(String conversationId);
 
     List<MessageEntity> findByParentMessageId(String parentMessageId);
+
+    void deleteByConversationId(String conversationId);
 }

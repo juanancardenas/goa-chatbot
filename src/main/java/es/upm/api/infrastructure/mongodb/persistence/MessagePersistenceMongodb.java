@@ -68,4 +68,9 @@ public class MessagePersistenceMongodb implements MessagePersistence {
                 .findByConversationIdOrderBySequenceNumberDesc(conversationId, PageRequest.of(page, size))
                 .map(MessageEntity::toMessage);
     }
+
+    @Override
+    public void deleteByConversationId(String conversationId) {
+        this.messageRepository.deleteByConversationId(conversationId);
+    }
 }

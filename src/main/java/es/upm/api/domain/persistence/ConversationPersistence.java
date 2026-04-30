@@ -36,4 +36,6 @@ public interface ConversationPersistence {
 
     void update(Conversation conversation);
 
+    void delete(String conversationId);
+
 }
