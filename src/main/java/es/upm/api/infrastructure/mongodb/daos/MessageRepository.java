@@ -1,16 +1,21 @@
 package es.upm.api.infrastructure.mongodb.daos;
 
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface MessageRepository extends MongoRepository<MessageEntity, String> {
-
     List<MessageEntity> findByConversationIdOrderBySequenceNumberAsc(String conversationId);
 
+    Page<MessageEntity> findByConversationIdOrderBySequenceNumberDesc(String conversationId, Pageable pageable);
+
     Optional<MessageEntity> findFirstByConversationIdOrderBySequenceNumberDesc(String conversationId);
+
+    Optional<MessageEntity> findFirstByConversationIdOrderByTimestampDesc(String conversationId);
 
     List<MessageEntity> findByConversationId(String conversationId);
 

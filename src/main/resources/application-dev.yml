@@ -9,6 +9,7 @@ spring:
   # Local Mongodb database (local or Dockerized) -------------
   data:
     mongodb:
+      auto-index-creation: true
       uri: mongodb://mongodb-chatbot:27017/goachatbotdb?authSource=admin
 
 goa:

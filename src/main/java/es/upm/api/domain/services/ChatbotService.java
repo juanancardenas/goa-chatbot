@@ -18,17 +18,22 @@ import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
+import es.upm.api.infrastructure.dtos.ChatbotHistoryMessageDto;
+import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationMessageResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -84,6 +89,75 @@ public class ChatbotService {
         );
     }
 
+    public List<ChatbotConversationSummaryDto> readConversationHistoryList(
+            String type,
+            String engagementLetterId
+    ) {
+        String normalizedType = this.normalizeConversationType(type);
+        String userId = this.authenticatedUserId();
+
+        List<Conversation> conversations = TYPE_CONTEXTUAL.equals(normalizedType)
+                ? this.readContextualConversations(userId, engagementLetterId)
+                : this.conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
+
+        return conversations.stream()
+                .map(this::toConversationSummaryDto)
+                .toList();
+    }
+
+    public ChatbotConversationHistoryResponseDto readConversationHistory(String conversationId, Integer page, Integer size) {
+        Conversation conversation = this.requireOwnedConversation(conversationId, this.authenticatedUserId());
+
+        int normalizedPage = this.normalizeHistoryPage(page);
+        int normalizedSize = this.normalizeHistorySize(size);
+
+        Page<Message> pagedMessages = this.messagePersistence.findByConversationIdOrderedDesc(
+                conversationId,
+                normalizedPage,
+                normalizedSize
+        );
+
+        List<Message> messagesChunk = new ArrayList<>(pagedMessages.getContent());
+        messagesChunk.sort((left, right) -> Integer.compare(left.getSequenceNumber(), right.getSequenceNumber()));
+
+        List<ChatbotHistoryMessageDto> messages = messagesChunk
+                .stream()
+                .map(this::toHistoryMessageDto)
+                .toList();
+
+        return ChatbotConversationHistoryResponseDto.builder()
+                .conversationId(conversation.getId())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .type(conversation.getType())
+                .status(conversation.getStatus().name())
+                .page(normalizedPage)
+                .size(normalizedSize)
+                .hasMore(pagedMessages.hasNext())
+                .totalMessages(pagedMessages.getTotalElements())
+                .messages(messages)
+                .build();
+    }
+
+    private int normalizeHistoryPage(Integer page) {
+        if (page == null) {
+            return 0;
+        }
+        if (page < 0) {
+            throw new BadRequestException("page debe ser mayor o igual que 0");
+        }
+        return page;
+    }
+
+    private int normalizeHistorySize(Integer size) {
+        if (size == null) {
+            return 10;
+        }
+        if (size < 1 || size > 100) {
+            throw new BadRequestException("size debe estar entre 1 y 100");
+        }
+        return size;
+    }
+
     private Conversation findOrCreateContextualConversation(String userId, String engagementLetterId) {
         return this.conversationPersistence
                 .findActiveContextualConversation(userId, engagementLetterId, TYPE_CONTEXTUAL)
@@ -100,6 +174,59 @@ public class ChatbotService {
                     this.conversationPersistence.create(conversation);
                     return conversation;
                 });
+    }
+
+    private List<Conversation> readContextualConversations(String userId, String engagementLetterId) {
+        if (engagementLetterId == null || engagementLetterId.isBlank()) {
+            throw new BadRequestException("engagementLetterId es obligatorio para listar conversaciones contextuales");
+        }
+
+        return this.conversationPersistence.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+                userId,
+                engagementLetterId,
+                TYPE_CONTEXTUAL
+        );
+    }
+
+    private String normalizeConversationType(String type) {
+        if (type == null || type.isBlank()) {
+            throw new BadRequestException("type es obligatorio");
+        }
+
+        String normalizedType = type.trim().toUpperCase(Locale.ROOT);
+
+        if (!TYPE_GENERAL.equals(normalizedType) && !TYPE_CONTEXTUAL.equals(normalizedType)) {
+            throw new BadRequestException("type debe ser GENERAL o CONTEXTUAL");
+        }
+
+        return normalizedType;
+    }
+
+    private ChatbotConversationSummaryDto toConversationSummaryDto(Conversation conversation) {
+        Optional<Message> latestMessage = this.messagePersistence.findLatestByConversationId(conversation.getId());
+
+        return ChatbotConversationSummaryDto.builder()
+                .conversationId(conversation.getId())
+                .type(conversation.getType())
+                .status(conversation.getStatus().name())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .createdAt(conversation.getCreatedAt().toString())
+                .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
+                .preview(latestMessage.map(Message::getContent).orElse(null))
+                .build();
+    }
+
+    private ChatbotHistoryMessageDto toHistoryMessageDto(Message message) {
+        return ChatbotHistoryMessageDto.builder()
+                .id(message.getId())
+                .conversationId(message.getConversationId())
+                .senderType(message.getSenderType().name())
+                .messageType(message.getMessageType().name())
+                .content(message.getContent())
+                .timestamp(message.getTimestamp().toString())
+                .sequenceNumber(message.getSequenceNumber())
+                .parentMessageId(message.getParentMessageId())
+                .build();
     }
 
     // Starts General Conversation, this type of conversation is not linked to other process or entity
@@ -253,70 +380,26 @@ public class ChatbotService {
         );
     }
 
-    public List<ChatbotConversationResponseDto> readUserConversations() {
-        return this.conversationPersistence.findByUserId(this.authenticatedUserId()).stream()
-                .map(conversation -> new ChatbotConversationResponseDto(
-                        conversation.getId(),
-                        conversation.getUserId(),
-                        conversation.getEngagementLetterId(),
-                        conversation.getStatus().name(),
-                        conversation.getType(),
-                        conversation.getCreatedAt().toString()
-                ))
-                .toList();
-    }
-
-    public ChatbotConversationResponseDto readConversation(String conversationId) {
-        Conversation conversation = this.requireOwnedConversation(
-                conversationId,
-                this.authenticatedUserId()
-        );
-
-        return this.toConversationResponse(conversation);
-    }
-
-    public List<ChatbotConversationMessageResponseDto> readConversationMessages(String conversationId) {
-        this.requireOwnedConversation(
-                conversationId,
-                this.authenticatedUserId()
-        );
-
-        return this.messagePersistence.findByConversationId(conversationId).stream()
-                .map(message -> new ChatbotConversationMessageResponseDto(
-                        message.getId(),
-                        message.getConversationId(),
-                        message.getSenderType().name(),
-                        message.getMessageType().name(),
-                        message.getContent(),
-                        message.getTimestamp().toString(),
-                        message.getSequenceNumber(),
-                        message.getParentMessageId()
-                ))
-                .toList();
-    }
-
-    private ChatbotConversationResponseDto toConversationResponse(Conversation conversation) {
-        return new ChatbotConversationResponseDto(
-                conversation.getId(),
-                conversation.getUserId(),
-                conversation.getEngagementLetterId(),
-                conversation.getStatus().name(),
-                conversation.getType(),
-                conversation.getCreatedAt().toString()
-        );
-    }
-
     public void closeConversation(String conversationId) {
+        Conversation conversation = this.requireActiveOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+        conversation.setStatus(ConversationStatus.CLOSED);
+        this.conversationPersistence.update(conversation);
+    }
+
+    public void reopenConversation(String conversationId) {
         Conversation conversation = this.requireOwnedConversation(
                 conversationId,
                 this.authenticatedUserId()
         );
 
-        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+        if (conversation.getStatus() == ConversationStatus.ACTIVE) {
             return;
         }
 
-        conversation.setStatus(ConversationStatus.CLOSED);
+        conversation.setStatus(ConversationStatus.ACTIVE);
         this.conversationPersistence.update(conversation);
     }
 
@@ -344,19 +427,6 @@ public class ChatbotService {
         );
     }
 
-    private Conversation requireActiveOwnedConversation(
-            String conversationId,
-            String userId
-    ) {
-        Conversation conversation = this.requireOwnedConversation(conversationId, userId);
-
-        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
-            throw new ConflictException("La conversacion no esta activa");
-        }
-
-        return conversation;
-    }
-
     private Conversation requireOwnedConversation(
             String conversationId,
             String userId
@@ -365,6 +435,19 @@ public class ChatbotService {
 
         if (!userId.equals(conversation.getUserId())) {
             throw new ForbiddenException("No tienes permisos sobre esta conversacion");
+        }
+
+        return conversation;
+    }
+
+    private Conversation requireActiveOwnedConversation(
+            String conversationId,
+            String userId
+    ) {
+        Conversation conversation = this.requireOwnedConversation(conversationId, userId);
+
+        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+            throw new ConflictException("La conversacion no esta activa");
         }
 
         return conversation;

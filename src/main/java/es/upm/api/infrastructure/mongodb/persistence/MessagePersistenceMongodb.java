@@ -5,13 +5,15 @@ import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class MessagePersistenceMongodb implements MessagePersistence {
-
     private final MessageRepository messageRepository;
 
     @Autowired
@@ -44,5 +46,26 @@ public class MessagePersistenceMongodb implements MessagePersistence {
                 .findFirstByConversationIdOrderBySequenceNumberDesc(conversationId)
                 .map(message -> message.getSequenceNumber() + 1)
                 .orElse(1);
+    }
+
+    @Override
+    public Optional<Message> findLatestByConversationId(String conversationId) {
+        return this.messageRepository.findFirstByConversationIdOrderByTimestampDesc(conversationId)
+                .map(MessageEntity::toMessage);
+    }
+
+    @Override
+    public List<Message> findByConversationIdOrdered(String conversationId) {
+        return this.messageRepository.findByConversationIdOrderBySequenceNumberAsc(conversationId)
+                .stream()
+                .map(MessageEntity::toMessage)
+                .toList();
+    }
+
+    @Override
+    public Page<Message> findByConversationIdOrderedDesc(String conversationId, int page, int size) {
+        return this.messageRepository
+                .findByConversationIdOrderBySequenceNumberDesc(conversationId, PageRequest.of(page, size))
+                .map(MessageEntity::toMessage);
     }
 }
