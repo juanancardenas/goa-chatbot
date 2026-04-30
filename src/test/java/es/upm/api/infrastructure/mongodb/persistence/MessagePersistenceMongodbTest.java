@@ -1,0 +1,123 @@
+package es.upm.api.infrastructure.mongodb.persistence;
+
+import es.upm.api.domain.enums.MessageSenderType;
+import es.upm.api.domain.enums.MessageType;
+import es.upm.api.domain.model.Message;
+import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
+import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class MessagePersistenceMongodbTest {
+
+    @Mock
+    private MessageRepository messageRepository;
+
+    @InjectMocks
+    private MessagePersistenceMongodb messagePersistenceMongodb;
+
+    @Test
+    void createAndCreateAndReturnIdShouldSaveMessage() {
+        Message message = message("message-1", "conversation-1", 1);
+
+        messagePersistenceMongodb.create(message);
+        String id = messagePersistenceMongodb.createAndReturnId(message);
+
+        ArgumentCaptor<MessageEntity> captor = ArgumentCaptor.forClass(MessageEntity.class);
+        verify(messageRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).hasSize(2);
+        assertThat(captor.getAllValues().get(0).getConversationId()).isEqualTo("conversation-1");
+        assertThat(id).isEqualTo("message-1");
+    }
+
+    @Test
+    void findByConversationMethodsShouldReturnMappedMessages() {
+        MessageEntity first = messageEntity("message-1", "conversation-1", 1);
+        MessageEntity second = messageEntity("message-2", "conversation-1", 2);
+
+        when(messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-1"))
+                .thenReturn(List.of(first, second));
+
+        List<Message> orderedAsc = messagePersistenceMongodb.findByConversationId("conversation-1");
+        List<Message> orderedAscAlias = messagePersistenceMongodb.findByConversationIdOrdered("conversation-1");
+
+        assertThat(orderedAsc).hasSize(2);
+        assertThat(orderedAscAlias).hasSize(2);
+        assertThat(orderedAsc.get(0).getSequenceNumber()).isEqualTo(1);
+        assertThat(orderedAscAlias.get(1).getSequenceNumber()).isEqualTo(2);
+    }
+
+    @Test
+    void nextSequenceNumberShouldReturnNextAndDefault() {
+        when(messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("conversation-1"))
+                .thenReturn(Optional.of(messageEntity("message-9", "conversation-1", 9)));
+        when(messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("conversation-empty"))
+                .thenReturn(Optional.empty());
+
+        Integer next = messagePersistenceMongodb.nextSequenceNumber("conversation-1");
+        Integer first = messagePersistenceMongodb.nextSequenceNumber("conversation-empty");
+
+        assertThat(next).isEqualTo(10);
+        assertThat(first).isEqualTo(1);
+    }
+
+    @Test
+    void findLatestAndFindOrderedDescShouldMapRepositoryResults() {
+        MessageEntity latest = messageEntity("message-10", "conversation-1", 10);
+        when(messageRepository.findFirstByConversationIdOrderByTimestampDesc("conversation-1"))
+                .thenReturn(Optional.of(latest));
+        when(messageRepository.findByConversationIdOrderBySequenceNumberDesc(
+                eq("conversation-1"),
+                any(PageRequest.class)
+        )).thenReturn(new PageImpl<>(List.of(latest)));
+
+        Optional<Message> latestMessage = messagePersistenceMongodb.findLatestByConversationId("conversation-1");
+        var page = messagePersistenceMongodb.findByConversationIdOrderedDesc("conversation-1", 0, 5);
+
+        assertThat(latestMessage).isPresent();
+        assertThat(latestMessage.orElseThrow().getId()).isEqualTo("message-10");
+        assertThat(page.getTotalElements()).isEqualTo(1);
+        assertThat(page.getContent().get(0).getSequenceNumber()).isEqualTo(10);
+    }
+
+    private Message message(String id, String conversationId, int sequence) {
+        return Message.builder()
+                .id(id)
+                .conversationId(conversationId)
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("content")
+                .timestamp(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .sequenceNumber(sequence)
+                .build();
+    }
+
+    private MessageEntity messageEntity(String id, String conversationId, int sequence) {
+        return MessageEntity.builder()
+                .id(id)
+                .conversationId(conversationId)
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("content")
+                .timestamp(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .sequenceNumber(sequence)
+                .build();
+    }
+}
