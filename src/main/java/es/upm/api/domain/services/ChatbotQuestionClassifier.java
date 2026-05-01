@@ -19,6 +19,15 @@ public class ChatbotQuestionClassifier {
         }
 
         if (containsAny(normalized,
+                "legal task", "legal tasks", "tarea legal", "tareas legales",
+                "tarea del encargo", "tareas del encargo",
+                "trabajo legal", "trabajos legales",
+                "actuacion legal", "actuaciones legales",
+                "actuaciones del encargo", "servicios legales")) {
+            return PlatformQuestionType.LEGAL_TASKS;
+        }
+
+        if (containsAny(normalized,
                 "hito", "hitos", "evento", "eventos", "timeline", "linea temporal",
                 "proximo paso", "proximos pasos", "siguiente paso", "siguientes pasos",
                 "fecha", "fechas", "plazo", "plazos", "cuando es", "cuando vence",

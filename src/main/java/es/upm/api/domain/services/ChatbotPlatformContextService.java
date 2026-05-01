@@ -46,7 +46,9 @@ public class ChatbotPlatformContextService {
                 .distinct()
                 .toList();
 
-        if (procedureTitles.isEmpty() && recentEventSummaries.isEmpty() && engagementLetter.isEmpty()) {
+        List<String> legalTaskSummaries = this.buildLegalTaskSummaries(engagementLetter);
+
+        if (procedureTitles.isEmpty() && legalTaskSummaries.isEmpty() && recentEventSummaries.isEmpty() && engagementLetter.isEmpty()) {
             return Optional.empty();
         }
 
@@ -56,6 +58,11 @@ public class ChatbotPlatformContextService {
         procedureTitles.stream()
                 .limit(2)
                 .map(title -> "Procedimiento: " + title)
+                .forEach(sourcesSummary::add);
+
+        legalTaskSummaries.stream()
+                .limit(3)
+                .map(task -> "Legal Task: " + task)
                 .forEach(sourcesSummary::add);
 
         recentEventSummaries.stream()
@@ -68,6 +75,7 @@ public class ChatbotPlatformContextService {
                         .engagementLetterId(engagementLetterId)
                         .ownerDisplayName(ownerDisplayName)
                         .procedureTitles(procedureTitles)
+                        .legalTaskSummaries(legalTaskSummaries)
                         .recentEventSummaries(recentEventSummaries)
                         .sourcesSummary(sourcesSummary)
                         .build()
@@ -98,4 +106,30 @@ public class ChatbotPlatformContextService {
             return List.of();
         }
     }
+
+    private List<String> buildLegalTaskSummaries(Optional<EngagementLetterSummary> engagementLetter) {
+        return engagementLetter
+                .map(EngagementLetterSummary::getLegalProcedures)
+                .orElse(List.of())
+                .stream()
+                .filter(procedure -> procedure.getLegalTasks() != null)
+                .flatMap(procedure -> procedure.getLegalTasks().stream()
+                        .filter(task -> task != null && !task.isBlank())
+                        .map(task -> "%s: %s".formatted(
+                                this.safeText(procedure.getTitle(), "Procedimiento sin título"),
+                                task.trim()
+                        ))
+                )
+                .distinct()
+                .toList();
+    }
+
+    private String safeText(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+
+        return value.trim();
+    }
+
 }
