@@ -65,6 +65,32 @@ class ChatbotPromptTemplateTest {
     }
 
     @Test
+    void shouldGuideAiToUseLegalTasksFromPlatformContext() {
+        ChatbotAiRequest request = ChatbotAiRequest.builder()
+                .basePrompt("Prompt base de pruebas")
+                .roleProfile("PROFESSIONAL")
+                .conversationType("CONTEXTUAL")
+                .documentsAvailable(false)
+                .platformContext("""
+                    EngagementLetterId: engagement-001
+                    Procedimientos: Procedimiento de herencia
+
+                    Legal Tasks:
+                    Procedimiento de herencia: Estudio de antecedentes y documentación.
+                    Procedimiento de herencia: Asesoramiento jurídico.
+                    """)
+                .recentMessages(List.of())
+                .build();
+
+        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+
+        assertThat(prompt).contains("Si existe una sección \"Legal Tasks\"");
+        assertThat(prompt).contains("úsala como fuente principal");
+        assertThat(prompt).contains("Procedimiento de herencia: Estudio de antecedentes y documentación.");
+        assertThat(prompt).contains("Procedimiento de herencia: Asesoramiento jurídico.");
+    }
+
+    @Test
     void shouldIncludeScopeRules() {
         ChatbotAiRequest request = ChatbotAiRequest.builder()
                 .conversationType("GENERAL")
