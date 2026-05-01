@@ -1,20 +1,24 @@
 spring:
+  ai:
+    model:
+      chat: ollama
+    ollama:
+      base-url: http://host.docker.internal:11434
+      chat:
+        options:
+          model: llama3.1:8b
+          temperature: 0.2
+          max-output-tokens: 500
+    openai:
+      api-key: ${CHATBOT_OPENAI_API_KEY:dev-placeholder}
+      speech:
+        api-key: ${CHATBOT_OPENAI_API_KEY:dev-placeholder}
   security:
     oauth2:
       jwk-uri: http://localhost:8080/api/goa-user/oauth2/jwks
       token-uri: http://localhost:8080/api/goa-user/oauth2/token
       api-client-id: api-client-id
       api-client-secret: api-client-secret
-  ai:
-    model:
-      chat: ollama
-    ollama:
-      base-url: http://localhost:11434
-      chat:
-        options:
-          model: llama3.1:8b
-          temperature: 0.2
-          max-output-tokens: 500
   # Local Mongodb database (local or Dockerized) -------------
   data:
     mongodb:
