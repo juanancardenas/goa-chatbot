@@ -12,14 +12,40 @@ services:
       SPRING_DATA_MONGODB_URI: mongodb://mongodb-chatbot:27017/goachatbotdb?authSource=admin
       SPRING_SECURITY_OAUTH2_JWK-URI: http://host.docker.internal:8080/api/goa-user/oauth2/jwks
       SPRING_SECURITY_OAUTH2_TOKEN-URI: http://host.docker.internal:8080/api/goa-user/oauth2/token
+      CHATBOT_OLLAMA_BASE_URL: http://ollama:11434
+      CHATBOT_OLLAMA_MODEL: ${CHATBOT_OLLAMA_MODEL:-llama3.2:3b}
+      SPRING_AI_OPENAI_API_KEY: dev-placeholder
+      SPRING_AI_OPENAI_SPEECH_API_KEY: dev-placeholder
+    depends_on:
+      - mongodb-chatbot
+      - ollama
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - chatbotNet
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-chatbot
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_MODEL: ${CHATBOT_OLLAMA_MODEL:-llama3.2:3b}
+    volumes:
+      - ollama-chatbot-data:/root/.ollama
+      - ./docker/ollama/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/usr/bin/bash", "/entrypoint.sh"]
     networks:
       - chatbotNet
 
 networks:
   chatbotNet:
     external: true
+
+volumes:
+  ollama-chatbot-data:
 
 #> docker compose up --build -d
 

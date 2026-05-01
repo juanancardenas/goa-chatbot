@@ -1,6 +1,7 @@
 package es.upm.api.infrastructure.resources;
 
 import es.upm.api.domain.services.ChatbotService;
+import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
@@ -35,6 +36,7 @@ public class ChatbotResource {
     public static final String DELETE_CONVERSATION = "/conversations/{conversationId}";
     public static final String CLOSE_CONVERSATION = "/conversations/{conversationId}/close";
     public static final String REOPEN_CONVERSATION = "/conversations/{conversationId}/reopen";
+    public static final String CONFIGURATION_STATUS = "/configuration/status";
 
     private final ChatbotService chatbotService;
 
@@ -70,6 +72,12 @@ public class ChatbotResource {
     @PostMapping(MESSAGES)
     public ChatbotMessageResponseDto sendMessage(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
         return this.chatbotService.sendMessage(requestDto);
+    }
+
+    @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
+    @GetMapping(CONFIGURATION_STATUS)
+    public ChatbotConfigurationStatusDto readConfigurationStatus() {
+        return this.chatbotService.readConfigurationStatus();
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)

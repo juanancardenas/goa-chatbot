@@ -9,6 +9,17 @@ de:
         version: 7.0.16
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.chat.GoogleGenAiChatAutoConfiguration
+  ai:
+    model:
+      chat: ollama
+    openai:
+      api-key: test-placeholder
+      speech:
+        api-key: test-placeholder
   security:
     oauth2:
       jwk-uri: http://localhost:8080/api/goa-user/oauth2/jwks
@@ -26,3 +37,16 @@ goa:
 app:
   cors:
     allowed-origins: http://localhost:4200
+
+chatbot:
+  ai:
+    enabled: true
+    provider: ollama
+    model: llama3.2:3b
+    temperature: 0.2
+    max-input-characters: 1000
+    max-output-tokens: 500
+    max-context-messages: 10
+    timeout-seconds: 20
+    documents-available: false
+    base-prompt: Test prompt for functional tests.
