@@ -9,11 +9,14 @@ import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
+import es.upm.api.domain.model.ai.ChatbotAiRequest;
+import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
+import es.upm.api.domain.services.ai.ChatbotAiClient;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
@@ -56,7 +59,7 @@ public class ChatbotService {
     private final ChatbotScopePolicy chatbotScopePolicy;
     private final ConversationPersistence conversationPersistence;
     private final MessagePersistence messagePersistence;
-
+    private final ChatbotAiClient chatbotAiClient;
     private final ChatbotAiProperties chatbotAiProperties;
     // Constructores
     @Autowired
@@ -66,6 +69,7 @@ public class ChatbotService {
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
                           ChatbotDocumentContextService chatbotDocumentContextService,
+                          ChatbotAiClient chatbotAiClient,
                           ChatbotAiProperties chatbotAiProperties
     ) {
         this.conversationPersistence = conversationPersistence;
@@ -74,6 +78,7 @@ public class ChatbotService {
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
+        this.chatbotAiClient = chatbotAiClient;
         this.chatbotAiProperties = chatbotAiProperties;
     }
 
@@ -237,7 +242,7 @@ public class ChatbotService {
             ChatbotMessageRequestDto requestDto
     ) {
         this.validateUserMessageLength(requestDto.getMessage());
-        // Se crea la conversación
+
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
 
@@ -249,10 +254,8 @@ public class ChatbotService {
                 .createdAt(date)
                 .build();
 
-        // Se persiste la conversación
         this.conversationPersistence.create(conversation);
 
-        // Se crea el mensaje inicial y se recupera su Id
         String messageId = this.saveMessage(
                 conversation.getId(),
                 MessageSenderType.USER,
@@ -264,7 +267,15 @@ public class ChatbotService {
         );
 
         ConversationProfileType profile = this.resolveConversationProfile();
-        String assistantReply = this.generalStartReply(profile);
+        String baseReply = this.generalStartReply(profile);
+
+        String assistantReply = this.generateConfiguredAssistantReply(
+                conversation,
+                profile,
+                requestDto.getMessage(),
+                baseReply,
+                Optional.empty()
+        );
 
         this.saveMessage(
                 conversation.getId(),
@@ -328,30 +339,57 @@ public class ChatbotService {
         List<String> sourcesSummary;
 
         if (scopeDecision.isAllowed()) {
+            ConversationProfileType profile = this.resolveConversationProfile();
+
             if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
                 Optional<ChatbotPlatformContext> platformContext = this.chatbotPlatformContextService
                         .loadContext(conversation.getEngagementLetterId());
-                ConversationProfileType profile = this.resolveConversationProfile();
 
                 if (platformContext.isPresent()) {
-                    assistantReply = this.contextualPlatformReply(
+                    String baseReply = this.contextualPlatformReply(
                             profile,
                             requestDto.getMessage(),
                             conversation,
                             platformContext.get()
                     );
+
+                    assistantReply = this.generateConfiguredAssistantReply(
+                            conversation,
+                            profile,
+                            requestDto.getMessage(),
+                            baseReply,
+                            platformContext
+                    );
+
                     responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
                     usedPlatformData = true;
                     sourcesSummary = platformContext.get().getSourcesSummary();
                 } else {
-                    assistantReply = this.contextualFallbackReply(profile, requestDto.getMessage());
+                    String baseReply = this.contextualFallbackReply(profile, requestDto.getMessage());
+
+                    assistantReply = this.generateConfiguredAssistantReply(
+                            conversation,
+                            profile,
+                            requestDto.getMessage(),
+                            baseReply,
+                            Optional.empty()
+                    );
+
                     responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
                     usedPlatformData = false;
                     sourcesSummary = List.of();
                 }
             } else {
-                ConversationProfileType profile = this.resolveConversationProfile();
-                assistantReply = this.generalFaqReply(profile, requestDto.getMessage());
+                String baseReply = this.generalFaqReply(profile, requestDto.getMessage());
+
+                assistantReply = this.generateConfiguredAssistantReply(
+                        conversation,
+                        profile,
+                        requestDto.getMessage(),
+                        baseReply,
+                        Optional.empty()
+                );
+
                 responseMode = RESPONSE_MODE_GENERAL;
                 usedPlatformData = false;
                 sourcesSummary = List.of();
@@ -506,6 +544,139 @@ public class ChatbotService {
             return "";
         }
         return authority.replace("ROLE_", "").toUpperCase(Locale.ROOT);
+    }
+
+    private String generateConfiguredAssistantReply(
+            Conversation conversation,
+            ConversationProfileType profile,
+            String userMessage,
+            String baseReply,
+            Optional<ChatbotPlatformContext> platformContext
+    ) {
+        if (!this.chatbotAiProperties.isEnabled()) {
+            return baseReply;
+        }
+
+        try {
+            ChatbotAiRequest aiRequest = ChatbotAiRequest.builder()
+                    .conversationId(conversation.getId())
+                    .userId(conversation.getUserId())
+                    .userMessage(this.buildAiUserMessage(userMessage, baseReply))
+                    .basePrompt(this.chatbotAiProperties.getBasePrompt())
+                    .roleProfile(profile.name())
+                    .conversationType(conversation.getType())
+                    .platformContext(this.buildPlatformContextForPrompt(platformContext))
+                    .recentMessages(this.readRecentMessagesForPrompt(conversation.getId()))
+                    .model(this.chatbotAiProperties.getModel())
+                    .maxOutputTokens(this.chatbotAiProperties.getMaxOutputTokens())
+                    .temperature(this.chatbotAiProperties.getTemperature())
+                    .documentsAvailable(this.chatbotAiProperties.isDocumentsAvailable())
+                    .build();
+
+            ChatbotAiResponse aiResponse = this.chatbotAiClient.generate(aiRequest);
+
+            if (aiResponse == null || aiResponse.getError() != null) {
+                return baseReply;
+            }
+
+            if (aiResponse.getContent() == null || aiResponse.getContent().isBlank()) {
+                return baseReply;
+            }
+
+            return aiResponse.getContent().trim();
+        } catch (RuntimeException ignored) {
+            return baseReply;
+        }
+    }
+
+    private String buildAiUserMessage(String userMessage, String baseReply) {
+        return """
+            Pregunta del usuario:
+            %s
+
+            Respuesta base segura generada por GOA:
+            %s
+
+            Mejora la respuesta manteniendo las restricciones del sistema.
+            No inventes datos.
+            No contradigas la respuesta base.
+            Si falta contexto, indícalo claramente.
+            """.formatted(
+                this.safeText(userMessage, "No disponible"),
+                this.safeText(baseReply, "No disponible")
+        );
+    }
+
+    private String buildPlatformContextForPrompt(Optional<ChatbotPlatformContext> platformContext) {
+        if (platformContext.isEmpty()) {
+            return "No hay contexto de plataforma disponible.";
+        }
+
+        ChatbotPlatformContext context = platformContext.get();
+
+        String procedures = context.getProcedureTitles() == null || context.getProcedureTitles().isEmpty()
+                ? "No disponible"
+                : String.join(", ", context.getProcedureTitles());
+
+        String events = context.getRecentEventSummaries() == null || context.getRecentEventSummaries().isEmpty()
+                ? "No disponible"
+                : String.join(System.lineSeparator(), context.getRecentEventSummaries());
+
+        String sources = context.getSourcesSummary() == null || context.getSourcesSummary().isEmpty()
+                ? "No disponible"
+                : String.join(System.lineSeparator(), context.getSourcesSummary());
+
+        return """
+            EngagementLetterId: %s
+            Cliente/propietario visible: %s
+            Procedimientos: %s
+
+            Eventos recientes:
+            %s
+
+            Fuentes internas disponibles:
+            %s
+            """.formatted(
+                this.safeText(context.getEngagementLetterId(), "No disponible"),
+                this.safeText(context.getOwnerDisplayName(), "No disponible"),
+                procedures,
+                events,
+                sources
+        );
+    }
+
+    private List<String> readRecentMessagesForPrompt(String conversationId) {
+        try {
+            List<Message> messages = this.messagePersistence.findByConversationIdOrdered(conversationId);
+
+            if (messages == null || messages.isEmpty()) {
+                return List.of();
+            }
+
+            int maxMessages = this.chatbotAiProperties.getMaxContextMessages();
+
+            return messages.stream()
+                    .skip(Math.max(0, messages.size() - maxMessages))
+                    .map(this::toPromptHistoryLine)
+                    .toList();
+        } catch (RuntimeException ignored) {
+            return List.of();
+        }
+    }
+
+    private String toPromptHistoryLine(Message message) {
+        return "%s: %s".formatted(
+                message.getSenderType().name(),
+                this.safeText(message.getContent(), "")
+        );
+    }
+
+    private String safeText(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+
+        return value.trim();
     }
 
     private String generalStartReply(ConversationProfileType profile) {
