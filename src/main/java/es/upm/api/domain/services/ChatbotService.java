@@ -1,5 +1,6 @@
 package es.upm.api.domain.services;
 
+import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.MessageSenderType;
@@ -16,6 +17,7 @@ import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
+import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
@@ -55,6 +57,7 @@ public class ChatbotService {
     private final ConversationPersistence conversationPersistence;
     private final MessagePersistence messagePersistence;
 
+    private final ChatbotAiProperties chatbotAiProperties;
     // Constructores
     @Autowired
     public ChatbotService(ConversationPersistence conversationPersistence,
@@ -62,7 +65,8 @@ public class ChatbotService {
                           ChatbotScopePolicy chatbotScopePolicy,
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
-                          ChatbotDocumentContextService chatbotDocumentContextService
+                          ChatbotDocumentContextService chatbotDocumentContextService,
+                          ChatbotAiProperties chatbotAiProperties
     ) {
         this.conversationPersistence = conversationPersistence;
         this.messagePersistence = messagePersistence;
@@ -70,6 +74,7 @@ public class ChatbotService {
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
+        this.chatbotAiProperties = chatbotAiProperties;
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
@@ -231,6 +236,7 @@ public class ChatbotService {
     public ChatbotMessageResponseDto startGeneralConversation(
             ChatbotMessageRequestDto requestDto
     ) {
+        this.validateUserMessageLength(requestDto.getMessage());
         // Se crea la conversación
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
@@ -291,6 +297,8 @@ public class ChatbotService {
         if (requestDto.getConversationId() == null || requestDto.getConversationId().isBlank()) {
             throw new BadRequestException("conversationId es obligatorio para enviar mensajes");
         }
+
+        this.validateUserMessageLength(requestDto.getMessage());
 
         Conversation conversation = this.requireActiveOwnedConversation(
                 requestDto.getConversationId(),
@@ -376,6 +384,18 @@ public class ChatbotService {
                 usedPlatformData,
                 sourcesSummary
         );
+    }
+
+    public ChatbotConfigurationStatusDto readConfigurationStatus() {
+        return ChatbotConfigurationStatusDto.builder()
+                .enabled(this.chatbotAiProperties.isEnabled())
+                .provider(this.chatbotAiProperties.normalizedProvider())
+                .model(this.chatbotAiProperties.getModel())
+                .maxInputCharacters(this.chatbotAiProperties.getMaxInputCharacters())
+                .maxOutputTokens(this.chatbotAiProperties.getMaxOutputTokens())
+                .maxContextMessages(this.chatbotAiProperties.getMaxContextMessages())
+                .documentsAvailable(this.chatbotAiProperties.isDocumentsAvailable())
+                .build();
     }
 
     public void closeConversation(String conversationId) {
@@ -739,5 +759,13 @@ public class ChatbotService {
             case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_CONTEXT_REPLY;
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_CONTEXT_REPLY;
         };
+    }
+
+    private void validateUserMessageLength(String message) {
+        int maxInputCharacters = this.chatbotAiProperties.getMaxInputCharacters();
+
+        if (maxInputCharacters > 0 && message != null && message.length() > maxInputCharacters) {
+            throw new BadRequestException("message supera el limite maximo de caracteres configurado");
+        }
     }
 }
