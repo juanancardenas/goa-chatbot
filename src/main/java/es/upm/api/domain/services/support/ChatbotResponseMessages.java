@@ -100,6 +100,30 @@ public final class ChatbotResponseMessages {
     public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_GENERAL_REPLY =
             "No he podido cargar en este momento el contexto actualizado del encargo activo. Puedo continuar con orientación general, pero no debo responder como si dispusiera de datos internos confirmados.";
 
+    public static final String CLIENT_CONTEXTUAL_LEGAL_TASKS_REPLY_TEMPLATE =
+            "Las tareas legales visibles asociadas a este encargo son: %s.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_LEGAL_TASKS_REPLY_TEMPLATE =
+            "Las Legal Tasks visibles asociadas a este encargo son: %s.";
+
+    public static final String CLIENT_CONTEXTUAL_NO_LEGAL_TASKS_REPLY =
+            "No se han encontrado tareas legales visibles en este momento para el encargo activo.";
+
+    public static final String PROFESSIONAL_CONTEXTUAL_NO_LEGAL_TASKS_REPLY =
+            "No se han encontrado Legal Tasks visibles en este momento para el encargo activo.";
+
+    public static final String CLIENT_CONTEXT_UNAVAILABLE_LEGAL_TASKS_REPLY =
+            "Ahora mismo no he podido recuperar las tareas legales del encargo activo. Puedes volver a intentarlo en unos momentos desde esta conversación contextual.";
+
+    public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_LEGAL_TASKS_REPLY =
+            "No he podido recuperar en este momento las Legal Tasks del encargo activo. No debo responder como si tuviera tareas confirmadas.";
+
+    public static final String CLIENT_GENERAL_LEGAL_TASKS_REPLY =
+            "Para consultar tareas legales de un encargo concreto, abre el asistente desde la hoja de encargo correspondiente.";
+
+    public static final String PROFESSIONAL_GENERAL_LEGAL_TASKS_REPLY =
+            "Para consultar Legal Tasks de un encargo concreto, usa una conversación contextual abierta desde la hoja de encargo correspondiente.";
+
     public static final String CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY =
             "Tu consulta parece referirse a documentos del caso. La integración documental real aún no está disponible en esta versión, así que solo puedo orientarte de forma segura sin afirmar documentos concretos no confirmados.";
 

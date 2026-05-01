@@ -618,6 +618,10 @@ public class ChatbotService {
                 ? "No disponible"
                 : String.join(", ", context.getProcedureTitles());
 
+        String legalTasks = context.getLegalTaskSummaries() == null || context.getLegalTaskSummaries().isEmpty()
+                ? "No disponible"
+                : String.join(System.lineSeparator(), context.getLegalTaskSummaries());
+
         String events = context.getRecentEventSummaries() == null || context.getRecentEventSummaries().isEmpty()
                 ? "No disponible"
                 : String.join(System.lineSeparator(), context.getRecentEventSummaries());
@@ -630,16 +634,20 @@ public class ChatbotService {
             EngagementLetterId: %s
             Cliente/propietario visible: %s
             Procedimientos: %s
-
+        
+            Legal Tasks:
+            %s
+        
             Eventos recientes:
             %s
-
+        
             Fuentes internas disponibles:
             %s
             """.formatted(
                 this.safeText(context.getEngagementLetterId(), "No disponible"),
                 this.safeText(context.getOwnerDisplayName(), "No disponible"),
                 procedures,
+                legalTasks,
                 events,
                 sources
         );
@@ -696,6 +704,7 @@ public class ChatbotService {
 
         return switch (questionType) {
             case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(profile, platformContext);
+            case LEGAL_TASKS -> this.buildLegalTasksReply(profile, platformContext);
             case TIMELINE_EVENTS -> this.buildTimelineReply(profile, platformContext);
             case DOCUMENTS -> this.buildDocumentsReply(profile, conversation, platformContext);
             case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile, platformContext);
@@ -808,6 +817,28 @@ public class ChatbotService {
         return reply.toString();
     }
 
+    private String buildLegalTasksReply(
+            ConversationProfileType profile,
+            ChatbotPlatformContext platformContext
+    ) {
+        boolean hasLegalTasks = platformContext.getLegalTaskSummaries() != null
+                && !platformContext.getLegalTaskSummaries().isEmpty();
+
+        if (!hasLegalTasks) {
+            return switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_LEGAL_TASKS_REPLY;
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_LEGAL_TASKS_REPLY;
+            };
+        }
+
+        String legalTasks = String.join(", ", platformContext.getLegalTaskSummaries());
+
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_LEGAL_TASKS_REPLY_TEMPLATE.formatted(legalTasks);
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_LEGAL_TASKS_REPLY_TEMPLATE.formatted(legalTasks);
+        };
+    }
+
     private String buildGeneralContextReply(
             ConversationProfileType profile,
             ChatbotPlatformContext platformContext
@@ -836,6 +867,10 @@ public class ChatbotService {
             reply.append(" ").append(noEventsReply);
         }
 
+        if (platformContext.getLegalTaskSummaries() != null && !platformContext.getLegalTaskSummaries().isEmpty()) {
+            reply.append(" ").append(this.buildLegalTasksReply(profile, platformContext));
+        }
+
         return reply.toString();
     }
 
@@ -853,6 +888,7 @@ public class ChatbotService {
             case ENGAGEMENT_STATUS -> this.buildContextUnavailableStatusReply(profile);
             case TIMELINE_EVENTS -> this.buildContextUnavailableEventsReply(profile);
             case DOCUMENTS -> this.buildContextUnavailableDocumentsReply(profile);
+            case LEGAL_TASKS -> this.buildContextUnavailableLegalTasksReply(profile);
             case GENERAL_CONTEXT -> this.buildContextUnavailableGeneralReply(profile);
         };
     }
@@ -878,6 +914,13 @@ public class ChatbotService {
         };
     }
 
+    private String buildContextUnavailableLegalTasksReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_LEGAL_TASKS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_LEGAL_TASKS_REPLY;
+        };
+    }
+
     private String buildContextUnavailableGeneralReply(ConversationProfileType profile) {
         return switch (profile) {
             case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY;
@@ -900,6 +943,7 @@ public class ChatbotService {
             case ENGAGEMENT_STATUS -> this.buildGeneralStatusReply(profile);
             case TIMELINE_EVENTS -> this.buildGeneralTimelineReply(profile);
             case DOCUMENTS -> this.buildGeneralDocumentsReply(profile);
+            case LEGAL_TASKS -> this.buildGeneralLegalTasksReply(profile);
             case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile);
         };
     }
@@ -922,6 +966,13 @@ public class ChatbotService {
         return switch (profile) {
             case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_DOCUMENTS_STUB_REPLY;
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY;
+        };
+    }
+
+    private String buildGeneralLegalTasksReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_LEGAL_TASKS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_LEGAL_TASKS_REPLY;
         };
     }
 

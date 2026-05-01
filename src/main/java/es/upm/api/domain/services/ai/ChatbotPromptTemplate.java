@@ -98,13 +98,14 @@ public class ChatbotPromptTemplate {
         String platformContext = this.safeText(request.getPlatformContext(), NOT_AVAILABLE);
 
         return """
-                [CONTEXTO DE PLATAFORMA]
-                Usa los siguientes datos solo si están disponibles y son suficientes.
-                Si el contexto aparece como "No disponible", no inventes datos de plataforma.
-                Si el usuario pregunta por Legal Tasks, estados, hitos, eventos o fechas, responde solo si esa información está presente en el contexto.
+            [CONTEXTO DE PLATAFORMA]
+            Usa los siguientes datos solo si están disponibles y son suficientes.
+            Si el contexto aparece como "No disponible", no inventes datos de plataforma.
+            Si el usuario pregunta por Legal Tasks, tareas legales, estados, hitos, eventos o fechas, responde solo si esa información está presente en el contexto.
+            Si existe una sección "Legal Tasks", úsala como fuente principal para responder preguntas sobre tareas legales del encargo.
 
-                %s
-                """.formatted(platformContext);
+            %s
+            """.formatted(platformContext);
     }
 
     private String buildHistorySection(ChatbotAiRequest request) {
