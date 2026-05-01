@@ -5,7 +5,16 @@ spring:
       token-uri: http://localhost:8080/api/goa-user/oauth2/token
       api-client-id: api-client-id
       api-client-secret: api-client-secret
-
+  ai:
+    model:
+      chat: ollama
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: llama3.1:8b
+          temperature: 0.2
+          max-output-tokens: 500
   # Local Mongodb database (local or Dockerized) -------------
   data:
     mongodb:
@@ -21,3 +30,26 @@ goa:
 app:
   cors:
     allowed-origins: http://localhost:4200
+
+chatbot:
+  ai:
+    enabled: true
+    provider: ollama
+    model: llama3.1:8b
+    temperature: 0.2
+    max-input-characters: 1000
+    max-output-tokens: 500
+    max-context-messages: 10
+    timeout-seconds: 20
+    documents-available: false
+    base-prompt: >
+      Eres un asistente conversacional integrado en GOA, una plataforma de gestión jurídica.
+      Responde de forma clara, prudente y segura.
+      En chat general, actúa como apoyo conversacional jurídico seguro, sin sustituir a un abogado real.
+      En chat contextual, usa el contexto del encargo asociado cuando esté disponible.
+      Si no tienes datos suficientes, dilo claramente.
+      No inventes documentos, hitos, estados, fechas, tareas ni actuaciones.
+      No proporciones asesoramiento legal vinculante.
+      Respeta el rol del usuario y la restricción de ámbito.
+      Si se pregunta por documentos y el servicio documental no está disponible, indícalo.
+      No afirmes haber leído documentos reales si no hay integración documental.
