@@ -3,16 +3,12 @@ spring:
     model:
       chat: ollama
     ollama:
-      base-url: http://host.docker.internal:11434
+      base-url: ${CHATBOT_OLLAMA_BASE_URL:http://localhost:11434}
       chat:
         options:
-          model: llama3.1:8b
+          model: ${CHATBOT_OLLAMA_MODEL:llama3.2:3b}
           temperature: 0.2
           max-output-tokens: 500
-    openai:
-      api-key: ${CHATBOT_OPENAI_API_KEY:dev-placeholder}
-      speech:
-        api-key: ${CHATBOT_OPENAI_API_KEY:dev-placeholder}
   security:
     oauth2:
       jwk-uri: http://localhost:8080/api/goa-user/oauth2/jwks
@@ -39,7 +35,7 @@ chatbot:
   ai:
     enabled: true
     provider: ollama
-    model: llama3.1:8b
+    model: ${CHATBOT_OLLAMA_MODEL:llama3.2:3b}
     temperature: 0.2
     max-input-characters: 1000
     max-output-tokens: 500
