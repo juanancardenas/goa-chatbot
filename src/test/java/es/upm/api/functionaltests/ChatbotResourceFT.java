@@ -1,5 +1,6 @@
 package es.upm.api.functionaltests;
 
+import es.upm.api.infrastructure.dtos.*;
 import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
 import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
@@ -12,16 +13,10 @@ import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
+import es.upm.api.domain.services.ai.ChatbotAiClient;
 import es.upm.api.domain.webclients.EngagementWebClient;
 import es.upm.api.functionaltests.support.ChatbotTestMessages;
-import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.resources.ChatbotResource;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
-import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
-import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +70,9 @@ class ChatbotResourceFT {
 
     @MockitoBean
     private EngagementWebClient engagementWebClient;
+
+    @MockitoBean
+    private ChatbotAiClient chatbotAiClient;
 
     @BeforeEach
     void setUp() {
@@ -369,6 +367,53 @@ class ChatbotResourceFT {
         assertThat(response.getBody())
                 .extracting(ChatbotConversationSummaryDto::getType)
                 .containsOnly(TYPE_GENERAL);
+    }
+
+    @Test
+    void testReadConfigurationStatusAuthenticated() {
+        HttpHeaders headers = this.authHeaders("fake-token-config", "customer-1", List.of("customer"));
+
+        ResponseEntity<ChatbotConfigurationStatusDto> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONFIGURATION_STATUS,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                ChatbotConfigurationStatusDto.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().isEnabled()).isTrue();
+        assertThat(response.getBody().getProvider()).isEqualTo("ollama");
+        assertThat(response.getBody().getModel()).isNotBlank();
+        assertThat(response.getBody().getMaxInputCharacters()).isGreaterThan(0);
+        assertThat(response.getBody().getMaxOutputTokens()).isGreaterThan(0);
+        assertThat(response.getBody().getMaxContextMessages()).isGreaterThanOrEqualTo(0);
+        assertThat(response.getBody().isDocumentsAvailable()).isFalse();
+    }
+
+    @Test
+    void testReadConfigurationStatusDoesNotExposeSensitiveFields() {
+        HttpHeaders headers = this.authHeaders("fake-token-config-safe", "customer-1", List.of("customer"));
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONFIGURATION_STATUS,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).contains("provider");
+        assertThat(response.getBody()).contains("model");
+
+        assertThat(response.getBody()).doesNotContain("apiKey");
+        assertThat(response.getBody()).doesNotContain("basePrompt");
+        assertThat(response.getBody()).doesNotContain("prompt");
+        assertThat(response.getBody()).doesNotContain("CHATBOT_OPENAI_API_KEY");
+        assertThat(response.getBody()).doesNotContain("CHATBOT_GEMINI_API_KEY");
+        assertThat(response.getBody()).doesNotContain("secret");
+        assertThat(response.getBody()).doesNotContain("stackTrace");
     }
 
     @Test

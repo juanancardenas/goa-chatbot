@@ -1,21 +1,25 @@
 package es.upm.api.domain.services;
 
+import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.*;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
+import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
+import es.upm.api.domain.services.ai.ChatbotAiClient;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -35,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -53,6 +58,12 @@ class ChatbotServiceTest {
     private ChatbotScopePolicy chatbotScopePolicy;
 
     @Mock
+    private ChatbotAiClient chatbotAiClient;
+
+    @Mock
+    private ChatbotAiProperties chatbotAiProperties;
+
+    @Mock
     private ChatbotDocumentContextService chatbotDocumentContextService;
 
     @Mock
@@ -67,6 +78,20 @@ class ChatbotServiceTest {
     @AfterEach
     void clearSecurityContext() {
         SecurityContextHolder.clearContext();
+    }
+
+    @BeforeEach
+    void configureChatbotAiProperties() {
+        lenient().when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+        lenient().when(this.chatbotAiProperties.normalizedProvider()).thenReturn("ollama");
+        lenient().when(this.chatbotAiProperties.getProvider()).thenReturn("ollama");
+        lenient().when(this.chatbotAiProperties.getModel()).thenReturn("llama3.2:3b");
+        lenient().when(this.chatbotAiProperties.getBasePrompt()).thenReturn("Prompt base de pruebas");
+        lenient().when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(1000);
+        lenient().when(this.chatbotAiProperties.getMaxOutputTokens()).thenReturn(500);
+        lenient().when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(10);
+        lenient().when(this.chatbotAiProperties.getTemperature()).thenReturn(0.2);
+        lenient().when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(false);
     }
 
     @Test
@@ -452,6 +477,168 @@ class ChatbotServiceTest {
 
         assertThat(response.getConversationId()).isEqualTo("conversation-99");
         assertThat(response.getMessage()).isEqualTo("safe reply");
+    }
+
+    @Test
+    void sendMessageShouldUseAiClientWhenAiConfigurationIsEnabled() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ai")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.conversationPersistence.readById("conversation-ai")).thenReturn(existingConversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-ai")).thenReturn(3);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.messagePersistence.findByConversationIdOrdered("conversation-ai"))
+                .thenReturn(List.of());
+        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Explícame qué puedes hacer")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotQuestionClassifier.classify("Explícame qué puedes hacer"))
+                .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
+        when(this.chatbotAiClient.generate(any()))
+                .thenReturn(ChatbotAiResponse.builder()
+                        .content("Respuesta generada por Ollama")
+                        .provider("ollama")
+                        .model("llama3.2:3b")
+                        .finishReason("SUCCESS")
+                        .build());
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-ai",
+                "Explícame qué puedes hacer"
+        );
+
+        var response = this.chatbotService.sendMessage(request);
+
+        assertThat(response.getMessage()).isEqualTo("Respuesta generada por Ollama");
+        verify(this.chatbotAiClient).generate(any());
+    }
+
+    @Test
+    void sendMessageShouldKeepBaseReplyWhenAiClientFails() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ai-fallback")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.conversationPersistence.readById("conversation-ai-fallback")).thenReturn(existingConversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-ai-fallback")).thenReturn(3);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.messagePersistence.findByConversationIdOrdered("conversation-ai-fallback"))
+                .thenReturn(List.of());
+        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Explícame qué puedes hacer")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotQuestionClassifier.classify("Explícame qué puedes hacer"))
+                .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
+        when(this.chatbotAiClient.generate(any()))
+                .thenReturn(ChatbotAiResponse.builder()
+                        .content("Ahora mismo no puedo generar una respuesta con IA.")
+                        .provider("ollama")
+                        .model("llama3.2:3b")
+                        .finishReason("ERROR")
+                        .error("AI_PROVIDER_ERROR")
+                        .build());
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-ai-fallback",
+                "Explícame qué puedes hacer"
+        );
+
+        var response = this.chatbotService.sendMessage(request);
+
+        assertThat(response.getMessage()).isNotBlank();
+        assertThat(response.getMessage()).isNotEqualTo("Ahora mismo no puedo generar una respuesta con IA.");
+        verify(this.chatbotAiClient).generate(any());
+    }
+
+    @Test
+    void sendMessageShouldNotCallAiClientWhenScopePolicyRejectsRequest() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-restricted")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-restricted")).thenReturn(existingConversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-restricted")).thenReturn(3);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame asesoría legal definitiva")))
+                .thenReturn(ChatbotScopeDecision.reject(
+                        ChatbotScopeViolationReason.LEGAL_BINDING_ADVICE_REQUESTED,
+                        "No puedo ofrecer asesoramiento legal vinculante.",
+                        true
+                ));
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-restricted",
+                "Dame asesoría legal definitiva"
+        );
+
+        var response = this.chatbotService.sendMessage(request);
+
+        assertThat(response.getMessage()).isEqualTo("No puedo ofrecer asesoramiento legal vinculante.");
+        verify(this.chatbotAiClient, never()).generate(any());
+    }
+
+    @Test
+    void sendMessageShouldRejectMessageLongerThanConfiguredLimit() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(5);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-long-message",
+                "mensaje demasiado largo"
+        );
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> this.chatbotService.sendMessage(request)
+        );
+
+        assertThat(exception).hasMessageContaining("limite maximo de caracteres");
+        verify(this.conversationPersistence, never()).readById(any());
+        verify(this.messagePersistence, never()).createAndReturnId(any(Message.class));
+    }
+
+    @Test
+    void startGeneralConversationShouldRejectMessageLongerThanConfiguredLimit() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(5);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                null,
+                "mensaje demasiado largo"
+        );
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> this.chatbotService.startGeneralConversation(request)
+        );
+
+        assertThat(exception).hasMessageContaining("limite maximo de caracteres");
+        verify(this.conversationPersistence, never()).create(any(Conversation.class));
+        verify(this.messagePersistence, never()).createAndReturnId(any(Message.class));
     }
 
     @Test
