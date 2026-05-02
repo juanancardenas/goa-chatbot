@@ -9,9 +9,11 @@ import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
+import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
+import es.upm.api.domain.persistence.EscalationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
@@ -53,11 +55,13 @@ public class ChatbotService {
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ChatbotScopePolicy chatbotScopePolicy;
     private final ConversationPersistence conversationPersistence;
+    private final EscalationPersistence escalationPersistence;
     private final MessagePersistence messagePersistence;
 
     // Constructores
     @Autowired
     public ChatbotService(ConversationPersistence conversationPersistence,
+                          EscalationPersistence escalationPersistence,
                           MessagePersistence messagePersistence,
                           ChatbotScopePolicy chatbotScopePolicy,
                           ChatbotPlatformContextService chatbotPlatformContextService,
@@ -65,6 +69,7 @@ public class ChatbotService {
                           ChatbotDocumentContextService chatbotDocumentContextService
     ) {
         this.conversationPersistence = conversationPersistence;
+        this.escalationPersistence = escalationPersistence;
         this.messagePersistence = messagePersistence;
         this.chatbotScopePolicy = chatbotScopePolicy;
         this.chatbotPlatformContextService = chatbotPlatformContextService;
@@ -385,6 +390,25 @@ public class ChatbotService {
         );
         conversation.setStatus(ConversationStatus.CLOSED);
         this.conversationPersistence.update(conversation);
+    }
+
+    public void escalateConversation(String conversationId) {
+        Conversation conversation = this.requireActiveOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+
+        LocalDateTime now = LocalDateTime.now();
+        conversation.setStatus(ConversationStatus.ARCHIVED);
+        this.conversationPersistence.update(conversation);
+        this.escalationPersistence.create(
+                Escalation.builder()
+                        .id(UUID.randomUUID())
+                        .conversationId(conversation.getId())
+                        .userId(conversation.getUserId())
+                        .createdAt(now)
+                        .build()
+        );
     }
 
     public void deleteConversation(String conversationId) {

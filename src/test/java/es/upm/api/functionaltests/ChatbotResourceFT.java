@@ -1,9 +1,11 @@
 package es.upm.api.functionaltests;
 
 import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
+import es.upm.api.infrastructure.mongodb.daos.EscalationRepository;
 import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
+import es.upm.api.infrastructure.mongodb.entities.EscalationEntity;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
@@ -67,6 +69,9 @@ class ChatbotResourceFT {
     @Autowired
     private MessageRepository messageRepository;
 
+    @Autowired
+    private EscalationRepository escalationRepository;
+
     @LocalServerPort
     private int port;
 
@@ -78,6 +83,7 @@ class ChatbotResourceFT {
 
     @BeforeEach
     void setUp() {
+        this.escalationRepository.deleteAll();
         this.messageRepository.deleteAll();
         this.conversationRepository.deleteAll();
     }
@@ -967,6 +973,40 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testEscalateConversationAuthenticatedAsOwnerReturnsNoContentAndCreatesEscalation() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-to-escalate",
+                "customer-1",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-escalate", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<Void> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.ESCALATE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                entity,
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        ConversationEntity conversation = this.conversationRepository.findById(conversationId).orElseThrow();
+        assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
+
+        List<EscalationEntity> escalations = this.escalationRepository.findAll();
+        assertThat(escalations).hasSize(1);
+        assertThat(escalations.getFirst().getConversationId()).isEqualTo(conversationId);
+        assertThat(escalations.getFirst().getUserId()).isEqualTo("customer-1");
+        assertThat(escalations.getFirst().getPhone()).isNull();
+        assertThat(escalations.getFirst().getEmail()).isNull();
+    }
+
+    @Test
     void testDeleteConversationAuthenticatedAsOwnerReturnsNoContentAndRemovesMessages() {
         String conversationId = this.conversationRepository.save(new ConversationEntity(
                 "conversation-to-delete",
@@ -1094,6 +1134,33 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testEscalateConversationOfAnotherUserReturnsForbidden() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-owned-by-other-user-to-escalate",
+                "customer-2",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-escalate-forbidden", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.ESCALATE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).contains("No tienes permisos sobre esta conversacion");
+        assertThat(this.escalationRepository.findAll()).isEmpty();
+    }
+
+    @Test
     void testCloseConversationUnauthorizedWithoutToken() {
         String conversationId = this.conversationRepository.save(new ConversationEntity(
                 "conversation-unauthorized-close",
@@ -1117,6 +1184,33 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void testEscalateConversationUnauthorizedWithoutToken() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-unauthorized-escalate",
+                "customer-1",
+                null,
+                ConversationStatus.ACTIVE,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.ESCALATE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                entity,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(this.escalationRepository.findAll()).isEmpty();
     }
 
     @Test
