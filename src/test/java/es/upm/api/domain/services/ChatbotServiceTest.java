@@ -5,10 +5,12 @@ import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
+import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
+import es.upm.api.domain.persistence.EscalationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
@@ -48,6 +50,9 @@ class ChatbotServiceTest {
 
     @Mock
     private MessagePersistence messagePersistence;
+
+    @Mock
+    private EscalationPersistence escalationPersistence;
 
     @Mock
     private ChatbotScopePolicy chatbotScopePolicy;
@@ -1112,6 +1117,56 @@ class ChatbotServiceTest {
 
         assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
         verify(conversationPersistence, never()).update(any(Conversation.class));
+    }
+
+    @Test
+    void escalateConversationShouldArchiveOwnedActiveConversationAndCreateEscalation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-escalate")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
+
+        chatbotService.escalateConversation("conversation-escalate");
+
+        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
+        verify(conversationPersistence).update(existingConversation);
+
+        ArgumentCaptor<Escalation> escalationCaptor = ArgumentCaptor.forClass(Escalation.class);
+        verify(escalationPersistence).create(escalationCaptor.capture());
+        Escalation escalation = escalationCaptor.getValue();
+
+        assertThat(escalation.getConversationId()).isEqualTo("conversation-escalate");
+        assertThat(escalation.getUserId()).isEqualTo("customer-1");
+        assertThat(escalation.getCreatedAt()).isNotNull();
+        assertThat(escalation.getPhone()).isNull();
+        assertThat(escalation.getEmail()).isNull();
+    }
+
+    @Test
+    void escalateConversationShouldRejectOtherUsersConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-escalate")
+                .userId("customer-2")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
+
+        ForbiddenException exception = assertThrows(
+                ForbiddenException.class,
+                () -> chatbotService.escalateConversation("conversation-escalate")
+        );
+
+        assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
+        verify(conversationPersistence, never()).update(any(Conversation.class));
+        verify(escalationPersistence, never()).create(any(Escalation.class));
     }
 
     @Test

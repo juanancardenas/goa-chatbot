@@ -35,6 +35,7 @@ public class ChatbotResource {
     public static final String DELETE_CONVERSATION = "/conversations/{conversationId}";
     public static final String CLOSE_CONVERSATION = "/conversations/{conversationId}/close";
     public static final String REOPEN_CONVERSATION = "/conversations/{conversationId}/reopen";
+    public static final String ESCALATE_CONVERSATION = "/conversations/{conversationId}/escalate";
 
     private final ChatbotService chatbotService;
 
@@ -100,6 +101,13 @@ public class ChatbotResource {
     @PatchMapping(REOPEN_CONVERSATION)
     public ResponseEntity<Void> reopenConversation(@PathVariable String conversationId) {
         this.chatbotService.reopenConversation(conversationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
+    @PatchMapping(ESCALATE_CONVERSATION)
+    public ResponseEntity<Void> escalateConversation(@PathVariable String conversationId) {
+        this.chatbotService.escalateConversation(conversationId);
         return ResponseEntity.noContent().build();
     }
 }

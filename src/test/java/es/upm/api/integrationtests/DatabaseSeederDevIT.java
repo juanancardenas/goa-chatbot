@@ -1,9 +1,11 @@
 package es.upm.api.integrationtests;
 
 import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
+import es.upm.api.infrastructure.mongodb.daos.EscalationRepository;
 import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.infrastructure.mongodb.entities.EscalationEntity;
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,12 +32,17 @@ class DatabaseSeederDevIT {
     @Autowired
     private MessageRepository messageRepository;
 
+    @Autowired
+    private EscalationRepository escalationRepository;
+
     @Test
-    void shouldSeedConversationsAndMessagesOnStartup() {
+    void shouldSeedConversationsEscalationsAndMessagesOnStartup() {
         List<ConversationEntity> conversations = this.conversationRepository.findAll();
+        List<EscalationEntity> escalations = this.escalationRepository.findAll();
         List<MessageEntity> messages = this.messageRepository.findAll();
 
         assertThat(conversations).hasSize(3);
+        assertThat(escalations).hasSize(2);
         assertThat(messages).hasSize(9);
 
         assertThat(this.conversationRepository.findById("conversation-dev-001"))
@@ -87,6 +95,26 @@ class DatabaseSeederDevIT {
                         "Quiero consultar el contexto asociado a mi engagement letter.",
                         "He recuperado la conversacion asociada a tu engagement letter."
                 );
+
+        assertThat(this.escalationRepository.findById(UUID.fromString("11111111-1111-1111-1111-111111111111")))
+                .isPresent()
+                .get()
+                .satisfies(escalation -> {
+                    assertThat(escalation.getConversationId()).isEqualTo("conversation-dev-001");
+                    assertThat(escalation.getUserId()).isEqualTo("customer-dev-001");
+                    assertThat(escalation.getPhone()).isEqualTo("+34600111222");
+                    assertThat(escalation.getEmail()).isEqualTo("customer1@example.com");
+                });
+
+        assertThat(this.escalationRepository.findById(UUID.fromString("22222222-2222-2222-2222-222222222222")))
+                .isPresent()
+                .get()
+                .satisfies(escalation -> {
+                    assertThat(escalation.getConversationId()).isEqualTo("conversation-dev-002");
+                    assertThat(escalation.getUserId()).isEqualTo("customer-dev-002");
+                    assertThat(escalation.getPhone()).isNull();
+                    assertThat(escalation.getEmail()).isEqualTo("customer2@example.com");
+                });
 
         assertThat(messages)
                 .extracting(MessageEntity::getConversationId)

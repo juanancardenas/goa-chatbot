@@ -3,7 +3,7 @@ https://www.plantuml.com/
 @startuml
 package data {
     package entities {
-      class ConversationEntity {
+      class Conversation {
         -String id*
         -String userId
         -String engagementLetterId
@@ -11,7 +11,7 @@ package data {
         -String type
         -LocalDateTime createdAt
       }
-      class MessageEntity {
+      class Message {
         -String id*
         -String conversationId
         -MessageSenderType senderType
@@ -21,6 +21,14 @@ package data {
         -Integer sequenceNumber
         -String parentMessageId
       }
+      class Escalation {
+        -UUID id*
+        -String conversationId
+        -String userId
+        -LocalDateTime createdAt
+        -String phone
+        -String email
+      }
       class UserDto #FEFECE {
         -UUID id*
         -String mobile
@@ -28,8 +36,9 @@ package data {
         -String familyName
       }
 
-      ConversationEntity "1" --> "1..*" MessageEntity
-      ConversationEntity "1" --> "0..1" UserDto
+      Conversation "1" --> "1..*" Message
+      Conversation "1" --> "0..1" UserDto
+      Conversation "1" --> "0..1" Escalation
     }
     package enums {
       enum ConversationStatus {
@@ -46,6 +55,23 @@ package data {
         request
         response
         instruction
+      }
+      enum ChatbotScopeViolationReason {
+        out_of_case_scope
+        missing_case_context
+        legal_binding_advice_requested
+        unsupported_factual_assertion
+        ambiguous_context
+      }
+      enum ConversationProfileType {
+        client
+        professional
+      }
+      enum PlatformQuestionType {
+        engagement_status
+        timeline_events
+        documents
+        general_context
       }
     }
   }
