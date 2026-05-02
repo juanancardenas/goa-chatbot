@@ -1304,6 +1304,27 @@ class ChatbotServiceTest {
         verify(conversationPersistence, never()).update(any(Conversation.class));
     }
 
+    @Test
+    void reopenConversationShouldRejectArchivedConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-archived")
+                .userId("customer-1")
+                .status(ConversationStatus.ARCHIVED)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-archived")).thenReturn(existingConversation);
+
+        ConflictException exception = assertThrows(
+                ConflictException.class,
+                () -> chatbotService.reopenConversation("conversation-archived")
+        );
+
+        assertThat(exception).hasMessageContaining("La conversacion archivada no se puede reabrir");
+        verify(conversationPersistence, never()).update(any(Conversation.class));
+    }
+
     private void authenticate(String userId, String... authorities) {
         SecurityContextHolder.getContext().setAuthentication(
                 new TestingAuthenticationToken(userId, "password", authorities)
