@@ -15,6 +15,7 @@ import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.webclients.EngagementWebClient;
+import es.upm.api.domain.webclients.UserWebClient;
 import es.upm.api.functionaltests.support.ChatbotTestMessages;
 import es.upm.api.infrastructure.dtos.ChatbotConversationResponseDto;
 import es.upm.api.infrastructure.resources.ChatbotResource;
@@ -24,6 +25,7 @@ import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
+import es.upm.api.domain.model.UserDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,11 +83,24 @@ class ChatbotResourceFT {
     @MockitoBean
     private EngagementWebClient engagementWebClient;
 
+    @MockitoBean
+    private UserWebClient userWebClient;
+
     @BeforeEach
     void setUp() {
         this.escalationRepository.deleteAll();
         this.messageRepository.deleteAll();
         this.conversationRepository.deleteAll();
+        when(this.userWebClient.readById(anyString())).thenAnswer(invocation -> {
+            String userId = invocation.getArgument(0, String.class);
+            return UserDto.builder()
+                    .id(UUID.nameUUIDFromBytes(userId.getBytes()))
+                    .mobile("+34600111222")
+                    .email(userId + "@example.com")
+                    .firstName("User")
+                    .familyName(userId)
+                    .build();
+        });
     }
 
     @Test
@@ -1002,8 +1017,8 @@ class ChatbotResourceFT {
         assertThat(escalations).hasSize(1);
         assertThat(escalations.getFirst().getConversationId()).isEqualTo(conversationId);
         assertThat(escalations.getFirst().getUserId()).isEqualTo("customer-1");
-        assertThat(escalations.getFirst().getPhone()).isNull();
-        assertThat(escalations.getFirst().getEmail()).isNull();
+        assertThat(escalations.getFirst().getPhone()).isEqualTo("+34600111222");
+        assertThat(escalations.getFirst().getEmail()).isEqualTo("customer-1@example.com");
     }
 
     @Test
