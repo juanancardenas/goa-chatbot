@@ -1,10 +1,11 @@
 package es.upm.api.infrastructure.mongodb.daos;
 
-import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
 import es.upm.api.domain.enums.ConversationStatus;
-import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
+import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
+import es.upm.api.infrastructure.mongodb.entities.EscalationEntity;
+import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Profile;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Profile({"dev", "test"})
@@ -22,13 +24,16 @@ public class DatabaseSeederDev {
     private static final Logger log = LogManager.getLogger(DatabaseSeederDev.class);
 
     private final ConversationRepository conversationRepository;
+    private final EscalationRepository escalationRepository;
     private final MessageRepository messageRepository;
 
     public DatabaseSeederDev(
             ConversationRepository conversationRepository,
+            EscalationRepository escalationRepository,
             MessageRepository messageRepository
     ) {
         this.conversationRepository = conversationRepository;
+        this.escalationRepository = escalationRepository;
         this.messageRepository = messageRepository;
         this.deleteAllAndInitializeAndSeedDataBase();
     }
@@ -41,6 +46,7 @@ public class DatabaseSeederDev {
     private void deleteAllAndInitialize() {
         log.warn("------- Delete All -----------");
         this.messageRepository.deleteAll();
+        this.escalationRepository.deleteAll();
         this.conversationRepository.deleteAll();
     }
 
@@ -76,6 +82,25 @@ public class DatabaseSeederDev {
         );
 
         this.conversationRepository.saveAll(List.of(conversation1, conversation2, conversation3));
+
+        EscalationEntity escalation1 = new EscalationEntity(
+                UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                conversation1.getId(),
+                conversation1.getUserId(),
+                baseTime.plusMinutes(5),
+                "+34600111222",
+                "customer1@example.com"
+        );
+        EscalationEntity escalation2 = new EscalationEntity(
+                UUID.fromString("22222222-2222-2222-2222-222222222222"),
+                conversation2.getId(),
+                conversation2.getUserId(),
+                baseTime.plusMinutes(15),
+                null,
+                "customer2@example.com"
+        );
+
+        this.escalationRepository.saveAll(List.of(escalation1, escalation2));
 
         MessageEntity message1 = MessageEntity.builder()
                 .id("message-dev-001")
@@ -173,7 +198,7 @@ public class DatabaseSeederDev {
                 message7, message8, message9
         ));
 
-        log.warn("------- Seeded {} conversations and {} messages -----------", 3, 9);
+        log.warn("------- Seeded {} conversations, {} escalations and {} messages -----------", 3, 2, 9);
     }
 
 }
