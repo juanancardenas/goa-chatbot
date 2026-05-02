@@ -19,7 +19,7 @@ public class Escalation {
     @NotNull
     private String conversationId;
     @NotNull
-    private String user;
+    private String userId;
     @NotNull
     private LocalDateTime createdAt;
     private String phone;
