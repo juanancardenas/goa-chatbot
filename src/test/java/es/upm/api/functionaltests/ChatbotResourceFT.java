@@ -646,6 +646,34 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testReopenConversationArchivedReturnsConflict() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-reopen-archived-001",
+                "customer-1",
+                null,
+                ConversationStatus.ARCHIVED,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-reopen-archived", "customer-1", List.of("customer"));
+
+        ResponseEntity<String> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT
+                        + ChatbotResource.REOPEN_CONVERSATION.replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                new HttpEntity<>(headers),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).contains("La conversacion archivada no se puede reabrir");
+
+        ConversationEntity updatedConversation = this.conversationRepository.findById(conversationId).orElseThrow();
+        assertThat(updatedConversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
+    }
+
+    @Test
     void testStartGeneralConversationAuthenticatedAsCustomer() {
         HttpHeaders headers = this.authHeaders("fake-token-general-customer", "customer-1", List.of("customer"));
 

@@ -434,6 +434,9 @@ public class ChatbotService {
         if (conversation.getStatus() == ConversationStatus.ACTIVE) {
             return;
         }
+        if (conversation.getStatus() == ConversationStatus.ARCHIVED) {
+            throw new ConflictException("La conversacion archivada no se puede reabrir");
+        }
 
         conversation.setStatus(ConversationStatus.ACTIVE);
         this.conversationPersistence.update(conversation);
