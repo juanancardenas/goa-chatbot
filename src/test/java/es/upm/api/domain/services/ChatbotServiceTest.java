@@ -7,6 +7,7 @@ import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.Message;
+import es.upm.api.domain.model.UserDto;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
@@ -15,6 +16,7 @@ import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
+import es.upm.api.domain.webclients.UserWebClient;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import org.junit.jupiter.api.AfterEach;
@@ -65,6 +67,9 @@ class ChatbotServiceTest {
 
     @Mock
     private ChatbotQuestionClassifier chatbotQuestionClassifier;
+
+    @Mock
+    private UserWebClient userWebClient;
 
     @InjectMocks
     private ChatbotService chatbotService;
@@ -1130,6 +1135,15 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
+        when(userWebClient.readById("customer-1")).thenReturn(
+                UserDto.builder()
+                        .id(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))
+                        .mobile("+34600111222")
+                        .email("customer1@example.com")
+                        .firstName("Customer")
+                        .familyName("One")
+                        .build()
+        );
 
         chatbotService.escalateConversation("conversation-escalate");
 
@@ -1143,6 +1157,29 @@ class ChatbotServiceTest {
         assertThat(escalation.getConversationId()).isEqualTo("conversation-escalate");
         assertThat(escalation.getUserId()).isEqualTo("customer-1");
         assertThat(escalation.getCreatedAt()).isNotNull();
+        assertThat(escalation.getPhone()).isEqualTo("+34600111222");
+        assertThat(escalation.getEmail()).isEqualTo("customer1@example.com");
+    }
+
+    @Test
+    void escalateConversationShouldCreateEscalationWithoutContactDataWhenUserLookupFails() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-escalate")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
+        when(userWebClient.readById("customer-1")).thenThrow(new RuntimeException("user service unavailable"));
+
+        chatbotService.escalateConversation("conversation-escalate");
+
+        ArgumentCaptor<Escalation> escalationCaptor = ArgumentCaptor.forClass(Escalation.class);
+        verify(escalationPersistence).create(escalationCaptor.capture());
+        Escalation escalation = escalationCaptor.getValue();
+
         assertThat(escalation.getPhone()).isNull();
         assertThat(escalation.getEmail()).isNull();
     }

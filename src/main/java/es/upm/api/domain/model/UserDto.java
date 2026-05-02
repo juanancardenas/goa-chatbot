@@ -14,6 +14,7 @@ import java.util.UUID;
 public class UserDto {
     private UUID id;
     private String mobile;
+    private String email;
     private String firstName;
     private String familyName;
 }
