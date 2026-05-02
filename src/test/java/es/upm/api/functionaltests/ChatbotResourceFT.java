@@ -1016,6 +1016,33 @@ class ChatbotResourceFT {
     }
 
     @Test
+    void testCloseConversationAuthenticatedAsOwnerAndAlreadyClosedReturnsNoContent() {
+        String conversationId = this.conversationRepository.save(new ConversationEntity(
+                "conversation-already-closed",
+                "customer-1",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                LocalDateTime.now()
+        )).getId();
+
+        HttpHeaders headers = this.authHeaders("fake-token-close-closed", "customer-1", List.of("customer"));
+        HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+        ResponseEntity<Void> response = this.restTemplate.exchange(
+                "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CLOSE_CONVERSATION
+                        .replace("{conversationId}", conversationId),
+                HttpMethod.PATCH,
+                entity,
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        ConversationEntity conversation = this.conversationRepository.findById(conversationId).orElseThrow();
+        assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+    }
+
+    @Test
     void testEscalateConversationAuthenticatedAsOwnerReturnsNoContentAndCreatesEscalation() {
         String conversationId = this.conversationRepository.save(new ConversationEntity(
                 "conversation-to-escalate",

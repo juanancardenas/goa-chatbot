@@ -389,10 +389,15 @@ public class ChatbotService {
     }
 
     public void closeConversation(String conversationId) {
-        Conversation conversation = this.requireActiveOwnedConversation(
+        Conversation conversation = this.requireOwnedConversation(
                 conversationId,
                 this.authenticatedUserId()
         );
+
+        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+            return;
+        }
+
         conversation.setStatus(ConversationStatus.CLOSED);
         this.conversationPersistence.update(conversation);
     }
@@ -431,8 +436,12 @@ public class ChatbotService {
                 this.authenticatedUserId()
         );
 
-        if ( conversation.getStatus() == ConversationStatus.ACTIVE )  {
+        if (conversation.getStatus() == ConversationStatus.ACTIVE) {
             return;
+        }
+
+        if (conversation.getStatus() == ConversationStatus.ARCHIVED) {
+            throw new ConflictException("La conversacion archivada no se puede reabrir");
         }
 
         conversation.setStatus(ConversationStatus.ACTIVE);
