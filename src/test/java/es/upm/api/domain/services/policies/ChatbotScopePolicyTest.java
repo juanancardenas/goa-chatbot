@@ -57,7 +57,7 @@ class ChatbotScopePolicyTest {
 
         assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.UNSUPPORTED_FACTUAL_ASSERTION);
-        assertThat(decision.getSafeMessage()).contains("No debo afirmar hechos");
+        assertThat(decision.getSafeMessage()).contains("No puedo confirmar hechos");
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
@@ -101,7 +101,7 @@ class ChatbotScopePolicyTest {
 
         assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
-        assertThat(decision.getSafeMessage()).contains("no está asociada a un encargo concreto");
+        assertThat(decision.getSafeMessage()).contains("no está asociada a un encargo específico");
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
@@ -141,6 +141,19 @@ class ChatbotScopePolicyTest {
         assertThat(decision.isAllowed()).isTrue();
         assertThat(decision.getReason()).isNull();
         assertThat(decision.getSafeMessage()).isNull();
+        assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldRejectOutOfDomainMessageInGeneralConversation() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                "te quiero mucho, nos vemos"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.OUT_OF_DOMAIN);
+        assertThat(decision.getSafeMessage()).contains("consultas sobre GOA");
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 

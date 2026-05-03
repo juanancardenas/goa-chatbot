@@ -62,6 +62,37 @@ public class ChatbotScopePolicy {
             "ademas de este caso"
     );
 
+    private static final List<String> OUT_OF_DOMAIN_PATTERNS = List.of(
+            "te quiero",
+            "nos vemos",
+            "te amo",
+            "me importas",
+            "no te importo",
+            "pum pum",
+            "a tu cabeza",
+            "idiota",
+            "imbecil",
+            "estupido",
+            "gilipollas"
+    );
+
+    private static final List<String> DOMAIN_KEYWORDS = List.of(
+            "goa",
+            "encargo",
+            "caso",
+            "expediente",
+            "estado",
+            "hito",
+            "evento",
+            "timeline",
+            "documento",
+            "procedimiento",
+            "tarea",
+            "plataforma",
+            "abogado",
+            "legal"
+    );
+
     public ChatbotScopeDecision evaluate(Conversation conversation, String message) {
         String normalizedMessage = this.normalize(message);
 
@@ -113,6 +144,14 @@ public class ChatbotScopePolicy {
             );
         }
 
+        if (this.looksOutOfDomain(normalizedMessage)) {
+            return ChatbotScopeDecision.reject(
+                    ChatbotScopeViolationReason.OUT_OF_DOMAIN,
+                    ChatbotResponseMessages.OUT_OF_DOMAIN_REPLY,
+                    false
+            );
+        }
+
         return ChatbotScopeDecision.allow();
     }
 
@@ -129,6 +168,11 @@ public class ChatbotScopePolicy {
         return normalizedMessage.contains("mi caso")
                 || normalizedMessage.contains("mi encargo")
                 || normalizedMessage.contains("mi expediente");
+    }
+
+    private boolean looksOutOfDomain(String normalizedMessage) {
+        return this.containsAny(normalizedMessage, OUT_OF_DOMAIN_PATTERNS)
+                && !this.containsAny(normalizedMessage, DOMAIN_KEYWORDS);
     }
 
     private boolean containsAny(String normalizedMessage, List<String> patterns) {

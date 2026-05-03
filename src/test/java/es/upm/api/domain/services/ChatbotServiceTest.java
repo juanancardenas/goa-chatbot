@@ -416,9 +416,9 @@ class ChatbotServiceTest {
                 .thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son los Legal Tasks de este encargo?")))
+        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son las tareas legales de este encargo?")))
                 .thenReturn(ChatbotScopeDecision.allow());
-        when(this.chatbotQuestionClassifier.classify("Cuáles son los Legal Tasks de este encargo?"))
+        when(this.chatbotQuestionClassifier.classify("Cuáles son las tareas legales de este encargo?"))
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
         when(this.chatbotPlatformContextService.loadContext("engagement-001"))
                 .thenReturn(Optional.empty());
@@ -426,13 +426,13 @@ class ChatbotServiceTest {
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
                 "conversation-contextual-unavailable",
-                "Cuáles son los Legal Tasks de este encargo?"
+                "Cuáles son las tareas legales de este encargo?"
         );
 
         ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
 
         assertThat(response.getMessage()).contains("No he podido recuperar");
-        assertThat(response.getMessage()).contains("Legal Tasks");
+        assertThat(response.getMessage()).contains("Tareas Legales");
         assertThat(response.getUsedPlatformData()).isFalse();
     }
 
@@ -480,7 +480,7 @@ class ChatbotServiceTest {
         ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
 
         assertThat(response.getMessage()).contains("No se han encontrado");
-        assertThat(response.getMessage()).contains("Legal Tasks");
+        assertThat(response.getMessage()).contains("Tareas Legales");
         assertThat(response.getUsedPlatformData()).isTrue();
     }
 
@@ -515,9 +515,9 @@ class ChatbotServiceTest {
                 .thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son los Legal Tasks de este encargo?")))
+        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son las tareas legales de este encargo?")))
                 .thenReturn(ChatbotScopeDecision.allow());
-        when(this.chatbotQuestionClassifier.classify("Cuáles son los Legal Tasks de este encargo?"))
+        when(this.chatbotQuestionClassifier.classify("Cuáles son las tareas legales de este encargo?"))
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
         when(this.chatbotPlatformContextService.loadContext("engagement-001"))
                 .thenReturn(Optional.of(platformContext));
@@ -525,12 +525,12 @@ class ChatbotServiceTest {
 
         ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
                 "conversation-contextual-legal-tasks",
-                "Cuáles son los Legal Tasks de este encargo?"
+                "Cuáles son las tareas legales de este encargo?"
         );
 
         ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
 
-        assertThat(response.getMessage()).contains("Legal Tasks");
+        assertThat(response.getMessage()).contains("Tareas Legales");
         assertThat(response.getMessage()).contains("Estudio de antecedentes y documentación");
         assertThat(response.getMessage()).contains("Asesoramiento jurídico");
         assertThat(response.getUsedPlatformData()).isTrue();

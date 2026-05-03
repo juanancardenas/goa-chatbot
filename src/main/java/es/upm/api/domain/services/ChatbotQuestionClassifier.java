@@ -35,10 +35,7 @@ public class ChatbotQuestionClassifier {
             return PlatformQuestionType.TIMELINE_EVENTS;
         }
 
-        if (containsAny(normalized,
-                "estado", "encargo", "caso", "procedimiento", "procedimientos",
-                "resumen", "contexto", "situacion", "como va", "en que esta",
-                "en que estado", "avance")) {
+        if (this.isStatusQuestion(normalized)) {
             return PlatformQuestionType.ENGAGEMENT_STATUS;
         }
 
@@ -52,6 +49,24 @@ public class ChatbotQuestionClassifier {
             }
         }
         return false;
+    }
+
+    private boolean isStatusQuestion(String normalizedMessage) {
+        boolean hasDirectStatusSignal = containsAny(normalizedMessage,
+                "estado", "resumen", "contexto", "situacion", "como va", "en que esta",
+                "en que estado", "avance");
+
+        if (hasDirectStatusSignal) {
+            return true;
+        }
+
+        boolean hasCaseReference = containsAny(normalizedMessage,
+                "encargo", "caso", "procedimiento", "procedimientos", "expediente");
+
+        boolean hasStatusIntent = containsAny(normalizedMessage,
+                "como va", "en que esta", "en que estado", "avance", "resumen");
+
+        return hasCaseReference && hasStatusIntent;
     }
 
     private String normalize(String value) {

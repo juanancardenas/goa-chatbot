@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class ChatbotPlatformContextService {
     private static final String DEFAULT_OWNER = "usuario del encargo";
@@ -25,61 +28,89 @@ public class ChatbotPlatformContextService {
 
     public Optional<ChatbotPlatformContext> loadContext(String engagementLetterId) {
         if (engagementLetterId == null || engagementLetterId.isBlank()) {
+            log.warn("Platform context not loaded because engagementLetterId is blank");
             return Optional.empty();
         }
 
-        Optional<EngagementLetterSummary> engagementLetter = this.readEngagementLetterSafely(engagementLetterId);
-        List<String> recentEventSummaries = this.readRecentEventSummaries(engagementLetterId);
+        try {
+            log.info("Loading platform context for engagementLetterId={}", engagementLetterId);
 
-        String ownerDisplayName = engagementLetter
-                .map(EngagementLetterSummary::getOwner)
-                .map(UserSummary::displayName)
-                .filter(name -> name != null && !name.isBlank())
-                .orElse(DEFAULT_OWNER);
+            Optional<EngagementLetterSummary> engagementLetter = this.readEngagementLetterSafely(engagementLetterId);
+            List<String> recentEventSummaries = this.readRecentEventSummaries(engagementLetterId);
 
-        List<String> procedureTitles = engagementLetter
-                .map(EngagementLetterSummary::getLegalProcedures)
-                .orElse(List.of())
-                .stream()
-                .map(LegalProcedureSummary::getTitle)
-                .filter(title -> title != null && !title.isBlank())
-                .distinct()
-                .toList();
+            log.info(
+                    "Engagement context response. engagementLetterId={}, found={}",
+                    engagementLetterId,
+                    engagementLetter.isPresent()
+            );
 
-        List<String> legalTaskSummaries = this.buildLegalTaskSummaries(engagementLetter);
+            String ownerDisplayName = engagementLetter
+                    .map(EngagementLetterSummary::getOwner)
+                    .map(UserSummary::displayName)
+                    .filter(name -> name != null && !name.isBlank())
+                    .orElse(DEFAULT_OWNER);
 
-        if (procedureTitles.isEmpty() && legalTaskSummaries.isEmpty() && recentEventSummaries.isEmpty() && engagementLetter.isEmpty()) {
+            List<String> procedureTitles = engagementLetter
+                    .map(EngagementLetterSummary::getLegalProcedures)
+                    .orElse(List.of())
+                    .stream()
+                    .map(LegalProcedureSummary::getTitle)
+                    .filter(title -> title != null && !title.isBlank())
+                    .distinct()
+                    .toList();
+
+            List<String> legalTaskSummaries = this.buildLegalTaskSummaries(engagementLetter);
+
+            if (procedureTitles.isEmpty() && legalTaskSummaries.isEmpty() && recentEventSummaries.isEmpty() && engagementLetter.isEmpty()) {
+                return Optional.empty();
+            }
+
+            List<String> sourcesSummary = new ArrayList<>();
+            sourcesSummary.add("Hoja de encargo " + engagementLetterId);
+
+            procedureTitles.stream()
+                    .limit(2)
+                    .map(title -> "Procedimiento: " + title)
+                    .forEach(sourcesSummary::add);
+
+            legalTaskSummaries.stream()
+                    .limit(3)
+                    .map(task -> "Legal Task: " + task)
+                    .forEach(sourcesSummary::add);
+
+            recentEventSummaries.stream()
+                    .limit(2)
+                    .map(event -> "Hito/evento: " + event)
+                    .forEach(sourcesSummary::add);
+
+            log.info(
+                    "Platform context built. engagementLetterId={}, procedures={}, legalTasks={}, events={}, sources={}",
+                    engagementLetterId,
+                    procedureTitles.size(),
+                    legalTaskSummaries.size(),
+                    recentEventSummaries.size(),
+                    sourcesSummary.size()
+            );
+
+            return Optional.of(
+                    ChatbotPlatformContext.builder()
+                            .engagementLetterId(engagementLetterId)
+                            .ownerDisplayName(ownerDisplayName)
+                            .procedureTitles(procedureTitles)
+                            .legalTaskSummaries(legalTaskSummaries)
+                            .recentEventSummaries(recentEventSummaries)
+                            .sourcesSummary(sourcesSummary)
+                            .build()
+            );
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Could not load platform context. engagementLetterId={}, error={}, message={}",
+                    engagementLetterId,
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage()
+            );
             return Optional.empty();
         }
-
-        List<String> sourcesSummary = new ArrayList<>();
-        sourcesSummary.add("Hoja de encargo " + engagementLetterId);
-
-        procedureTitles.stream()
-                .limit(2)
-                .map(title -> "Procedimiento: " + title)
-                .forEach(sourcesSummary::add);
-
-        legalTaskSummaries.stream()
-                .limit(3)
-                .map(task -> "Legal Task: " + task)
-                .forEach(sourcesSummary::add);
-
-        recentEventSummaries.stream()
-                .limit(2)
-                .map(event -> "Hito/evento: " + event)
-                .forEach(sourcesSummary::add);
-
-        return Optional.of(
-                ChatbotPlatformContext.builder()
-                        .engagementLetterId(engagementLetterId)
-                        .ownerDisplayName(ownerDisplayName)
-                        .procedureTitles(procedureTitles)
-                        .legalTaskSummaries(legalTaskSummaries)
-                        .recentEventSummaries(recentEventSummaries)
-                        .sourcesSummary(sourcesSummary)
-                        .build()
-        );
     }
 
     private Optional<EngagementLetterSummary> readEngagementLetterSafely(String engagementLetterId) {

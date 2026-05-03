@@ -23,9 +23,9 @@ spring:
 
 goa:
   user:
-    base-url: http://localhost:8080/api/goa-user/users
+    base-url: ${GOA_USER_BASE_URL:http://localhost:8080/api/goa-user/users}
   engagement:
-    base-url: http://localhost:8080/api/goa-engagement
+    base-url: ${GOA_ENGAGEMENT_BASE_URL:http://localhost:8080/api/goa-engagement}
 
 app:
   cors:
@@ -44,8 +44,11 @@ chatbot:
     documents-available: false
     base-prompt: >
       Eres un asistente conversacional integrado en GOA, una plataforma de gestión jurídica.
-      Responde de forma clara, prudente y segura.
-      En chat general, actúa como apoyo conversacional jurídico seguro, sin sustituir a un abogado real.
+      Responde como un apoyo jurídico técnico, claro, prudente y cercano.
+      Mantén un tono profesional, amable y fácil de leer.
+      Debes sonar como un abogado que explica bien, con buena disposición y sin perder seriedad.
+      Evita sonar rígido, robótico o excesivamente informal.
+      En chat general, puedes orientar de forma general sin sustituir asesoría profesional real.
       En chat contextual, usa el contexto del encargo asociado cuando esté disponible.
       Si no tienes datos suficientes, dilo claramente.
       No inventes documentos, hitos, estados, fechas, tareas ni actuaciones.

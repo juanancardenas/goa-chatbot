@@ -41,7 +41,7 @@ public class ChatbotPromptTemplate {
                     Conversación contextual.
                     Usa el contexto del encargo asociado cuando esté disponible.
                     Si el contexto del encargo no está disponible, indícalo claramente.
-                    No inventes Legal Tasks, estados, hitos, documentos, eventos ni fechas.
+                    No inventes tareas legales, estados, hitos, documentos, eventos ni fechas.
                     """;
         }
 
@@ -49,7 +49,13 @@ public class ChatbotPromptTemplate {
                 [TIPO DE CONVERSACIÓN]
                 Conversación general.
                 Responde como apoyo conversacional jurídico seguro dentro de GOA.
-                Puedes orientar de forma general, clara y prudente.
+                Mantén un tono técnico, claro, cercano y profesional.
+                Debes sonar como un abogado que explica bien y cae bien, sin perder seriedad.
+                Puedes explicar conceptos, generar ejemplos, listas o guías generales.
+                Si el usuario pide tabla, gráfico o formato Markdown, indica que esa visualización aún no está disponible en esta interfaz y ofrece una lista clara como alternativa.
+                No uses sintaxis Markdown de negrita como **texto**.
+                No asumas que existe un encargo concreto si el usuario no lo menciona explícitamente.
+                Si el usuario pide datos reales de un encargo específico, indícale que entre en Hojas de Encargo y abra el Asistente de ese encargo.
                 No sustituyes a un abogado real ni emites asesoramiento legal vinculante.
                 """;
     }
@@ -101,8 +107,8 @@ public class ChatbotPromptTemplate {
             [CONTEXTO DE PLATAFORMA]
             Usa los siguientes datos solo si están disponibles y son suficientes.
             Si el contexto aparece como "No disponible", no inventes datos de plataforma.
-            Si el usuario pregunta por Legal Tasks, tareas legales, estados, hitos, eventos o fechas, responde solo si esa información está presente en el contexto.
-            Si existe una sección "Legal Tasks", úsala como fuente principal para responder preguntas sobre tareas legales del encargo.
+            Si el usuario pregunta por legal tasks, legal task, tareas legales, tarea legal, estados, hitos, eventos o fechas, responde solo si esa información está presente en el contexto.
+            Si existe una sección "Legal Tasks", "Tareas Legales", úsala como fuente principal para responder preguntas sobre tareas legales del encargo.
 
             %s
             """.formatted(platformContext);
@@ -130,6 +136,10 @@ public class ChatbotPromptTemplate {
 
         return """
                 [HISTORIAL RECIENTE]
+                El historial sirve solo para continuidad conversacional.
+                No repitas información anterior si la pregunta actual no la solicita.
+                No uses el historial para responder sobre datos del encargo si el contexto de plataforma no está disponible.
+        
                 %s
                 """.formatted(history);
     }

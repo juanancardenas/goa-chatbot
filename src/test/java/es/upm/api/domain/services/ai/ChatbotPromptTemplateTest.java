@@ -59,7 +59,7 @@ class ChatbotPromptTemplateTest {
         assertThat(prompt).contains("Prompt contextual");
         assertThat(prompt).contains("Conversación contextual");
         assertThat(prompt).contains("Usa el contexto del encargo asociado");
-        assertThat(prompt).contains("No inventes Legal Tasks");
+        assertThat(prompt).contains("No inventes tareas legales");
         assertThat(prompt).contains("EngagementLetterId: engagement-123");
         assertThat(prompt).contains("Rol conversacional: CLIENT");
     }
@@ -75,7 +75,7 @@ class ChatbotPromptTemplateTest {
                     EngagementLetterId: engagement-001
                     Procedimientos: Procedimiento de herencia
 
-                    Legal Tasks:
+                    Tareas Legales:
                     Procedimiento de herencia: Estudio de antecedentes y documentación.
                     Procedimiento de herencia: Asesoramiento jurídico.
                     """)

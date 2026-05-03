@@ -49,6 +49,8 @@ class ChatbotQuestionClassifierTest {
     @Test
     void classifyShouldReturnGeneralContextWhenNoKeywordMatches() {
         assertThat(this.classifier.classify("Hola, necesito ayuda")).isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
+        assertThat(this.classifier.classify("Seguro que puedes resolver dudas sobre un encargo?"))
+                .isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
         assertThat(this.classifier.classify(null)).isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
     }
 
