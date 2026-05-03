@@ -22,6 +22,7 @@ import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.domain.webclients.UserWebClient;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
+import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -459,6 +460,146 @@ class ChatbotServiceTest {
         assertThat(exception).hasMessageContaining("conversationId es obligatorio");
         verify(conversationPersistence, never()).readById(any());
         verify(messagePersistence, never()).createAndReturnId(any(Message.class));
+    }
+
+    @Test
+    void sendMessageShouldReplyContextUnavailableWhenLegalTasksContextCannotBeLoaded() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-contextual-unavailable")
+                .userId("professional-1")
+                .engagementLetterId("engagement-001")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-contextual-unavailable"))
+                .thenReturn(conversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-contextual-unavailable"))
+                .thenReturn(3);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son las tareas legales de este encargo?")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotQuestionClassifier.classify("Cuáles son las tareas legales de este encargo?"))
+                .thenReturn(PlatformQuestionType.LEGAL_TASKS);
+        when(this.chatbotPlatformContextService.loadContext("engagement-001"))
+                .thenReturn(Optional.empty());
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-contextual-unavailable",
+                "Cuáles son las tareas legales de este encargo?"
+        );
+
+        ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
+
+        assertThat(response.getMessage()).contains("No he podido recuperar");
+        assertThat(response.getMessage()).contains("Tareas Legales");
+        assertThat(response.getUsedPlatformData()).isFalse();
+    }
+
+    @Test
+    void sendMessageShouldReplyNoLegalTasksWhenContextHasNoTasks() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-contextual-no-legal-tasks")
+                .userId("professional-1")
+                .engagementLetterId("engagement-001")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .build();
+
+        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
+                .engagementLetterId("engagement-001")
+                .ownerDisplayName("Cliente Demo")
+                .procedureTitles(List.of("Procedimiento de herencia"))
+                .legalTaskSummaries(List.of())
+                .recentEventSummaries(List.of())
+                .sourcesSummary(List.of("Procedimiento: Procedimiento de herencia"))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-contextual-no-legal-tasks"))
+                .thenReturn(conversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-contextual-no-legal-tasks"))
+                .thenReturn(3);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son las tareas legales?")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotQuestionClassifier.classify("Cuáles son las tareas legales?"))
+                .thenReturn(PlatformQuestionType.LEGAL_TASKS);
+        when(this.chatbotPlatformContextService.loadContext("engagement-001"))
+                .thenReturn(Optional.of(platformContext));
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-contextual-no-legal-tasks",
+                "Cuáles son las tareas legales?"
+        );
+
+        ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
+
+        assertThat(response.getMessage()).contains("No se han encontrado");
+        assertThat(response.getMessage()).contains("Tareas Legales");
+        assertThat(response.getUsedPlatformData()).isTrue();
+    }
+
+    @Test
+    void sendMessageShouldReplyWithLegalTasksWhenContextualConversationHasTasks() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-contextual-legal-tasks")
+                .userId("professional-1")
+                .engagementLetterId("engagement-001")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .build();
+
+        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
+                .engagementLetterId("engagement-001")
+                .ownerDisplayName("Cliente Demo")
+                .procedureTitles(List.of("Procedimiento de herencia"))
+                .legalTaskSummaries(List.of(
+                        "Procedimiento de herencia: Estudio de antecedentes y documentación.",
+                        "Procedimiento de herencia: Asesoramiento jurídico."
+                ))
+                .recentEventSummaries(List.of())
+                .sourcesSummary(List.of("Legal Task: Procedimiento de herencia: Estudio de antecedentes y documentación."))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-contextual-legal-tasks"))
+                .thenReturn(conversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-contextual-legal-tasks"))
+                .thenReturn(3);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son las tareas legales de este encargo?")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotQuestionClassifier.classify("Cuáles son las tareas legales de este encargo?"))
+                .thenReturn(PlatformQuestionType.LEGAL_TASKS);
+        when(this.chatbotPlatformContextService.loadContext("engagement-001"))
+                .thenReturn(Optional.of(platformContext));
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-contextual-legal-tasks",
+                "Cuáles son las tareas legales de este encargo?"
+        );
+
+        ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
+
+        assertThat(response.getMessage()).contains("Tareas Legales");
+        assertThat(response.getMessage()).contains("Estudio de antecedentes y documentación");
+        assertThat(response.getMessage()).contains("Asesoramiento jurídico");
+        assertThat(response.getUsedPlatformData()).isTrue();
+        assertThat(response.getSourcesSummary()).isNotEmpty();
     }
 
     @Test
@@ -1126,7 +1267,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
-        assertThat(response.getMessage()).contains("puedo darte una explicación más clara");
+        assertThat(response.getMessage()).contains("puedo explicarte el caso");
         assertThat(response.getMessage()).contains("procedimientos visibles relacionados");
     }
 
@@ -1236,7 +1377,7 @@ class ChatbotServiceTest {
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
         assertThat(response.getResponseMode()).isEqualTo("GENERAL");
         assertThat(response.getUsedPlatformData()).isFalse();
-        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_REPLY);
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_EXAMPLE_REPLY);
     }
 
     @Test
@@ -1310,6 +1451,36 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldRejectAnotherEngagementIdInContextualConversation() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Compáralo con EL-200")))
+                .thenReturn(ChatbotScopeDecision.allow());
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Compáralo con EL-200");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY);
+        verify(chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
     void sendMessageShouldReturnMissingCaseContextWhenCustomerAsksForOwnEngagementStatusInGeneralConversation() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
         String userMessage = "¿Cuál es el estado de mi encargo?";
@@ -1345,6 +1516,46 @@ class ChatbotServiceTest {
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY);
         verify(chatbotQuestionClassifier, never()).classify(any());
+    }
+
+    @Test
+    void sendMessageShouldReturnEmotionalDistressReplyInContextualConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        String userMessage = "No puedo más con esto";
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-300")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
+                .thenReturn(ChatbotScopeDecision.reject(
+                        ChatbotScopeViolationReason.EMOTIONAL_DISTRESS,
+                        ChatbotResponseMessages.EMOTIONAL_DISTRESS_REPLY,
+                        false
+                ));
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-ctx",
+                userMessage
+        );
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-ctx");
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.EMOTIONAL_DISTRESS_REPLY);
+        verify(chatbotQuestionClassifier, never()).classify(any());
+        verify(chatbotPlatformContextService, never()).loadContext(any());
     }
 
     @Test

@@ -49,6 +49,36 @@ class ChatbotQuestionClassifierTest {
     @Test
     void classifyShouldReturnGeneralContextWhenNoKeywordMatches() {
         assertThat(this.classifier.classify("Hola, necesito ayuda")).isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
+        assertThat(this.classifier.classify("Seguro que puedes resolver dudas sobre un encargo?"))
+                .isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
         assertThat(this.classifier.classify(null)).isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
+    }
+
+    @Test
+    void shouldClassifyLegalTasksQuestionInEnglish() {
+        PlatformQuestionType result = this.classifier.classify("What are the Legal Tasks of this engagement?");
+
+        assertThat(result).isEqualTo(PlatformQuestionType.LEGAL_TASKS);
+    }
+
+    @Test
+    void shouldClassifyLegalTasksQuestionInSpanish() {
+        PlatformQuestionType result = this.classifier.classify("Cuáles son las tareas legales de este encargo?");
+
+        assertThat(result).isEqualTo(PlatformQuestionType.LEGAL_TASKS);
+    }
+
+    @Test
+    void shouldClassifyEngagementTasksQuestion() {
+        PlatformQuestionType result = this.classifier.classify("Qué actuaciones del encargo están previstas?");
+
+        assertThat(result).isEqualTo(PlatformQuestionType.LEGAL_TASKS);
+    }
+
+    @Test
+    void shouldKeepDocumentsPriorityOverLegalTasksWhenQuestionMentionsDocument() {
+        PlatformQuestionType result = this.classifier.classify("Revisa el documento y dime las tareas legales");
+
+        assertThat(result).isEqualTo(PlatformQuestionType.DOCUMENTS);
     }
 }

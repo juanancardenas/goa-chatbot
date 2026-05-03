@@ -59,9 +59,37 @@ class ChatbotPromptTemplateTest {
         assertThat(prompt).contains("Prompt contextual");
         assertThat(prompt).contains("Conversación contextual");
         assertThat(prompt).contains("Usa el contexto del encargo asociado");
-        assertThat(prompt).contains("No inventes Legal Tasks");
+        assertThat(prompt).contains("No inventes tareas legales");
+        assertThat(prompt).contains("No respondas con datos de otros encargos");
+        assertThat(prompt).contains("Cierra cada respuesta con una pregunta breve de seguimiento");
         assertThat(prompt).contains("EngagementLetterId: engagement-123");
         assertThat(prompt).contains("Rol conversacional: CLIENT");
+    }
+
+    @Test
+    void shouldGuideAiToUseLegalTasksFromPlatformContext() {
+        ChatbotAiRequest request = ChatbotAiRequest.builder()
+                .basePrompt("Prompt base de pruebas")
+                .roleProfile("PROFESSIONAL")
+                .conversationType("CONTEXTUAL")
+                .documentsAvailable(false)
+                .platformContext("""
+                    EngagementLetterId: engagement-001
+                    Procedimientos: Procedimiento de herencia
+
+                    Tareas Legales:
+                    Procedimiento de herencia: Estudio de antecedentes y documentación.
+                    Procedimiento de herencia: Asesoramiento jurídico.
+                    """)
+                .recentMessages(List.of())
+                .build();
+
+        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+
+        assertThat(prompt).contains("Si existe una sección \"Legal Tasks\"");
+        assertThat(prompt).contains("úsala como fuente principal");
+        assertThat(prompt).contains("Procedimiento de herencia: Estudio de antecedentes y documentación.");
+        assertThat(prompt).contains("Procedimiento de herencia: Asesoramiento jurídico.");
     }
 
     @Test

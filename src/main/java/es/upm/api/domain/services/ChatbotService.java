@@ -41,10 +41,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ChatbotService {
@@ -55,6 +59,7 @@ public class ChatbotService {
     private static final String RESPONSE_MODE_GENERAL = "GENERAL";
     private static final String RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA = "CONTEXTUAL_PLATFORM_DATA";
     private static final String RESPONSE_MODE_CONTEXTUAL_RESTRICTED = "CONTEXTUAL_RESTRICTED";
+    private static final Pattern ENGAGEMENT_ID_PATTERN = Pattern.compile("\\bEL-\\d+\\b", Pattern.CASE_INSENSITIVE);
 
     // Attributes
     private final ChatbotDocumentContextService chatbotDocumentContextService;
@@ -347,35 +352,106 @@ public class ChatbotService {
         String responseMode;
         boolean usedPlatformData;
         List<String> sourcesSummary;
+        ConversationProfileType profile = this.resolveConversationProfile();
+
+        if (this.isCourtesyMessage(requestDto.getMessage())) {
+            assistantReply = this.courtesyReply(profile);
+            responseMode = RESPONSE_MODE_GENERAL;
+            usedPlatformData = false;
+            sourcesSummary = List.of();
+
+            this.saveMessage(
+                    conversation.getId(),
+                    MessageSenderType.ASSISTANT,
+                    MessageType.RESPONSE,
+                    assistantReply,
+                    nextSequence + 1,
+                    messageId,
+                    date
+            );
+
+            return new ChatbotMessageResponseDto(
+                    conversation.getId(),
+                    assistantReply,
+                    null,
+                    date.toString(),
+                    responseMode,
+                    usedPlatformData,
+                    sourcesSummary
+            );
+        }
+
+        if (this.referencesAnotherEngagement(conversation, requestDto.getMessage())) {
+            assistantReply = ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY;
+            responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
+            usedPlatformData = false;
+            sourcesSummary = List.of();
+
+            this.saveMessage(
+                    conversation.getId(),
+                    MessageSenderType.ASSISTANT,
+                    MessageType.RESPONSE,
+                    assistantReply,
+                    nextSequence + 1,
+                    messageId,
+                    date
+            );
+
+            return new ChatbotMessageResponseDto(
+                    conversation.getId(),
+                    assistantReply,
+                    null,
+                    date.toString(),
+                    responseMode,
+                    usedPlatformData,
+                    sourcesSummary
+            );
+        }
 
         if (scopeDecision.isAllowed()) {
-            ConversationProfileType profile = this.resolveConversationProfile();
-
             if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
-                Optional<ChatbotPlatformContext> platformContext = this.chatbotPlatformContextService
-                        .loadContext(conversation.getEngagementLetterId());
+                PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(requestDto.getMessage());
 
-                if (platformContext.isPresent()) {
-                    String baseReply = this.contextualPlatformReply(
-                            profile,
-                            requestDto.getMessage(),
-                            conversation,
-                            platformContext.get()
-                    );
+                if (this.requiresPlatformContext(questionType)) {
+                    Optional<ChatbotPlatformContext> platformContext = this.chatbotPlatformContextService
+                            .loadContext(conversation.getEngagementLetterId());
 
-                    assistantReply = this.generateConfiguredAssistantReply(
-                            conversation,
-                            profile,
-                            requestDto.getMessage(),
-                            baseReply,
-                            platformContext
-                    );
+                    if (platformContext.isPresent()) {
+                        String baseReply = this.contextualPlatformReply(
+                                profile,
+                                requestDto.getMessage(),
+                                conversation,
+                                platformContext.get()
+                        );
 
-                    responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
-                    usedPlatformData = true;
-                    sourcesSummary = platformContext.get().getSourcesSummary();
+                        assistantReply = this.generateConfiguredAssistantReply(
+                                conversation,
+                                profile,
+                                requestDto.getMessage(),
+                                baseReply,
+                                platformContext
+                        );
+
+                        responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
+                        usedPlatformData = true;
+                        sourcesSummary = platformContext.get().getSourcesSummary();
+                    } else {
+                        String baseReply = this.contextualFallbackReply(profile, requestDto.getMessage());
+
+                        assistantReply = this.generateConfiguredAssistantReply(
+                                conversation,
+                                profile,
+                                requestDto.getMessage(),
+                                baseReply,
+                                Optional.empty()
+                        );
+
+                        responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
+                        usedPlatformData = false;
+                        sourcesSummary = List.of();
+                    }
                 } else {
-                    String baseReply = this.contextualFallbackReply(profile, requestDto.getMessage());
+                    String baseReply = this.generalFaqReply(profile, requestDto.getMessage());
 
                     assistantReply = this.generateConfiguredAssistantReply(
                             conversation,
@@ -385,7 +461,7 @@ public class ChatbotService {
                             Optional.empty()
                     );
 
-                    responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
+                    responseMode = RESPONSE_MODE_GENERAL;
                     usedPlatformData = false;
                     sourcesSummary = List.of();
                 }
@@ -412,6 +488,8 @@ public class ChatbotService {
             usedPlatformData = false;
             sourcesSummary = List.of();
         }
+
+        assistantReply = this.normalizeReplyForFrontend(assistantReply);
 
         this.saveMessage(
                 conversation.getId(),
@@ -504,6 +582,16 @@ public class ChatbotService {
 
         conversation.setStatus(ConversationStatus.ACTIVE);
         this.conversationPersistence.update(conversation);
+    }
+
+    private boolean requiresPlatformContext(PlatformQuestionType questionType) {
+        if (questionType == null) {
+            return true;
+        }
+
+        return switch (questionType) {
+            case ENGAGEMENT_STATUS, LEGAL_TASKS, TIMELINE_EVENTS, DOCUMENTS, GENERAL_CONTEXT -> true;
+        };
     }
 
     // Crea un mensaje y devuelve su ID de BD
@@ -610,7 +698,7 @@ public class ChatbotService {
             ChatbotAiRequest aiRequest = ChatbotAiRequest.builder()
                     .conversationId(conversation.getId())
                     .userId(conversation.getUserId())
-                    .userMessage(this.buildAiUserMessage(userMessage, baseReply))
+                    .userMessage(this.buildAiUserMessage(conversation, userMessage, baseReply, platformContext))
                     .basePrompt(this.chatbotAiProperties.getBasePrompt())
                     .roleProfile(profile.name())
                     .conversationType(conversation.getType())
@@ -638,22 +726,84 @@ public class ChatbotService {
         }
     }
 
-    private String buildAiUserMessage(String userMessage, String baseReply) {
+    private String buildAiUserMessage(
+            Conversation conversation,
+            String userMessage,
+            String baseReply,
+            Optional<ChatbotPlatformContext> platformContext
+    ) {
+        String contextualRules = "";
+
+        if (TYPE_CONTEXTUAL.equals(conversation.getType())) {
+            String activeEngagementId = platformContext
+                    .map(ChatbotPlatformContext::getEngagementLetterId)
+                    .orElse(this.safeText(conversation.getEngagementLetterId(), "No disponible"));
+
+            contextualRules = """
+                Reglas adicionales para chat contextual:
+                - Este chat está asociado al encargo activo: %s.
+                - No respondas con datos de otros encargos, expedientes o casos.
+                - Si el usuario pide comparar con otro encargo o salir de este ámbito, indícalo con claridad y mantén el foco en el encargo activo.
+                - Evita copiar la respuesta base como plantilla literal; úsala solo como guardrail y redacta una respuesta natural.
+                - Responde con tono de abogado cercano, amable y servicial.
+                - Cierra la respuesta con una sugerencia útil o una pregunta breve para continuar ayudando.
+                """.formatted(activeEngagementId);
+        }
+
         return """
-            Pregunta del usuario:
+            Pregunta actual del usuario:
             %s
 
             Respuesta base segura generada por GOA:
             %s
 
-            Mejora la respuesta manteniendo las restricciones del sistema.
-            No inventes datos.
-            No contradigas la respuesta base.
-            Si falta contexto, indícalo claramente.
+            Usa la respuesta base como guía de seguridad, no como texto obligatorio.
+            Si la pregunta es general, hipotética, explicativa o pide ejemplos, puedes desarrollar una respuesta útil.
+            Mantén un tono amable, claro y profesional.
+            Puedes sonar cercano, pero no uses bromas excesivas ni lenguaje demasiado informal.
+            Si el usuario pide datos reales de un encargo, expediente, documento, hito, estado o tarea concreta, responde solo si esos datos están disponibles en el contexto.
+            No inventes datos reales de plataforma.
+            No inventes documentos, estados, hitos, fechas ni tareas de un encargo concreto.
+            No proporciones asesoramiento legal vinculante.
+            Si el usuario pide una tabla, gráfico, diagrama o formato que dependa de Markdown/renderizado especial, indica brevemente que en esta versión de la interfaz aún no está disponible.
+            Después, ofrece la alternativa en forma de lista clara y útil.
+            Responde únicamente a la pregunta actual del usuario.
+            No repitas respuestas anteriores salvo que el usuario lo pida explícitamente.
+            No arrastres contexto anterior si no es relevante para la pregunta actual.
+            Si generas listas, usa saltos de línea y viñetas simples.
+            No generes tablas en texto con separadores " | ".
+            No generes tablas Markdown.
+            No generes bloques pseudo-gráficos.
+            No uses sintaxis Markdown de negrita como **texto**.
+            Devuelve únicamente la respuesta final para el usuario.
+            No escribas títulos como "Respuesta mejorada", "Respuesta final" o similares.
+            %s
             """.formatted(
                 this.safeText(userMessage, "No disponible"),
-                this.safeText(baseReply, "No disponible")
+                this.safeText(baseReply, "No disponible"),
+                contextualRules
         );
+    }
+
+    private boolean asksForSpecificEngagementData(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+
+        String normalized = message.toLowerCase();
+
+        return normalized.contains("este encargo")
+                || normalized.contains("mi encargo")
+                || normalized.contains("del encargo")
+                || normalized.contains("de un encargo")
+                || normalized.contains("este caso")
+                || normalized.contains("mi caso")
+                || normalized.contains("del caso")
+                || normalized.contains("esta hoja de encargo")
+                || normalized.contains("mi hoja de encargo")
+                || normalized.contains("del expediente")
+                || normalized.contains("mi expediente")
+                || normalized.contains("este expediente");
     }
 
     private String buildPlatformContextForPrompt(Optional<ChatbotPlatformContext> platformContext) {
@@ -667,6 +817,10 @@ public class ChatbotService {
                 ? "No disponible"
                 : String.join(", ", context.getProcedureTitles());
 
+        String legalTasks = context.getLegalTaskSummaries() == null || context.getLegalTaskSummaries().isEmpty()
+                ? "No disponible"
+                : String.join(System.lineSeparator(), context.getLegalTaskSummaries());
+
         String events = context.getRecentEventSummaries() == null || context.getRecentEventSummaries().isEmpty()
                 ? "No disponible"
                 : String.join(System.lineSeparator(), context.getRecentEventSummaries());
@@ -679,16 +833,20 @@ public class ChatbotService {
             EngagementLetterId: %s
             Cliente/propietario visible: %s
             Procedimientos: %s
-
+        
+            Tareas legales:
+            %s
+        
             Eventos recientes:
             %s
-
+        
             Fuentes internas disponibles:
             %s
             """.formatted(
                 this.safeText(context.getEngagementLetterId(), "No disponible"),
                 this.safeText(context.getOwnerDisplayName(), "No disponible"),
                 procedures,
+                legalTasks,
                 events,
                 sources
         );
@@ -745,6 +903,7 @@ public class ChatbotService {
 
         return switch (questionType) {
             case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(profile, platformContext);
+            case LEGAL_TASKS -> this.buildLegalTasksReply(profile, platformContext);
             case TIMELINE_EVENTS -> this.buildTimelineReply(profile, platformContext);
             case DOCUMENTS -> this.buildDocumentsReply(profile, conversation, platformContext);
             case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile, platformContext);
@@ -857,6 +1016,30 @@ public class ChatbotService {
         return reply.toString();
     }
 
+    private String buildLegalTasksReply(
+            ConversationProfileType profile,
+            ChatbotPlatformContext platformContext
+    ) {
+        boolean hasLegalTasks = platformContext.getLegalTaskSummaries() != null
+                && !platformContext.getLegalTaskSummaries().isEmpty();
+
+        if (!hasLegalTasks) {
+            return switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_LEGAL_TASKS_REPLY;
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_LEGAL_TASKS_REPLY;
+            };
+        }
+
+        String legalTasks = platformContext.getLegalTaskSummaries().stream()
+                .map(task -> "- " + task)
+                .collect(Collectors.joining(System.lineSeparator()));
+
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXTUAL_LEGAL_TASKS_REPLY_TEMPLATE.formatted(legalTasks);
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_LEGAL_TASKS_REPLY_TEMPLATE.formatted(legalTasks);
+        };
+    }
+
     private String buildGeneralContextReply(
             ConversationProfileType profile,
             ChatbotPlatformContext platformContext
@@ -885,6 +1068,10 @@ public class ChatbotService {
             reply.append(" ").append(noEventsReply);
         }
 
+        if (platformContext.getLegalTaskSummaries() != null && !platformContext.getLegalTaskSummaries().isEmpty()) {
+            reply.append(" ").append(this.buildLegalTasksReply(profile, platformContext));
+        }
+
         return reply.toString();
     }
 
@@ -902,6 +1089,7 @@ public class ChatbotService {
             case ENGAGEMENT_STATUS -> this.buildContextUnavailableStatusReply(profile);
             case TIMELINE_EVENTS -> this.buildContextUnavailableEventsReply(profile);
             case DOCUMENTS -> this.buildContextUnavailableDocumentsReply(profile);
+            case LEGAL_TASKS -> this.buildContextUnavailableLegalTasksReply(profile);
             case GENERAL_CONTEXT -> this.buildContextUnavailableGeneralReply(profile);
         };
     }
@@ -927,6 +1115,13 @@ public class ChatbotService {
         };
     }
 
+    private String buildContextUnavailableLegalTasksReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_LEGAL_TASKS_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_LEGAL_TASKS_REPLY;
+        };
+    }
+
     private String buildContextUnavailableGeneralReply(ConversationProfileType profile) {
         return switch (profile) {
             case CLIENT -> ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY;
@@ -946,24 +1141,39 @@ public class ChatbotService {
         PlatformQuestionType questionType = this.classifyQuestion(userMessage);
 
         return switch (questionType) {
-            case ENGAGEMENT_STATUS -> this.buildGeneralStatusReply(profile);
-            case TIMELINE_EVENTS -> this.buildGeneralTimelineReply(profile);
+            case ENGAGEMENT_STATUS -> this.buildGeneralStatusReply(profile, userMessage);
+            case LEGAL_TASKS -> this.buildGeneralLegalTasksReply(profile, userMessage);
+            case TIMELINE_EVENTS -> this.buildGeneralTimelineReply(profile, userMessage);
             case DOCUMENTS -> this.buildGeneralDocumentsReply(profile);
             case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile);
         };
     }
 
-    private String buildGeneralStatusReply(ConversationProfileType profile) {
+    private String buildGeneralStatusReply(ConversationProfileType profile, String message) {
+        if (this.asksForSpecificEngagementData(message)) {
+            return switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_STATUS_REPLY;
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_STATUS_REPLY;
+            };
+        }
+
         return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_STATUS_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_STATUS_REPLY;
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_STATUS_EXAMPLE_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_STATUS_EXAMPLE_REPLY;
         };
     }
 
-    private String buildGeneralTimelineReply(ConversationProfileType profile) {
+    private String buildGeneralTimelineReply(ConversationProfileType profile, String message) {
+        if (this.asksForSpecificEngagementData(message)) {
+            return switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_TIMELINE_REPLY;
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_REPLY;
+            };
+        }
+
         return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_TIMELINE_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_REPLY;
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_TIMELINE_EXAMPLE_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_EXAMPLE_REPLY;
         };
     }
 
@@ -971,6 +1181,20 @@ public class ChatbotService {
         return switch (profile) {
             case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_DOCUMENTS_STUB_REPLY;
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY;
+        };
+    }
+
+    private String buildGeneralLegalTasksReply(ConversationProfileType profile, String message) {
+        if (this.asksForSpecificEngagementData(message)) {
+            return switch (profile) {
+                case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_LEGAL_TASKS_REPLY;
+                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_LEGAL_TASKS_REPLY;
+            };
+        }
+
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_LEGAL_TASKS_EXAMPLE_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_LEGAL_TASKS_EXAMPLE_REPLY;
         };
     }
 
@@ -987,5 +1211,118 @@ public class ChatbotService {
         if (maxInputCharacters > 0 && message != null && message.length() > maxInputCharacters) {
             throw new BadRequestException("message supera el limite maximo de caracteres configurado");
         }
+    }
+
+    private boolean isCourtesyMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+
+        String normalized = message.toLowerCase(Locale.ROOT);
+
+        return normalized.contains("gracias")
+                || normalized.contains("muchas gracias")
+                || normalized.contains("por favor")
+                || normalized.contains("te quiero")
+                || normalized.contains("te amo")
+                || normalized.contains("buen dia")
+                || normalized.contains("buen día")
+                || normalized.contains("buenas")
+                || normalized.contains("hasta luego")
+                || normalized.contains("nos vemos");
+    }
+
+    private String courtesyReply(ConversationProfileType profile) {
+        return switch (profile) {
+            case CLIENT -> ChatbotResponseMessages.CLIENT_COURTESY_REPLY;
+            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_COURTESY_REPLY;
+        };
+    }
+
+    private String normalizeReplyForFrontend(String reply) {
+        if (reply == null || reply.isBlank()) {
+            return reply;
+        }
+
+        List<String> lines = Arrays.asList(reply.split("\\R"));
+        boolean hasPipes = lines.stream().anyMatch(line -> line.contains("|"));
+
+        if (!hasPipes) {
+            return reply;
+        }
+
+        StringBuilder sanitized = new StringBuilder();
+
+        for (String rawLine : lines) {
+            String line = rawLine == null ? "" : rawLine.trim();
+
+            if (line.isBlank()) {
+                if (!sanitized.isEmpty()) {
+                    sanitized.append(System.lineSeparator());
+                }
+                continue;
+            }
+
+            if (!line.contains("|")) {
+                sanitized.append(line).append(System.lineSeparator());
+                continue;
+            }
+
+            String compact = line.replace(" ", "");
+            if (compact.matches("[|:\\-]+")) {
+                continue;
+            }
+
+            String normalizedLine = line;
+            if (normalizedLine.startsWith("|")) {
+                normalizedLine = normalizedLine.substring(1);
+            }
+            if (normalizedLine.endsWith("|")) {
+                normalizedLine = normalizedLine.substring(0, normalizedLine.length() - 1);
+            }
+
+            String[] cells = Arrays.stream(normalizedLine.split("\\|"))
+                    .map(String::trim)
+                    .filter(cell -> !cell.isBlank())
+                    .toArray(String[]::new);
+
+            if (cells.length == 0) {
+                continue;
+            }
+
+            if (cells.length == 1) {
+                sanitized.append("- ").append(cells[0]).append(System.lineSeparator());
+                continue;
+            }
+
+            sanitized.append("- ").append(cells[0]).append(": ");
+            for (int i = 1; i < cells.length; i++) {
+                if (i > 1) {
+                    sanitized.append("; ");
+                }
+                sanitized.append(cells[i]);
+            }
+            sanitized.append(System.lineSeparator());
+        }
+
+        return sanitized.toString().trim();
+    }
+
+    private boolean referencesAnotherEngagement(Conversation conversation, String message) {
+        if (!TYPE_CONTEXTUAL.equals(conversation.getType()) || message == null || message.isBlank()) {
+            return false;
+        }
+
+        String activeEngagementId = this.safeText(conversation.getEngagementLetterId(), "");
+        Matcher matcher = ENGAGEMENT_ID_PATTERN.matcher(message);
+
+        while (matcher.find()) {
+            String candidate = matcher.group();
+            if (!candidate.equalsIgnoreCase(activeEngagementId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

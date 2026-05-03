@@ -1,5 +1,6 @@
 package es.upm.api.domain.services;
 
+import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.model.platform.EngagementEventPage;
 import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
@@ -8,11 +9,13 @@ import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.webclients.EngagementWebClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,6 +28,9 @@ import static org.mockito.Mockito.when;
 class ChatbotPlatformContextServiceTest {
     @Mock
     private EngagementWebClient engagementWebClient;
+
+    @InjectMocks
+    private ChatbotPlatformContextService chatbotPlatformContextService;
 
     @Test
     void loadContextShouldReturnEmptyWhenEngagementLetterIdIsBlank() {
@@ -249,6 +255,101 @@ class ChatbotPlatformContextServiceTest {
                 "Hoja de encargo " + engagementLetterId,
                 "Hito/evento: Evento valido",
                 "Hito/evento: Evento adicional"
+        );
+    }
+
+    @Test
+    void shouldMapLegalTasksFromEngagementContext() {
+        LegalProcedureSummary procedure = new LegalProcedureSummary(
+                "Procedimiento de herencia",
+                LocalDate.of(2026, 4, 28),
+                null,
+                List.of(
+                        "Estudio de antecedentes y documentación.",
+                        "Asesoramiento jurídico.",
+                        "Localización de personas."
+                )
+        );
+
+        EngagementLetterSummary engagementLetter = new EngagementLetterSummary(
+                UUID.randomUUID(),
+                LocalDate.of(2026, 4, 1),
+                null,
+                null,
+                List.of(procedure)
+        );
+
+        when(this.engagementWebClient.readById("engagement-001"))
+                .thenReturn(engagementLetter);
+
+        Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-001");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getLegalTaskSummaries()).containsExactly(
+                "Procedimiento de herencia: Estudio de antecedentes y documentación.",
+                "Procedimiento de herencia: Asesoramiento jurídico.",
+                "Procedimiento de herencia: Localización de personas."
+        );
+        assertThat(result.get().getSourcesSummary()).anyMatch(source -> source.contains("Legal Task"));
+    }
+
+    @Test
+    void shouldIgnoreBlankLegalTasks() {
+        LegalProcedureSummary procedure = new LegalProcedureSummary(
+                "Procedimiento de herencia",
+                null,
+                null,
+                List.of(
+                        "Estudio de antecedentes y documentación.",
+                        " ",
+                        ""
+                )
+        );
+
+        EngagementLetterSummary engagementLetter = new EngagementLetterSummary(
+                UUID.randomUUID(),
+                LocalDate.of(2026, 4, 1),
+                null,
+                null,
+                List.of(procedure)
+        );
+
+        when(this.engagementWebClient.readById("engagement-001"))
+                .thenReturn(engagementLetter);
+
+        Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-001");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getLegalTaskSummaries()).containsExactly(
+                "Procedimiento de herencia: Estudio de antecedentes y documentación."
+        );
+    }
+
+    @Test
+    void shouldUseFallbackProcedureTitleWhenProcedureTitleIsMissing() {
+        LegalProcedureSummary procedure = new LegalProcedureSummary(
+                null,
+                null,
+                null,
+                List.of("Asesoramiento jurídico.")
+        );
+
+        EngagementLetterSummary engagementLetter = new EngagementLetterSummary(
+                UUID.randomUUID(),
+                LocalDate.of(2026, 4, 1),
+                null,
+                null,
+                List.of(procedure)
+        );
+
+        when(this.engagementWebClient.readById("engagement-001"))
+                .thenReturn(engagementLetter);
+
+        Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-001");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getLegalTaskSummaries()).containsExactly(
+                "Procedimiento sin título: Asesoramiento jurídico."
         );
     }
 }

@@ -57,7 +57,7 @@ class ChatbotScopePolicyTest {
 
         assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.UNSUPPORTED_FACTUAL_ASSERTION);
-        assertThat(decision.getSafeMessage()).contains("No debo afirmar hechos");
+        assertThat(decision.getSafeMessage()).contains("No puedo confirmar hechos");
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
@@ -101,7 +101,7 @@ class ChatbotScopePolicyTest {
 
         assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
-        assertThat(decision.getSafeMessage()).contains("no está asociada a un encargo concreto");
+        assertThat(decision.getSafeMessage()).contains("no está asociada a un encargo específico");
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
@@ -131,6 +131,37 @@ class ChatbotScopePolicyTest {
         assertThat(decision.isRequiresHuman()).isTrue();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "No puedo más con esto",
+            "Me quiero morir",
+            "Estoy en crisis y tengo ansiedad"
+    })
+    void evaluateShouldRejectEmotionalDistressMessagesInGeneralConversation(String message) {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                message
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.EMOTIONAL_DISTRESS);
+        assertThat(decision.getSafeMessage()).contains("asistente conversacional jurídico");
+        assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldRejectEmotionalDistressMessagesInContextualConversation() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("CONTEXTUAL"),
+                "Siento que no quiero vivir"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.EMOTIONAL_DISTRESS);
+        assertThat(decision.getSafeMessage()).contains("trámite legal en GOA");
+        assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
     @Test
     void evaluateShouldAllowContextualMessageWithinScope() {
         ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
@@ -141,6 +172,19 @@ class ChatbotScopePolicyTest {
         assertThat(decision.isAllowed()).isTrue();
         assertThat(decision.getReason()).isNull();
         assertThat(decision.getSafeMessage()).isNull();
+        assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldRejectOutOfDomainMessageInGeneralConversation() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                "te quiero mucho, nos vemos"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.OUT_OF_DOMAIN);
+        assertThat(decision.getSafeMessage()).contains("consultas sobre GOA");
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
