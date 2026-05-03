@@ -43,6 +43,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ChatbotService {
@@ -53,6 +55,7 @@ public class ChatbotService {
     private static final String RESPONSE_MODE_GENERAL = "GENERAL";
     private static final String RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA = "CONTEXTUAL_PLATFORM_DATA";
     private static final String RESPONSE_MODE_CONTEXTUAL_RESTRICTED = "CONTEXTUAL_RESTRICTED";
+    private static final Pattern ENGAGEMENT_ID_PATTERN = Pattern.compile("\\bEL-\\d+\\b", Pattern.CASE_INSENSITIVE);
 
     // Attributes
     private final ChatbotDocumentContextService chatbotDocumentContextService;
@@ -368,6 +371,33 @@ public class ChatbotService {
             );
         }
 
+        if (this.referencesAnotherEngagement(conversation, requestDto.getMessage())) {
+            assistantReply = ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY;
+            responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
+            usedPlatformData = false;
+            sourcesSummary = List.of();
+
+            this.saveMessage(
+                    conversation.getId(),
+                    MessageSenderType.ASSISTANT,
+                    MessageType.RESPONSE,
+                    assistantReply,
+                    nextSequence + 1,
+                    messageId,
+                    date
+            );
+
+            return new ChatbotMessageResponseDto(
+                    conversation.getId(),
+                    assistantReply,
+                    null,
+                    date.toString(),
+                    responseMode,
+                    usedPlatformData,
+                    sourcesSummary
+            );
+        }
+
         if (scopeDecision.isAllowed()) {
             if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
                 PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(requestDto.getMessage());
@@ -619,7 +649,7 @@ public class ChatbotService {
             ChatbotAiRequest aiRequest = ChatbotAiRequest.builder()
                     .conversationId(conversation.getId())
                     .userId(conversation.getUserId())
-                    .userMessage(this.buildAiUserMessage(userMessage, baseReply))
+                    .userMessage(this.buildAiUserMessage(conversation, userMessage, baseReply, platformContext))
                     .basePrompt(this.chatbotAiProperties.getBasePrompt())
                     .roleProfile(profile.name())
                     .conversationType(conversation.getType())
@@ -647,7 +677,30 @@ public class ChatbotService {
         }
     }
 
-    private String buildAiUserMessage(String userMessage, String baseReply) {
+    private String buildAiUserMessage(
+            Conversation conversation,
+            String userMessage,
+            String baseReply,
+            Optional<ChatbotPlatformContext> platformContext
+    ) {
+        String contextualRules = "";
+
+        if (TYPE_CONTEXTUAL.equals(conversation.getType())) {
+            String activeEngagementId = platformContext
+                    .map(ChatbotPlatformContext::getEngagementLetterId)
+                    .orElse(this.safeText(conversation.getEngagementLetterId(), "No disponible"));
+
+            contextualRules = """
+                Reglas adicionales para chat contextual:
+                - Este chat está asociado al encargo activo: %s.
+                - No respondas con datos de otros encargos, expedientes o casos.
+                - Si el usuario pide comparar con otro encargo o salir de este ámbito, indícalo con claridad y mantén el foco en el encargo activo.
+                - Evita copiar la respuesta base como plantilla literal; úsala solo como guardrail y redacta una respuesta natural.
+                - Responde con tono de abogado cercano, amable y servicial.
+                - Cierra la respuesta con una sugerencia útil o una pregunta breve para continuar ayudando.
+                """.formatted(activeEngagementId);
+        }
+
         return """
             Pregunta actual del usuario:
             %s
@@ -675,9 +728,11 @@ public class ChatbotService {
             No uses sintaxis Markdown de negrita como **texto**.
             Devuelve únicamente la respuesta final para el usuario.
             No escribas títulos como "Respuesta mejorada", "Respuesta final" o similares.
+            %s
             """.formatted(
                 this.safeText(userMessage, "No disponible"),
-                this.safeText(baseReply, "No disponible")
+                this.safeText(baseReply, "No disponible"),
+                contextualRules
         );
     }
 
@@ -1202,5 +1257,23 @@ public class ChatbotService {
         }
 
         return sanitized.toString().trim();
+    }
+
+    private boolean referencesAnotherEngagement(Conversation conversation, String message) {
+        if (!TYPE_CONTEXTUAL.equals(conversation.getType()) || message == null || message.isBlank()) {
+            return false;
+        }
+
+        String activeEngagementId = this.safeText(conversation.getEngagementLetterId(), "");
+        Matcher matcher = ENGAGEMENT_ID_PATTERN.matcher(message);
+
+        while (matcher.find()) {
+            String candidate = matcher.group();
+            if (!candidate.equalsIgnoreCase(activeEngagementId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -73,3 +73,5 @@ chatbot:
       Respeta el rol del usuario y la restricción de ámbito.
       Si se pregunta por documentos y el servicio documental no está disponible, indícalo.
       No afirmes haber leído documentos reales si no hay integración documental.
+      No uses tablas ni referencias a Markdown.
+      Termina cada respuesta con una pregunta breve de seguimiento.

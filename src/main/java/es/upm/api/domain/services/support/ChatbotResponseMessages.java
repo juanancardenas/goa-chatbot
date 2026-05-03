@@ -43,10 +43,10 @@ public final class ChatbotResponseMessages {
             " Si la consulta requiere datos reales de un encargo específico, entra en Hojas de Encargo y abre el Asistente de ese encargo.";
 
     public static final String CLIENT_CONTEXTUAL_STATUS_REPLY_TEMPLATE =
-            "He revisado la hoja de encargo %s. Este encargo está asociado a %s y puedo darte una explicación más clara del caso con la información disponible en plataforma.";
+            "He revisado la hoja de encargo %s. Este encargo está asociado a %s y puedo explicarte el caso con la información disponible en plataforma. ¿Quieres que empecemos por estado, hitos o tareas legales?";
 
     public static final String PROFESSIONAL_CONTEXTUAL_STATUS_REPLY_TEMPLATE =
-            "He revisado la hoja de encargo %s, asociada a %s. Puedo apoyarme en la información operativa del caso para responder con más precisión.";
+            "He revisado la hoja de encargo %s, asociada a %s. Puedo apoyarme en la información operativa del caso para responder con precisión. Si te parece, puedo continuar con estado, hitos o tareas legales.";
 
     public static final String CLIENT_CONTEXTUAL_PROCEDURES_REPLY_TEMPLATE =
             "Los procedimientos visibles relacionados con este encargo son: %s.";
@@ -61,46 +61,46 @@ public final class ChatbotResponseMessages {
             "Los hitos o eventos recientes visibles del encargo son: %s.";
 
     public static final String CLIENT_CONTEXTUAL_NO_EVENTS_REPLY =
-            "No se han encontrado hitos recientes visibles en este momento para el encargo activo.";
+            "No se han encontrado hitos recientes visibles en este momento para el encargo activo. Si quieres, revisamos ahora el estado general o las tareas legales visibles.";
 
     public static final String PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY =
-            "No se han encontrado hitos recientes visibles en este momento para el encargo activo.";
+            "No se han encontrado hitos recientes visibles en este momento para el encargo activo. Si te sirve, puedo continuar con estado general o tareas legales visibles.";
 
     public static final String CLIENT_CONTEXTUAL_DOCUMENTS_REPLY =
-            "Tu consulta parece referirse a documentos del caso. En esta fase solo debo apoyarme en documentación autorizada y visible, sin asumir documentos no confirmados.";
+            "Tu consulta parece referirse a documentos del caso. En esta fase solo debo apoyarme en documentación autorizada y visible, sin asumir documentos no confirmados. Si quieres, te ayudo con lo que sí está visible en el encargo activo.";
 
     public static final String PROFESSIONAL_CONTEXTUAL_DOCUMENTS_REPLY =
-            "Tu consulta parece referirse a documentación del caso. En esta fase la respuesta debe apoyarse solo en documentación autorizada y visible, sin inventar documentos: no debo inventar documentos ni afirmar accesos no confirmados.";
+            "Tu consulta parece referirse a documentación del caso. En esta fase la respuesta debe apoyarse solo en documentación autorizada y visible, sin inventar documentos ni confirmar accesos no verificados. Si te parece, seguimos con el contexto operativo disponible.";
 
     public static final String CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY =
-            "He cargado el contexto del encargo activo y puedo ayudarte con una explicación general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma.";
+            "He cargado el contexto del encargo activo y puedo ayudarte con una explicación general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma. ¿Quieres que priorice estado, hitos o tareas legales?";
 
     public static final String PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY =
-            "He cargado contexto del encargo activo y puedo ayudarte con información general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma.";
+            "He cargado contexto del encargo activo y puedo ayudarte con información general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma. Si quieres, priorizo estado, hitos o tareas legales.";
 
     public static final String CLIENT_CONTEXT_UNAVAILABLE_STATUS_REPLY =
-            "Ahora mismo no he podido recuperar el estado actualizado del encargo activo. Si lo deseas, vuelve a intentarlo en unos momentos o consulta la hoja de encargo directamente en la plataforma.";
+            "Ahora mismo no he podido recuperar el estado actualizado del encargo activo. Si te parece, vuelve a intentarlo en unos momentos y, mientras tanto, te ayudo con una orientación general del siguiente paso.";
 
     public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_STATUS_REPLY =
-            "No he podido recuperar ahora el contexto actualizado del encargo activo para responder sobre su estado. Prefiero no darte datos del caso sin confirmación de plataforma.";
+            "No he podido recuperar ahora el contexto actualizado del encargo activo para responder sobre su estado. Prefiero no darte datos sin confirmación de plataforma; si quieres, te doy una orientación operativa mientras se restablece.";
 
     public static final String CLIENT_CONTEXT_UNAVAILABLE_EVENTS_REPLY =
-            "Ahora mismo no he podido recuperar los hitos o pasos recientes del encargo activo. Puedes volver a intentarlo en unos momentos desde esta conversación contextual.";
+            "Ahora mismo no he podido recuperar los hitos o pasos recientes del encargo activo. Puedes volver a intentarlo en unos momentos; si quieres, continuamos con estado general o tareas legales.";
 
     public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_EVENTS_REPLY =
-            "No he podido recuperar ahora los hitos o eventos recientes del encargo activo. Prefiero no darte una cronología como confirmada sin datos de plataforma.";
+            "No he podido recuperar ahora los hitos o eventos recientes del encargo activo. Prefiero no dar una cronología como confirmada sin datos de plataforma; si te sirve, seguimos con estado general o tareas legales.";
 
     public static final String CLIENT_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY =
-            "Ahora mismo no he podido comprobar la documentación visible del caso. Solo debo apoyarme en documentos autorizados y confirmados por la plataforma.";
+            "Ahora mismo no he podido comprobar la documentación visible del caso. Solo debo apoyarme en documentos autorizados y confirmados por la plataforma. Si quieres, te ayudo con el resto del contexto operativo disponible.";
 
     public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_REPLY =
-            "No he podido comprobar ahora la documentación visible del caso. Para evitar errores, no voy a afirmar accesos ni documentos no confirmados.";
+            "No he podido comprobar ahora la documentación visible del caso. Para evitar errores, no voy a afirmar accesos ni documentos no confirmados. Si te parece, seguimos con el contexto operativo que sí está disponible.";
 
     public static final String CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY =
-            "Ahora mismo no he podido cargar el contexto actualizado del encargo activo. Puedo seguir ayudándote con orientación general, pero sin asumir datos confirmados del caso.";
+            "Ahora mismo no he podido cargar el contexto actualizado del encargo activo. Puedo seguir ayudándote con orientación general, pero sin asumir datos confirmados del caso. ¿Quieres que te proponga los siguientes pasos habituales?";
 
     public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_GENERAL_REPLY =
-            "No he podido cargar ahora el contexto actualizado del encargo activo. Puedo continuar con orientación general, pero sin tratar como confirmados datos internos que no tengo disponibles.";
+            "No he podido cargar ahora el contexto actualizado del encargo activo. Puedo continuar con orientación general, pero sin tratar como confirmados datos internos no disponibles. Si quieres, te propongo una secuencia operativa de seguimiento.";
 
     public static final String CLIENT_CONTEXTUAL_LEGAL_TASKS_REPLY_TEMPLATE =
             """
@@ -155,16 +155,16 @@ public final class ChatbotResponseMessages {
             """;
 
     public static final String CLIENT_CONTEXTUAL_NO_LEGAL_TASKS_REPLY =
-            "No se han encontrado Tareas Legales visibles en este momento para el encargo activo.";
+            "No se han encontrado Tareas Legales visibles en este momento para el encargo activo. Si quieres, revisamos estado general o hitos recientes.";
 
     public static final String PROFESSIONAL_CONTEXTUAL_NO_LEGAL_TASKS_REPLY =
-            "No se han encontrado Tareas Legales visibles en este momento para el encargo activo.";
+            "No se han encontrado Tareas Legales visibles en este momento para el encargo activo. Si te sirve, continuamos con estado general o hitos recientes.";
 
     public static final String CLIENT_CONTEXT_UNAVAILABLE_LEGAL_TASKS_REPLY =
-            "Ahora mismo no he podido recuperar las Tareas Legales del encargo activo. Puedes volver a intentarlo en unos momentos desde esta conversación contextual.";
+            "Ahora mismo no he podido recuperar las Tareas Legales del encargo activo. Puedes volver a intentarlo en unos momentos; si quieres, seguimos con estado o hitos del encargo activo.";
 
     public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_LEGAL_TASKS_REPLY =
-            "No he podido recuperar ahora las Tareas Legales del encargo activo. Prefiero no listarlas como confirmadas sin datos de plataforma.";
+            "No he podido recuperar ahora las Tareas Legales del encargo activo. Prefiero no listarlas como confirmadas sin datos de plataforma; si te parece, avanzamos con estado o hitos.";
 
     public static final String CLIENT_GENERAL_LEGAL_TASKS_REPLY =
             "Para consultar tareas legales de un encargo específico, entra en Hojas de Encargo y abre el Asistente de ese encargo.";
@@ -173,16 +173,16 @@ public final class ChatbotResponseMessages {
             "Para consultar Tareas Legales de un encargo específico, entra en Hojas de Encargo y abre el Asistente de ese encargo.";
 
     public static final String CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY =
-            "Tu consulta parece referirse a documentos del caso. La integración documental real aún no está disponible en esta versión, así que solo puedo orientarte de forma segura sin afirmar documentos concretos no confirmados.";
+            "Tu consulta parece referirse a documentos del caso. La integración documental real aún no está disponible en esta versión, así que solo puedo orientarte de forma segura sin afirmar documentos concretos no confirmados. Si quieres, seguimos con el contexto operativo del encargo activo.";
 
     public static final String PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY =
-            "Tu consulta parece referirse a documentación del caso. La integración documental real aún no está disponible en esta versión, así que no puedo confirmar documentos concretos ni accesos no verificados.";
+            "Tu consulta parece referirse a documentación del caso. La integración documental real aún no está disponible en esta versión, así que no puedo confirmar documentos concretos ni accesos no verificados. Si te parece, continúo con la información operativa disponible del encargo activo.";
 
     public static final String CLIENT_CONTEXT_UNAVAILABLE_DOCUMENTS_STUB_REPLY =
-            "Todavía no dispongo de integración documental real para comprobar documentos visibles del caso. Puedo orientarte de forma segura, sin inventar información.";
+            "Todavía no dispongo de integración documental real para comprobar documentos visibles del caso. Puedo orientarte de forma segura, sin inventar información. ¿Quieres que sigamos con estado, hitos o tareas?";
 
     public static final String PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_STUB_REPLY =
-            "La integración documental real aún no está disponible en esta versión. Por ahora no puedo confirmar accesos documentales, documentos visibles ni metadatos no verificados.";
+            "La integración documental real aún no está disponible en esta versión. Por ahora no puedo confirmar accesos documentales, documentos visibles ni metadatos no verificados. Si te sirve, seguimos con el resto del contexto operativo.";
 
     public static final String CLIENT_GENERAL_DOCUMENTS_STUB_REPLY =
             "Puedo orientarte de forma general sobre documentación, pero en esta versión todavía no tengo integración documental real para consultar documentos concretos del caso.";
@@ -199,7 +199,7 @@ public final class ChatbotResponseMessages {
             "Los procedimientos visibles en este encargo incluyen: %s.";
 
     public static final String CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY =
-            "No he podido recuperar ahora el contexto actualizado del encargo activo. Puedo seguir ayudándote, pero sin presentar como confirmados datos internos del caso.";
+            "No he podido recuperar ahora el contexto actualizado del encargo activo. Puedo seguir ayudándote, pero sin presentar como confirmados datos internos del caso. Si quieres, te propongo cómo continuar en cuanto se recupere el contexto.";
 
     public static final String CONTEXTUAL_PLATFORM_EVENTS_TEMPLATE =
             "Los hitos o eventos recientes visibles del encargo son: %s.";
@@ -217,13 +217,13 @@ public final class ChatbotResponseMessages {
             "Los hitos o eventos recientes visibles del encargo son: %s.";
 
     public static final String CONTEXTUAL_NO_EVENTS_REPLY =
-            "Ahora mismo no veo hitos recientes visibles para este encargo en el contexto recuperado.";
+            "Ahora mismo no veo hitos recientes visibles para este encargo en el contexto recuperado. Si te parece, revisamos estado general o tareas legales visibles.";
 
     public static final String CONTEXTUAL_DOCUMENTS_REPLY =
-            "Tu consulta parece referirse a documentación del caso. En esta fase la respuesta debe apoyarse solo en documentación autorizada y visible, sin inventar documentos ni confirmar accesos no verificados.";
+            "Tu consulta parece referirse a documentación del caso. En esta fase la respuesta debe apoyarse solo en documentación autorizada y visible, sin inventar documentos ni confirmar accesos no verificados. Si quieres, continuamos con estado, hitos o tareas del encargo activo.";
 
     public static final String CONTEXTUAL_GENERAL_SUMMARY_REPLY =
-            "He cargado contexto del encargo activo y puedo ayudarte con información general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma.";
+            "He cargado contexto del encargo activo y puedo ayudarte con información general del caso, sus procedimientos visibles y los hitos recientes disponibles en plataforma. Si quieres, te detallo el punto que prefieras primero.";
 
 
     //ScopePolicy

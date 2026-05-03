@@ -1202,7 +1202,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
-        assertThat(response.getMessage()).contains("puedo darte una explicación más clara");
+        assertThat(response.getMessage()).contains("puedo explicarte el caso");
         assertThat(response.getMessage()).contains("procedimientos visibles relacionados");
     }
 
@@ -1278,6 +1278,36 @@ class ChatbotServiceTest {
         assertThat(response.getResponseMode()).isEqualTo("GENERAL");
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_GENERAL_STATUS_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldRejectAnotherEngagementIdInContextualConversation() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Compáralo con EL-200")))
+                .thenReturn(ChatbotScopeDecision.allow());
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Compáralo con EL-200");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY);
+        verify(chatbotPlatformContextService, never()).loadContext(any());
     }
 
     @Test

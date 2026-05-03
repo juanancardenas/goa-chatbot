@@ -60,6 +60,8 @@ class ChatbotPromptTemplateTest {
         assertThat(prompt).contains("Conversación contextual");
         assertThat(prompt).contains("Usa el contexto del encargo asociado");
         assertThat(prompt).contains("No inventes tareas legales");
+        assertThat(prompt).contains("No respondas con datos de otros encargos");
+        assertThat(prompt).contains("Cierra cada respuesta con una pregunta breve de seguimiento");
         assertThat(prompt).contains("EngagementLetterId: engagement-123");
         assertThat(prompt).contains("Rol conversacional: CLIENT");
     }
