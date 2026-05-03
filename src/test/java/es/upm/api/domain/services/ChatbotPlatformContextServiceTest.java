@@ -176,4 +176,79 @@ class ChatbotPlatformContextServiceTest {
         assertThat(result.get().getSourcesSummary().get(1)).contains("[EVENT] - OPEN");
         assertThat(result.get().getSourcesSummary().get(2)).isEqualTo("Hito/evento: Evento 1 [EVENT] - OPEN");
     }
+
+    @Test
+    void loadContextShouldFallbackToDefaultOwnerAndLimitProcedureSourcesWhenOwnerDisplayNameIsBlank() {
+        String engagementLetterId = "eng-006";
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        UserSummary owner = org.mockito.Mockito.mock(UserSummary.class);
+
+        when(owner.displayName()).thenReturn(" ");
+        when(this.engagementWebClient.readById(engagementLetterId))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        owner,
+                        List.of(
+                                new LegalProcedureSummary("Procedimiento A", LocalDate.of(2026, 4, 2), null, List.of()),
+                                new LegalProcedureSummary(null, LocalDate.of(2026, 4, 3), null, List.of()),
+                                new LegalProcedureSummary("Procedimiento B", LocalDate.of(2026, 4, 4), null, List.of()),
+                                new LegalProcedureSummary("Procedimiento C", LocalDate.of(2026, 4, 5), null, List.of())
+                        )
+                ));
+        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+                .thenReturn(new EngagementEventPage(List.of()));
+
+        var result = service.loadContext(engagementLetterId);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getOwnerDisplayName()).isEqualTo("usuario del encargo");
+        assertThat(result.get().getProcedureTitles()).containsExactly("Procedimiento A", "Procedimiento B", "Procedimiento C");
+        assertThat(result.get().getSourcesSummary()).containsExactly(
+                "Hoja de encargo " + engagementLetterId,
+                "Procedimiento: Procedimiento A",
+                "Procedimiento: Procedimiento B"
+        );
+    }
+
+    @Test
+    void loadContextShouldIgnoreNullOrBlankEventTexts() {
+        String engagementLetterId = "eng-007";
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        EngagementEventSummary nullTextEvent = org.mockito.Mockito.mock(EngagementEventSummary.class);
+        EngagementEventSummary blankTextEvent = org.mockito.Mockito.mock(EngagementEventSummary.class);
+        EngagementEventSummary validEvent = org.mockito.Mockito.mock(EngagementEventSummary.class);
+        EngagementEventSummary secondValidEvent = org.mockito.Mockito.mock(EngagementEventSummary.class);
+
+        when(this.engagementWebClient.readById(engagementLetterId))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        new UserSummary(UUID.randomUUID(), "Ana", "Diaz", "ana@goa.es", "600000002"),
+                        List.of()
+                ));
+        when(nullTextEvent.displayText()).thenReturn(null);
+        when(blankTextEvent.displayText()).thenReturn(" ");
+        when(validEvent.displayText()).thenReturn("Evento valido");
+        when(secondValidEvent.displayText()).thenReturn("Evento adicional");
+        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+                .thenReturn(new EngagementEventPage(List.of(
+                        nullTextEvent,
+                        blankTextEvent,
+                        validEvent,
+                        secondValidEvent
+                )));
+
+        var result = service.loadContext(engagementLetterId);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getRecentEventSummaries()).containsExactly("Evento valido", "Evento adicional");
+        assertThat(result.get().getSourcesSummary()).containsExactly(
+                "Hoja de encargo " + engagementLetterId,
+                "Hito/evento: Evento valido",
+                "Hito/evento: Evento adicional"
+        );
+    }
 }
