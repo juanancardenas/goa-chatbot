@@ -1377,7 +1377,7 @@ class ChatbotServiceTest {
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
         assertThat(response.getResponseMode()).isEqualTo("GENERAL");
         assertThat(response.getUsedPlatformData()).isFalse();
-        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_REPLY);
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_EXAMPLE_REPLY);
     }
 
     @Test
@@ -1516,6 +1516,46 @@ class ChatbotServiceTest {
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY);
         verify(chatbotQuestionClassifier, never()).classify(any());
+    }
+
+    @Test
+    void sendMessageShouldReturnEmotionalDistressReplyInContextualConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+        String userMessage = "No puedo más con esto";
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-300")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
+                .thenReturn(ChatbotScopeDecision.reject(
+                        ChatbotScopeViolationReason.EMOTIONAL_DISTRESS,
+                        ChatbotResponseMessages.EMOTIONAL_DISTRESS_REPLY,
+                        false
+                ));
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-ctx",
+                userMessage
+        );
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-ctx");
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.EMOTIONAL_DISTRESS_REPLY);
+        verify(chatbotQuestionClassifier, never()).classify(any());
+        verify(chatbotPlatformContextService, never()).loadContext(any());
     }
 
     @Test

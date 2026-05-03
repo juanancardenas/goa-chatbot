@@ -237,6 +237,9 @@ public final class ChatbotResponseMessages {
     public static final String LEGAL_BINDING_ADVICE_REPLY =
             "No puedo emitir asesoramiento legal vinculante ni indicar una estrategia jurídica definitiva. Puedo ofrecer orientación general y ayudarte a revisar la información disponible en la plataforma.";
 
+    public static final String EMOTIONAL_DISTRESS_REPLY =
+            "Entiendo que este mensaje puede reflejar un momento difícil. Soy un asistente conversacional jurídico y no puedo ofrecer apoyo psicológico o de emergencia. Si te sientes desbordado o en riesgo, contacta cuanto antes con una persona de confianza o con un profesional especializado. Si quieres, te ayudo ahora con tu encargo o con un trámite legal en GOA.";
+
     public static final String UNSUPPORTED_FACTUAL_ASSERTION_REPLY =
             "No puedo confirmar hechos que no estén disponibles en el contexto actual. Puedo ayudarte con orientación general o con la información visible del encargo activo.";
 

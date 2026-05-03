@@ -52,6 +52,28 @@ public class ChatbotScopePolicy {
             "proximos pasos de mi caso"
     );
 
+    private static final List<String> EMOTIONAL_DISTRESS_PATTERNS = List.of(
+            "me quiero morir",
+            "quiero morirme",
+            "no quiero vivir",
+            "quiero desaparecer",
+            "estoy deprimido",
+            "estoy deprimida",
+            "estoy hundido",
+            "estoy hundida",
+            "no puedo mas",
+            "no puedo más",
+            "no le encuentro sentido",
+            "me siento fatal",
+            "tengo ansiedad",
+            "estoy en crisis",
+            "quiero hacerme dano",
+            "quiero hacerme daño",
+            "hacerme dano",
+            "hacerme daño",
+            "suicid"
+    );
+
     private static final List<String> OTHER_CASE_PATTERNS = List.of(
             "otro caso",
             "otro encargo",
@@ -105,6 +127,14 @@ public class ChatbotScopePolicy {
                     ChatbotScopeViolationReason.LEGAL_BINDING_ADVICE_REQUESTED,
                     ChatbotResponseMessages.LEGAL_BINDING_ADVICE_REPLY,
                     true
+            );
+        }
+
+        if (this.containsAny(normalizedMessage, EMOTIONAL_DISTRESS_PATTERNS)) {
+            return ChatbotScopeDecision.reject(
+                    ChatbotScopeViolationReason.EMOTIONAL_DISTRESS,
+                    ChatbotResponseMessages.EMOTIONAL_DISTRESS_REPLY,
+                    false
             );
         }
 
