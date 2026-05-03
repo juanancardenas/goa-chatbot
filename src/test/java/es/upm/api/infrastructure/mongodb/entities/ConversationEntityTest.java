@@ -1,0 +1,99 @@
+package es.upm.api.infrastructure.mongodb.entities;
+
+import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.model.Conversation;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class ConversationEntityTest {
+
+    @Test
+    void builderShouldUseActiveStatusByDefault() {
+        ConversationEntity entity = ConversationEntity.builder()
+                .id("conversation-1")
+                .userId("user-1")
+                .engagementLetterId("engagement-1")
+                .type("CHATBOT")
+                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .build();
+
+        assertThat(entity.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+    }
+
+    @Test
+    void constructorShouldCopyConversationProperties() {
+        Conversation conversation = this.conversation();
+
+        ConversationEntity entity = new ConversationEntity(conversation);
+
+        assertThat(entity.getId()).isEqualTo("conversation-1");
+        assertThat(entity.getUserId()).isEqualTo("user-1");
+        assertThat(entity.getEngagementLetterId()).isEqualTo("engagement-1");
+        assertThat(entity.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+        assertThat(entity.getType()).isEqualTo("CHATBOT");
+        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
+    }
+
+    @Test
+    void allArgsConstructorShouldDefaultStatusToActiveWhenNull() {
+        ConversationEntity entity = new ConversationEntity(
+                "conversation-2",
+                "user-2",
+                "engagement-2",
+                null,
+                "ASSISTED",
+                LocalDateTime.of(2026, 5, 4, 9, 30)
+        );
+
+        assertThat(entity.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+    }
+
+    @Test
+    void fromConversationShouldMapDomainToEntity() {
+        Conversation conversation = this.conversation();
+
+        ConversationEntity entity = ConversationEntity.fromConversation(conversation);
+
+        assertThat(entity.getId()).isEqualTo("conversation-1");
+        assertThat(entity.getUserId()).isEqualTo("user-1");
+        assertThat(entity.getEngagementLetterId()).isEqualTo("engagement-1");
+        assertThat(entity.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+        assertThat(entity.getType()).isEqualTo("CHATBOT");
+        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
+    }
+
+    @Test
+    void toConversationShouldMapEntityToDomain() {
+        ConversationEntity entity = ConversationEntity.builder()
+                .id("conversation-3")
+                .userId("user-3")
+                .engagementLetterId("engagement-3")
+                .status(ConversationStatus.ACTIVE)
+                .type("FOLLOW_UP")
+                .createdAt(LocalDateTime.of(2026, 5, 5, 8, 15))
+                .build();
+
+        Conversation conversation = entity.toConversation();
+
+        assertThat(conversation.getId()).isEqualTo("conversation-3");
+        assertThat(conversation.getUserId()).isEqualTo("user-3");
+        assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-3");
+        assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        assertThat(conversation.getType()).isEqualTo("FOLLOW_UP");
+        assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 5, 8, 15));
+    }
+
+    private Conversation conversation() {
+        return Conversation.builder()
+                .id("conversation-1")
+                .userId("user-1")
+                .engagementLetterId("engagement-1")
+                .status(ConversationStatus.CLOSED)
+                .type("CHATBOT")
+                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .build();
+    }
+}

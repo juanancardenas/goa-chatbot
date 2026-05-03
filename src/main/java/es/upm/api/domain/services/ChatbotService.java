@@ -12,15 +12,19 @@ import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
+import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.Message;
+import es.upm.api.domain.model.UserDto;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.persistence.ConversationPersistence;
+import es.upm.api.domain.persistence.EscalationPersistence;
 import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.domain.services.ai.ChatbotAiClient;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.support.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
+import es.upm.api.domain.webclients.UserWebClient;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
@@ -62,27 +66,33 @@ public class ChatbotService {
     private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ChatbotScopePolicy chatbotScopePolicy;
+    private final UserWebClient userWebClient;
     private final ConversationPersistence conversationPersistence;
+    private final EscalationPersistence escalationPersistence;
     private final MessagePersistence messagePersistence;
     private final ChatbotAiClient chatbotAiClient;
     private final ChatbotAiProperties chatbotAiProperties;
     // Constructores
     @Autowired
     public ChatbotService(ConversationPersistence conversationPersistence,
+                          EscalationPersistence escalationPersistence,
                           MessagePersistence messagePersistence,
                           ChatbotScopePolicy chatbotScopePolicy,
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
                           ChatbotDocumentContextService chatbotDocumentContextService,
                           ChatbotAiClient chatbotAiClient,
-                          ChatbotAiProperties chatbotAiProperties
+                          ChatbotAiProperties chatbotAiProperties,
+                          UserWebClient userWebClient
     ) {
         this.conversationPersistence = conversationPersistence;
+        this.escalationPersistence = escalationPersistence;
         this.messagePersistence = messagePersistence;
         this.chatbotScopePolicy = chatbotScopePolicy;
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
+        this.userWebClient = userWebClient;
         this.chatbotAiClient = chatbotAiClient;
         this.chatbotAiProperties = chatbotAiProperties;
     }
@@ -515,12 +525,39 @@ public class ChatbotService {
     }
 
     public void closeConversation(String conversationId) {
+        Conversation conversation = this.requireOwnedConversation(
+                conversationId,
+                this.authenticatedUserId()
+        );
+
+        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
+            return;
+        }
+
+        conversation.setStatus(ConversationStatus.CLOSED);
+        this.conversationPersistence.update(conversation);
+    }
+
+    public void escalateConversation(String conversationId) {
         Conversation conversation = this.requireActiveOwnedConversation(
                 conversationId,
                 this.authenticatedUserId()
         );
-        conversation.setStatus(ConversationStatus.CLOSED);
+        Optional<UserDto> user = this.readUserSafely(conversation.getUserId());
+
+        LocalDateTime now = LocalDateTime.now();
+        conversation.setStatus(ConversationStatus.ARCHIVED);
         this.conversationPersistence.update(conversation);
+        this.escalationPersistence.create(
+                Escalation.builder()
+                        .id(UUID.randomUUID())
+                        .conversationId(conversation.getId())
+                        .userId(conversation.getUserId())
+                        .createdAt(now)
+                        .phone(user.map(UserDto::getMobile).orElse(null))
+                        .email(user.map(UserDto::getEmail).orElse(null))
+                        .build()
+        );
     }
 
     public void deleteConversation(String conversationId) {
@@ -537,6 +574,10 @@ public class ChatbotService {
 
         if (conversation.getStatus() == ConversationStatus.ACTIVE) {
             return;
+        }
+
+        if (conversation.getStatus() == ConversationStatus.ARCHIVED) {
+            throw new ConflictException("La conversacion archivada no se puede reabrir");
         }
 
         conversation.setStatus(ConversationStatus.ACTIVE);
@@ -606,6 +647,14 @@ public class ChatbotService {
     // Devuelve el siguiente secuencial
     private Integer nextSequenceNumber(String conversationId) {
         return this.messagePersistence.nextSequenceNumber(conversationId);
+    }
+
+    private Optional<UserDto> readUserSafely(String userId) {
+        try {
+            return Optional.ofNullable(this.userWebClient.readById(userId));
+        } catch (RuntimeException ignored) {
+            return Optional.empty();
+        }
     }
 
     private String authenticatedUserId() {
