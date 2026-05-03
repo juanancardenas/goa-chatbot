@@ -119,6 +119,26 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void startGeneralConversationShouldPersistConversationAndMessagesForProfessional() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Necesito soporte");
+
+        var response = chatbotService.startGeneralConversation(request);
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
+        List<Message> savedMessages = messageCaptor.getAllValues();
+
+        assertThat(savedMessages.get(1).getContent()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY);
+        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY);
+    }
+
+    @Test
     void startContextualConversationShouldReuseExistingConversation() {
         this.authenticate("customer-42", "ROLE_CUSTOMER");
         Conversation existingConversation = Conversation.builder()
@@ -253,6 +273,19 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void readConversationHistoryListShouldRequireConversationType() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> chatbotService.readConversationHistoryList("   ", null)
+        );
+
+        assertThat(exception).hasMessageContaining("type es obligatorio");
+        verify(conversationPersistence, never()).findByUserIdAndTypeOrderByCreatedAtDesc(any(), any());
+    }
+
+    @Test
     void readConversationHistoryListShouldRequireEngagementLetterIdForContextualType() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
 
@@ -360,6 +393,28 @@ class ChatbotServiceTest {
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
                 () -> chatbotService.readConversationHistory("conversation-history", 0, 101)
+        );
+
+        assertThat(exception).hasMessageContaining("size debe estar entre 1 y 100");
+        verify(messagePersistence, never()).findByConversationIdOrderedDesc(any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void readConversationHistoryShouldRejectSizeBelowMinimum() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-history")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
+                .build();
+        when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> chatbotService.readConversationHistory("conversation-history", 0, 0)
         );
 
         assertThat(exception).hasMessageContaining("size debe estar entre 1 y 100");
@@ -963,6 +1018,111 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldReturnGeneralTimelineFaqForProfessional() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+        String userMessage = "Que plazos o hitos tiene esto";
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-general")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotQuestionClassifier.classify(userMessage))
+                .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-general",
+                userMessage
+        );
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-general");
+        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldReturnGeneralDocumentsFaqForProfessional() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+        String userMessage = "Que documentos aplican aqui";
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-general")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(5);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotQuestionClassifier.classify(userMessage))
+                .thenReturn(PlatformQuestionType.DOCUMENTS);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-general",
+                userMessage
+        );
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-general");
+        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY);
+    }
+
+    @Test
+    void sendMessageShouldReturnGeneralContextFaqWhenClassifierReturnsNull() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+        String userMessage = "Dame una vision general";
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-general")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(7);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotQuestionClassifier.classify(userMessage))
+                .thenReturn(null);
+
+        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+                "conversation-general",
+                userMessage
+        );
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-general");
+        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_CONTEXT_REPLY);
+    }
+
+    @Test
     void sendMessageShouldReturnMissingCaseContextWhenCustomerAsksForOwnEngagementStatusInGeneralConversation() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
         String userMessage = "¿Cuál es el estado de mi encargo?";
@@ -1042,6 +1202,48 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldReturnClientNoEventsReplyWhenTimelineHasNoEventsOrProcedures() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx-empty-events")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-201")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 30))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx-empty-events")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx-empty-events")).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos tiene mi caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-201"))
+                .thenReturn(Optional.of(
+                        ChatbotPlatformContext.builder()
+                                .engagementLetterId("EL-201")
+                                .ownerDisplayName("Ana")
+                                .procedureTitles(List.of())
+                                .recentEventSummaries(List.of())
+                                .sourcesSummary(List.of("Hoja de encargo EL-201"))
+                                .build()
+                ));
+        when(chatbotQuestionClassifier.classify("Que hitos tiene mi caso"))
+                .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
+
+        ChatbotMessageRequestDto request =
+                new ChatbotMessageRequestDto("conversation-ctx-empty-events", "Que hitos tiene mi caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getUsedPlatformData()).isTrue();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY);
+    }
+
+    @Test
     void sendMessageShouldReturnDocumentsReplyWithProceduresWhenContextExists() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
@@ -1082,6 +1284,58 @@ class ChatbotServiceTest {
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getMessage()).contains("documentación del caso");
         assertThat(response.getMessage()).contains("Procedimiento laboral");
+    }
+
+    @Test
+    void sendMessageShouldAppendVisibleDocumentsForClientContextualConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx-docs-visible")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-301")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 11, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-ctx-docs-visible")).thenReturn(existingConversation);
+        when(messagePersistence.nextSequenceNumber("conversation-ctx-docs-visible")).thenReturn(9);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos veo en mi caso")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(chatbotPlatformContextService.loadContext("EL-301"))
+                .thenReturn(Optional.of(
+                        ChatbotPlatformContext.builder()
+                                .engagementLetterId("EL-301")
+                                .ownerDisplayName("Ana")
+                                .procedureTitles(List.of())
+                                .recentEventSummaries(List.of())
+                                .sourcesSummary(List.of("Hoja de encargo EL-301"))
+                                .build()
+                ));
+        when(chatbotQuestionClassifier.classify("Que documentos veo en mi caso"))
+                .thenReturn(PlatformQuestionType.DOCUMENTS);
+        when(chatbotDocumentContextService.loadDocumentContext(existingConversation))
+                .thenReturn(ChatbotDocumentContext.builder()
+                        .available(true)
+                        .authorizedSourceConfigured(true)
+                        .visibleDocumentTitles(List.of("Contrato", "Poder"))
+                        .sourcesSummary(List.of("Repositorio documental"))
+                        .build());
+
+        ChatbotMessageRequestDto request =
+                new ChatbotMessageRequestDto("conversation-ctx-docs-visible", "Que documentos veo en mi caso");
+
+        var response = chatbotService.sendMessage(request);
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getUsedPlatformData()).isTrue();
+        assertThat(response.getMessage()).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
+        assertThat(response.getMessage()).contains("Documentos visibles preparados");
+        assertThat(response.getMessage()).contains("Contrato");
+        assertThat(response.getMessage()).contains("Poder");
     }
 
     @Test
