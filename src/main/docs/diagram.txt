@@ -73,6 +73,12 @@ package data {
         documents
         general_context
       }
+      enum chatbotAiProvider {
+        ollama
+        openai
+        gemini
+      }
     }
   }
+
 @enduml
