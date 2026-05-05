@@ -11,6 +11,13 @@ import java.util.StringJoiner;
 public class ChatbotPromptTemplate {
     private static final String NOT_AVAILABLE = "No disponible";
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
+    private static final String SCOPE_SECTION = """
+            [RESTRICCIÓN DE ÁMBITO]
+            Responde únicamente dentro del ámbito de GOA, del encargo y de la información autorizada.
+            Si el usuario pide algo fuera de ámbito, responde de forma prudente e indica la limitación.
+            No proporciones asesoramiento legal vinculante.
+            No inventes información.
+            """;
 
     private final ChatbotAiProperties chatbotAiProperties;
 
@@ -24,7 +31,7 @@ public class ChatbotPromptTemplate {
         prompt.add(this.safeText(request.getBasePrompt(), this.chatbotAiProperties.getBasePrompt()));
         prompt.add(this.buildConversationTypeSection(request));
         prompt.add(this.buildRoleSection(request));
-        prompt.add(this.buildScopeSection());
+        prompt.add(SCOPE_SECTION);
         prompt.add(this.buildDocumentsSection(request));
         prompt.add(this.buildPlatformContextSection(request));
         prompt.add(this.buildHistorySection(request));
@@ -71,16 +78,6 @@ public class ChatbotPromptTemplate {
                 Si el rol es CLIENT, usa lenguaje sencillo y guiado.
                 Si el rol es PROFESSIONAL, usa lenguaje técnico y operativo.
                 """.formatted(this.safeText(request.getRoleProfile(), NOT_AVAILABLE));
-    }
-
-    private String buildScopeSection() {
-        return """
-                [RESTRICCIÓN DE ÁMBITO]
-                Responde únicamente dentro del ámbito de GOA, del encargo y de la información autorizada.
-                Si el usuario pide algo fuera de ámbito, responde de forma prudente e indica la limitación.
-                No proporciones asesoramiento legal vinculante.
-                No inventes información.
-                """;
     }
 
     private String buildDocumentsSection(ChatbotAiRequest request) {

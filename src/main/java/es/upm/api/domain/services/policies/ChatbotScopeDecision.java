@@ -1,8 +1,11 @@
 package es.upm.api.domain.services.policies;
 
 import es.upm.api.domain.enums.ChatbotScopeViolationReason;
+import lombok.Getter;
 
+@Getter
 public class ChatbotScopeDecision {
+
     private final boolean allowed;
     private final ChatbotScopeViolationReason reason;
     private final String safeMessage;
@@ -32,19 +35,4 @@ public class ChatbotScopeDecision {
         return new ChatbotScopeDecision(false, reason, safeMessage, requiresHuman);
     }
 
-    public boolean isAllowed() {
-        return allowed;
-    }
-
-    public ChatbotScopeViolationReason getReason() {
-        return reason;
-    }
-
-    public String getSafeMessage() {
-        return safeMessage;
-    }
-
-    public boolean isRequiresHuman() {
-        return requiresHuman;
-    }
 }
