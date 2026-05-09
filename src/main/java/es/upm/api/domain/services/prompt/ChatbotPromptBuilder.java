@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.ai;
+package es.upm.api.domain.services.prompt;
 
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.StringJoiner;
 
 @Service
-public class ChatbotPromptTemplate {
+public class ChatbotPromptBuilder {
     private static final String NOT_AVAILABLE = "No disponible";
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String SCOPE_SECTION = """
@@ -21,7 +21,7 @@ public class ChatbotPromptTemplate {
 
     private final ChatbotAiProperties chatbotAiProperties;
 
-    public ChatbotPromptTemplate(ChatbotAiProperties chatbotAiProperties) {
+    public ChatbotPromptBuilder(ChatbotAiProperties chatbotAiProperties) {
         this.chatbotAiProperties = chatbotAiProperties;
     }
 

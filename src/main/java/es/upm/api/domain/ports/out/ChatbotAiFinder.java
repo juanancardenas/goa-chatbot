@@ -1,8 +1,8 @@
-package es.upm.api.domain.services.ai;
+package es.upm.api.domain.ports.out;
 
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 
-public interface ChatbotAiClient {
+public interface ChatbotAiFinder {
     ChatbotAiResponse generate(ChatbotAiRequest request);
 }

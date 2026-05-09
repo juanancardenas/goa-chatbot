@@ -6,7 +6,7 @@ import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
-import es.upm.api.domain.webclients.EngagementWebClient;
+import es.upm.api.infrastructure.webclients.EngagementWebClient;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;

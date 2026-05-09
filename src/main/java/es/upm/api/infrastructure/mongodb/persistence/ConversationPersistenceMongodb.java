@@ -3,7 +3,7 @@ package es.upm.api.infrastructure.mongodb.persistence;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.NotFoundException;
 import es.upm.api.domain.model.Conversation;
-import es.upm.api.domain.persistence.ConversationPersistence;
+import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
 import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public class ConversationPersistenceMongodb implements ConversationPersistence {
+public class ConversationPersistenceMongodb implements ConversationGateway {
     private final ConversationRepository conversationRepository;
 
     @Autowired

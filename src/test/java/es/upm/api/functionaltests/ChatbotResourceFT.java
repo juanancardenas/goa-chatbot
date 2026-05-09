@@ -15,9 +15,9 @@ import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
-import es.upm.api.domain.services.ai.ChatbotAiClient;
-import es.upm.api.domain.webclients.EngagementWebClient;
-import es.upm.api.domain.webclients.UserWebClient;
+import es.upm.api.domain.ports.out.ChatbotAiFinder;
+import es.upm.api.infrastructure.webclients.EngagementWebClient;
+import es.upm.api.infrastructure.webclients.UserWebClient;
 import es.upm.api.functionaltests.support.ChatbotTestMessages;
 import es.upm.api.infrastructure.resources.ChatbotResource;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
@@ -85,7 +85,7 @@ class ChatbotResourceFT {
     private EngagementWebClient engagementWebClient;
 
     @MockitoBean
-    private ChatbotAiClient chatbotAiClient;
+    private ChatbotAiFinder chatbotAiClient;
 
     @MockitoBean
     private UserWebClient userWebClient;

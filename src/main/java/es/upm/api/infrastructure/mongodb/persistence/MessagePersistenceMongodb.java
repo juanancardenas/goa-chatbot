@@ -1,7 +1,7 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
 import es.upm.api.domain.model.Message;
-import es.upm.api.domain.persistence.MessagePersistence;
+import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public class MessagePersistenceMongodb implements MessagePersistence {
+public class MessagePersistenceMongodb implements MessageGateway {
     private final MessageRepository messageRepository;
 
     @Autowired
