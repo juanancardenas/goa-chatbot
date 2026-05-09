@@ -1,6 +1,6 @@
 package es.upm.api.functionaltests.support;
 
-import es.upm.api.domain.services.support.ChatbotResponseMessages;
+import es.upm.api.domain.common.ChatbotResponseMessages;
 
 public final class ChatbotTestMessages {
     private ChatbotTestMessages() {
