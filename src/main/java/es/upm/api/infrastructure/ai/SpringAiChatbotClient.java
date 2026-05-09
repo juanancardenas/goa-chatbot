@@ -1,15 +1,17 @@
-package es.upm.api.domain.services.ai;
+package es.upm.api.infrastructure.ai;
 
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
+import es.upm.api.domain.ports.out.ChatbotAiFinder;
+import es.upm.api.domain.services.prompt.ChatbotPromptBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class SpringAiChatbotClient implements ChatbotAiClient {
+public class SpringAiChatbotClient implements ChatbotAiFinder {
     private static final String FINISH_REASON_SUCCESS = "SUCCESS";
     private static final String FINISH_REASON_ERROR = "ERROR";
     private static final String AI_PROVIDER_ERROR = "AI_PROVIDER_ERROR";
@@ -19,12 +21,12 @@ public class SpringAiChatbotClient implements ChatbotAiClient {
 
     private final ChatClient chatClient;
     private final ChatbotAiProperties chatbotAiProperties;
-    private final ChatbotPromptTemplate chatbotPromptTemplate;
+    private final ChatbotPromptBuilder chatbotPromptTemplate;
 
     public SpringAiChatbotClient(
             ChatClient.Builder chatClientBuilder,
             ChatbotAiProperties chatbotAiProperties,
-            ChatbotPromptTemplate chatbotPromptTemplate
+            ChatbotPromptBuilder chatbotPromptTemplate
     ) {
         this.chatClient = chatClientBuilder.build();
         this.chatbotAiProperties = chatbotAiProperties;

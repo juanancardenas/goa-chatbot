@@ -16,15 +16,15 @@ import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.UserDto;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
-import es.upm.api.domain.persistence.ConversationPersistence;
-import es.upm.api.domain.persistence.EscalationPersistence;
-import es.upm.api.domain.persistence.MessagePersistence;
-import es.upm.api.domain.services.ai.ChatbotAiClient;
+import es.upm.api.domain.ports.out.ConversationGateway;
+import es.upm.api.domain.ports.out.EscalationGateway;
+import es.upm.api.domain.ports.out.MessageGateway;
+import es.upm.api.domain.ports.out.ChatbotAiFinder;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
-import es.upm.api.domain.webclients.UserWebClient;
+import es.upm.api.infrastructure.webclients.UserWebClient;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
@@ -67,21 +67,21 @@ public class ChatbotService {
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ChatbotScopePolicy chatbotScopePolicy;
     private final UserWebClient userWebClient;
-    private final ConversationPersistence conversationPersistence;
-    private final EscalationPersistence escalationPersistence;
-    private final MessagePersistence messagePersistence;
-    private final ChatbotAiClient chatbotAiClient;
+    private final ConversationGateway conversationPersistence;
+    private final EscalationGateway escalationPersistence;
+    private final MessageGateway messagePersistence;
+    private final ChatbotAiFinder chatbotAiClient;
     private final ChatbotAiProperties chatbotAiProperties;
     // Constructores
     @Autowired
-    public ChatbotService(ConversationPersistence conversationPersistence,
-                          EscalationPersistence escalationPersistence,
-                          MessagePersistence messagePersistence,
+    public ChatbotService(ConversationGateway conversationPersistence,
+                          EscalationGateway escalationPersistence,
+                          MessageGateway messagePersistence,
                           ChatbotScopePolicy chatbotScopePolicy,
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
                           ChatbotDocumentContextService chatbotDocumentContextService,
-                          ChatbotAiClient chatbotAiClient,
+                          ChatbotAiFinder chatbotAiClient,
                           ChatbotAiProperties chatbotAiProperties,
                           UserWebClient userWebClient
     ) {

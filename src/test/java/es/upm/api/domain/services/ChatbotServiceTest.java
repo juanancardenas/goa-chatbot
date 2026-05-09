@@ -13,14 +13,14 @@ import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.UserDto;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
-import es.upm.api.domain.persistence.ConversationPersistence;
-import es.upm.api.domain.persistence.EscalationPersistence;
-import es.upm.api.domain.persistence.MessagePersistence;
-import es.upm.api.domain.services.ai.ChatbotAiClient;
+import es.upm.api.domain.ports.out.ConversationGateway;
+import es.upm.api.domain.ports.out.EscalationGateway;
+import es.upm.api.domain.ports.out.MessageGateway;
+import es.upm.api.domain.ports.out.ChatbotAiFinder;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
-import es.upm.api.domain.webclients.UserWebClient;
+import es.upm.api.infrastructure.webclients.UserWebClient;
 import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
@@ -56,19 +56,19 @@ import static org.mockito.Mockito.when;
 class ChatbotServiceTest {
 
     @Mock
-    private ConversationPersistence conversationPersistence;
+    private ConversationGateway conversationPersistence;
 
     @Mock
-    private MessagePersistence messagePersistence;
+    private MessageGateway messagePersistence;
 
     @Mock
-    private EscalationPersistence escalationPersistence;
+    private EscalationGateway escalationPersistence;
 
     @Mock
     private ChatbotScopePolicy chatbotScopePolicy;
 
     @Mock
-    private ChatbotAiClient chatbotAiClient;
+    private ChatbotAiFinder chatbotAiClient;
 
     @Mock
     private ChatbotAiProperties chatbotAiProperties;

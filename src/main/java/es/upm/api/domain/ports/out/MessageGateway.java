@@ -1,4 +1,4 @@
-package es.upm.api.domain.persistence;
+package es.upm.api.domain.ports.out;
 
 import es.upm.api.domain.model.Message;
 import org.springframework.data.domain.Page;
@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MessagePersistence {
+public interface MessageGateway {
 
     void create(Message message);
 

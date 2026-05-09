@@ -1,4 +1,4 @@
-package es.upm.api.domain.persistence;
+package es.upm.api.domain.ports.out;
 
 import es.upm.api.domain.model.Conversation;
 import org.springframework.stereotype.Repository;
@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ConversationPersistence {
+public interface ConversationGateway {
 
     Conversation readById(String conversationId);
 

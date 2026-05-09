@@ -1,14 +1,14 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
 import es.upm.api.domain.model.Escalation;
-import es.upm.api.domain.persistence.EscalationPersistence;
+import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.infrastructure.mongodb.daos.EscalationRepository;
 import es.upm.api.infrastructure.mongodb.entities.EscalationEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class EscalationPersistenceMongodb implements EscalationPersistence {
+public class EscalationPersistenceMongodb implements EscalationGateway {
     private final EscalationRepository escalationRepository;
 
     @Autowired

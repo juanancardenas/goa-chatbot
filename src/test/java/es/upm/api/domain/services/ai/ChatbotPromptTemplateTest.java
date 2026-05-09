@@ -2,6 +2,7 @@ package es.upm.api.domain.services.ai;
 
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
+import es.upm.api.domain.services.prompt.ChatbotPromptBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -11,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ChatbotPromptTemplateTest {
     private ChatbotAiProperties chatbotAiProperties;
-    private ChatbotPromptTemplate chatbotPromptTemplate;
+    private ChatbotPromptBuilder chatbotPromptTemplate;
 
     @BeforeEach
     void setUp() {
@@ -19,7 +20,7 @@ class ChatbotPromptTemplateTest {
         this.chatbotAiProperties.setBasePrompt("Prompt base de pruebas para GOA.");
         this.chatbotAiProperties.setMaxContextMessages(2);
         this.chatbotAiProperties.setDocumentsAvailable(false);
-        this.chatbotPromptTemplate = new ChatbotPromptTemplate(this.chatbotAiProperties);
+        this.chatbotPromptTemplate = new ChatbotPromptBuilder(this.chatbotAiProperties);
     }
 
     @Test
