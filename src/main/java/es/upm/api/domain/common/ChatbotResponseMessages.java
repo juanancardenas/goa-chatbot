@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.support;
+package es.upm.api.domain.common;
 
 public final class ChatbotResponseMessages {
     private ChatbotResponseMessages() {

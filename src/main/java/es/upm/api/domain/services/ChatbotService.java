@@ -22,7 +22,7 @@ import es.upm.api.domain.persistence.MessagePersistence;
 import es.upm.api.domain.services.ai.ChatbotAiClient;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
-import es.upm.api.domain.services.support.ChatbotResponseMessages;
+import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
 import es.upm.api.domain.webclients.UserWebClient;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;

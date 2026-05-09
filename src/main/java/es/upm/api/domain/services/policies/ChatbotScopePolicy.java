@@ -1,7 +1,7 @@
 package es.upm.api.domain.services.policies;
 
 import es.upm.api.domain.model.Conversation;
-import es.upm.api.domain.services.support.ChatbotResponseMessages;
+import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ChatbotScopeViolationReason;
 import org.springframework.stereotype.Service;
 
