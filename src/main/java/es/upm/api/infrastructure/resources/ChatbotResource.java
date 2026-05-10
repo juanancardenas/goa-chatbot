@@ -52,7 +52,10 @@ public class ChatbotResource {
             @RequestParam String type,
             @RequestParam(required = false) String engagementLetterId
     ) {
-        return this.chatbotService.readConversationHistoryList(type, engagementLetterId);
+        return this.chatbotService.readConversationHistoryList(type, engagementLetterId)
+                .stream()
+                .map(ChatbotConversationSummaryDto::fromDomain)
+                .toList();
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)

@@ -32,7 +32,7 @@ import es.upm.api.domain.model.configuration.ChatbotContextualConversationComman
 import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult;
 import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
-import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
+import es.upm.api.domain.model.configuration.ChatbotConversationSummaryResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
@@ -121,7 +121,8 @@ public class ChatbotService {
                 .build();
     }
 
-    public List<ChatbotConversationSummaryDto> readConversationHistoryList(
+    // Reading Conversation History List
+    public List<ChatbotConversationSummaryResult> readConversationHistoryList(
             String type,
             String engagementLetterId
     ) {
@@ -133,11 +134,25 @@ public class ChatbotService {
                 : this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
 
         return conversations.stream()
-                .map(this::toConversationSummaryDto)
+                .map(this::toConversationSummaryResult)
                 .toList();
     }
 
-    // Lectura del historial de conversation
+    private ChatbotConversationSummaryResult toConversationSummaryResult(Conversation conversation) {
+        Optional<Message> latestMessage = this.messageGateway.findLatestByConversationId(conversation.getId());
+
+        return ChatbotConversationSummaryResult.builder()
+                .conversationId(conversation.getId())
+                .type(conversation.getType())
+                .status(conversation.getStatus().name())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .createdAt(conversation.getCreatedAt().toString())
+                .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
+                .preview(latestMessage.map(Message::getContent).orElse(null))
+                .build();
+    }
+
+    // Reading the messages of a conversation
     public ChatbotConversationHistoryResult readConversationHistory(String conversationId, Integer page, Integer size) {
         Conversation conversation = this.requireOwnedConversation(conversationId, this.authenticatedUserId());
 
@@ -246,20 +261,6 @@ public class ChatbotService {
         }
 
         return normalizedType;
-    }
-
-    private ChatbotConversationSummaryDto toConversationSummaryDto(Conversation conversation) {
-        Optional<Message> latestMessage = this.messageGateway.findLatestByConversationId(conversation.getId());
-
-        return ChatbotConversationSummaryDto.builder()
-                .conversationId(conversation.getId())
-                .type(conversation.getType())
-                .status(conversation.getStatus().name())
-                .engagementLetterId(conversation.getEngagementLetterId())
-                .createdAt(conversation.getCreatedAt().toString())
-                .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
-                .preview(latestMessage.map(Message::getContent).orElse(null))
-                .build();
     }
 
     // Starts General Conversation, this type of conversation is not linked to other process or entity
