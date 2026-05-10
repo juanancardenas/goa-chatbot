@@ -1,4 +1,4 @@
-package es.upm.api.domain.services;
+package es.upm.api.domain.services.classification;
 
 import es.upm.api.domain.enums.PlatformQuestionType;
 import org.springframework.stereotype.Service;

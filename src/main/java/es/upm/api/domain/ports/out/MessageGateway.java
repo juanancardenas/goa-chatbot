@@ -2,12 +2,10 @@ package es.upm.api.domain.ports.out;
 
 import es.upm.api.domain.model.Message;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface MessageGateway {
 
     void create(Message message);

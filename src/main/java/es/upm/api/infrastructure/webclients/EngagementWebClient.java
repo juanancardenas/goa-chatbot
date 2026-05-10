@@ -3,7 +3,7 @@ package es.upm.api.infrastructure.webclients;
 import es.upm.api.configurations.FeignConfig;
 import es.upm.api.domain.model.platform.EngagementEventPage;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
-import es.upm.api.domain.ports.out.EngagementClientFinder;
+import es.upm.api.domain.ports.out.EngagementClient;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
         url = "${goa.engagement.base-url}",
         configuration = FeignConfig.class
 )
-public interface EngagementWebClient extends EngagementClientFinder {
+public interface EngagementWebClient extends EngagementClient {
 
     String ENGAGEMENT_LETTERS = "/engagement-letters";
     String ID_ID = "/{id}";

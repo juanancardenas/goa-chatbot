@@ -6,7 +6,7 @@ import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
-import es.upm.api.infrastructure.webclients.EngagementWebClient;
+import es.upm.api.domain.ports.out.EngagementClient;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,10 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 public class ChatbotPlatformContextService {
     private static final String DEFAULT_OWNER = "usuario del encargo";
 
-    private final EngagementWebClient engagementWebClient;
+    private final EngagementClient engagementClient;
 
-    public ChatbotPlatformContextService(EngagementWebClient engagementWebClient) {
-        this.engagementWebClient = engagementWebClient;
+    public ChatbotPlatformContextService(EngagementClient engagementClient) {
+        this.engagementClient = engagementClient;
     }
 
     public Optional<ChatbotPlatformContext> loadContext(String engagementLetterId) {
@@ -115,7 +115,7 @@ public class ChatbotPlatformContextService {
 
     private Optional<EngagementLetterSummary> readEngagementLetterSafely(String engagementLetterId) {
         try {
-            return Optional.ofNullable(this.engagementWebClient.readById(engagementLetterId));
+            return Optional.ofNullable(this.engagementClient.readById(engagementLetterId));
         } catch (RuntimeException ignored) {
             return Optional.empty();
         }
@@ -123,7 +123,7 @@ public class ChatbotPlatformContextService {
 
     private List<String> readRecentEventSummaries(String engagementLetterId) {
         try {
-            EngagementEventPage eventsPage = this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5);
+            EngagementEventPage eventsPage = this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5);
 
             return Optional.ofNullable(eventsPage)
                     .map(EngagementEventPage::getContent)
