@@ -29,7 +29,7 @@ import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotMessageResult;
 import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
+import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotHistoryMessageDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
@@ -53,6 +53,7 @@ import java.util.regex.Pattern;
 
 @Service
 public class ChatbotService {
+
     // Constants
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
@@ -102,21 +103,22 @@ public class ChatbotService {
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
-    public ChatbotContextualConversationResponseDto startContextualConversation(
+    public ChatbotContextualConversationResult startContextualConversation(
             ChatbotContextualConversationCommand command
     ) {
         String userId = this.authenticatedUserId();
+
         Conversation conversation = this.findOrCreateContextualConversation(
                 userId,
                 command.getEngagementLetterId()
         );
 
-        return new ChatbotContextualConversationResponseDto(
-                conversation.getId(),
-                conversation.getEngagementLetterId(),
-                conversation.getCreatedAt().toString(),
-                null
-        );
+        return ChatbotContextualConversationResult.builder()
+                .conversationId(conversation.getId())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .createdAt(conversation.getCreatedAt().toString())
+                .error(null)
+                .build();
     }
 
     public List<ChatbotConversationSummaryDto> readConversationHistoryList(

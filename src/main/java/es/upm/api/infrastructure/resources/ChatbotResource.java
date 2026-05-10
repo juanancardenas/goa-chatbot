@@ -60,7 +60,9 @@ public class ChatbotResource {
     public ChatbotContextualConversationResponseDto startContextualConversation(
             @Valid @RequestBody ChatbotContextualConversationRequestDto requestDto
     ) {
-        return this.chatbotService.startContextualConversation(requestDto.toCommand());
+        return ChatbotContextualConversationResponseDto.fromDomain(
+                this.chatbotService.startContextualConversation(requestDto.toCommand())
+        );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
