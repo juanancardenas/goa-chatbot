@@ -94,7 +94,9 @@ public class ChatbotResource {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
-        return this.chatbotService.readConversationHistory(conversationId, page, size);
+        return ChatbotConversationHistoryResponseDto.fromDomain(
+                this.chatbotService.readConversationHistory(conversationId, page, size)
+        );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)

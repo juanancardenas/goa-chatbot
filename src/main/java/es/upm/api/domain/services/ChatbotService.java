@@ -30,8 +30,8 @@ import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotMessageResult;
 import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
 import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult;
-import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
-import es.upm.api.infrastructure.dtos.ChatbotHistoryMessageDto;
+import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
+import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -137,7 +137,8 @@ public class ChatbotService {
                 .toList();
     }
 
-    public ChatbotConversationHistoryResponseDto readConversationHistory(String conversationId, Integer page, Integer size) {
+    // Lectura del historial de conversation
+    public ChatbotConversationHistoryResult readConversationHistory(String conversationId, Integer page, Integer size) {
         Conversation conversation = this.requireOwnedConversation(conversationId, this.authenticatedUserId());
 
         int normalizedPage = this.normalizeHistoryPage(page);
@@ -152,12 +153,12 @@ public class ChatbotService {
         List<Message> messagesChunk = new ArrayList<>(pagedMessages.getContent());
         messagesChunk.sort((left, right) -> Integer.compare(left.getSequenceNumber(), right.getSequenceNumber()));
 
-        List<ChatbotHistoryMessageDto> messages = messagesChunk
+        List<ChatbotHistoryMessageResult> messages = messagesChunk
                 .stream()
-                .map(this::toHistoryMessageDto)
+                .map(this::toHistoryMessageResult)
                 .toList();
 
-        return ChatbotConversationHistoryResponseDto.builder()
+        return ChatbotConversationHistoryResult.builder()
                 .conversationId(conversation.getId())
                 .engagementLetterId(conversation.getEngagementLetterId())
                 .type(conversation.getType())
@@ -167,6 +168,19 @@ public class ChatbotService {
                 .hasMore(pagedMessages.hasNext())
                 .totalMessages(pagedMessages.getTotalElements())
                 .messages(messages)
+                .build();
+    }
+
+    private ChatbotHistoryMessageResult toHistoryMessageResult(Message message) {
+        return ChatbotHistoryMessageResult.builder()
+                .id(message.getId())
+                .conversationId(message.getConversationId())
+                .senderType(message.getSenderType().name())
+                .messageType(message.getMessageType().name())
+                .content(message.getContent())
+                .timestamp(message.getTimestamp().toString())
+                .sequenceNumber(message.getSequenceNumber())
+                .parentMessageId(message.getParentMessageId())
                 .build();
     }
 
@@ -245,19 +259,6 @@ public class ChatbotService {
                 .createdAt(conversation.getCreatedAt().toString())
                 .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
                 .preview(latestMessage.map(Message::getContent).orElse(null))
-                .build();
-    }
-
-    private ChatbotHistoryMessageDto toHistoryMessageDto(Message message) {
-        return ChatbotHistoryMessageDto.builder()
-                .id(message.getId())
-                .conversationId(message.getConversationId())
-                .senderType(message.getSenderType().name())
-                .messageType(message.getMessageType().name())
-                .content(message.getContent())
-                .timestamp(message.getTimestamp().toString())
-                .sequenceNumber(message.getSequenceNumber())
-                .parentMessageId(message.getParentMessageId())
                 .build();
     }
 

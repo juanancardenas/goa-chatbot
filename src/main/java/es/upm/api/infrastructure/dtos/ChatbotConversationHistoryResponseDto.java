@@ -1,5 +1,6 @@
 package es.upm.api.infrastructure.dtos;
 
+import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatbotConversationHistoryResponseDto {
+
     private String conversationId;
     private String engagementLetterId;
     private String type;
@@ -21,4 +23,23 @@ public class ChatbotConversationHistoryResponseDto {
     private Boolean hasMore;
     private Long totalMessages;
     private List<ChatbotHistoryMessageDto> messages;
+
+    public static ChatbotConversationHistoryResponseDto fromDomain(ChatbotConversationHistoryResult result) {
+        return ChatbotConversationHistoryResponseDto.builder()
+                .conversationId(result.getConversationId())
+                .engagementLetterId(result.getEngagementLetterId())
+                .type(result.getType())
+                .status(result.getStatus())
+                .page(result.getPage())
+                .size(result.getSize())
+                .hasMore(result.getHasMore())
+                .totalMessages(result.getTotalMessages())
+                .messages(
+                        result.getMessages()
+                                .stream()
+                                .map(ChatbotHistoryMessageDto::fromDomain)
+                                .toList()
+                )
+                .build();
+    }
 }
