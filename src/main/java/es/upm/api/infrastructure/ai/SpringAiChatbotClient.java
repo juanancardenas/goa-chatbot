@@ -3,7 +3,7 @@ package es.upm.api.infrastructure.ai;
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
-import es.upm.api.domain.ports.out.ChatbotAiFinder;
+import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.services.prompt.ChatbotPromptBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class SpringAiChatbotClient implements ChatbotAiFinder {
+public class SpringAiChatbotClient implements ChatbotAiClient {
     private static final String FINISH_REASON_SUCCESS = "SUCCESS";
     private static final String FINISH_REASON_ERROR = "ERROR";
     private static final String AI_PROVIDER_ERROR = "AI_PROVIDER_ERROR";

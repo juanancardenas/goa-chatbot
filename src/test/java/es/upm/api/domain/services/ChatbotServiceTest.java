@@ -16,11 +16,12 @@ import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
-import es.upm.api.domain.ports.out.ChatbotAiFinder;
+import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.ports.out.UserClient;
+import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
-import es.upm.api.infrastructure.webclients.UserWebClient;
 import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
@@ -68,7 +69,7 @@ class ChatbotServiceTest {
     private ChatbotScopePolicy chatbotScopePolicy;
 
     @Mock
-    private ChatbotAiFinder chatbotAiClient;
+    private ChatbotAiClient chatbotAiClient;
 
     @Mock
     private ChatbotAiProperties chatbotAiProperties;
@@ -83,7 +84,7 @@ class ChatbotServiceTest {
     private ChatbotQuestionClassifier chatbotQuestionClassifier;
 
     @Mock
-    private UserWebClient userWebClient;
+    private UserClient userClient;
 
     @InjectMocks
     private ChatbotService chatbotService;
@@ -1807,7 +1808,7 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
-        when(userWebClient.readById("customer-1")).thenReturn(
+        when(userClient.readById("customer-1")).thenReturn(
                 UserDto.builder()
                         .id(java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"))
                         .mobile("+34600111222")
@@ -1844,7 +1845,7 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
-        when(userWebClient.readById("customer-1")).thenThrow(new RuntimeException("user service unavailable"));
+        when(userClient.readById("customer-1")).thenThrow(new RuntimeException("user service unavailable"));
 
         chatbotService.escalateConversation("conversation-escalate");
 

@@ -19,12 +19,13 @@ import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
-import es.upm.api.domain.ports.out.ChatbotAiFinder;
+import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
+import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
-import es.upm.api.infrastructure.webclients.UserWebClient;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
@@ -66,35 +67,38 @@ public class ChatbotService {
     private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ChatbotScopePolicy chatbotScopePolicy;
-    private final UserWebClient userWebClient;
-    private final ConversationGateway conversationPersistence;
-    private final EscalationGateway escalationPersistence;
-    private final MessageGateway messagePersistence;
-    private final ChatbotAiFinder chatbotAiClient;
     private final ChatbotAiProperties chatbotAiProperties;
+
+    private final UserClient userClient;
+    private final ChatbotAiClient chatbotAiClient;
+
+    private final ConversationGateway conversationGateway;
+    private final EscalationGateway escalationGateway;
+    private final MessageGateway messageGateway;
+
     // Constructores
     @Autowired
-    public ChatbotService(ConversationGateway conversationPersistence,
-                          EscalationGateway escalationPersistence,
-                          MessageGateway messagePersistence,
+    public ChatbotService(ConversationGateway conversationGateway,
+                          EscalationGateway escalationGateway,
+                          MessageGateway messageGateway,
                           ChatbotScopePolicy chatbotScopePolicy,
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
                           ChatbotDocumentContextService chatbotDocumentContextService,
-                          ChatbotAiFinder chatbotAiClient,
+                          ChatbotAiClient chatbotAiClient,
                           ChatbotAiProperties chatbotAiProperties,
-                          UserWebClient userWebClient
+                          UserClient userClient
     ) {
-        this.conversationPersistence = conversationPersistence;
-        this.escalationPersistence = escalationPersistence;
-        this.messagePersistence = messagePersistence;
+        this.conversationGateway = conversationGateway;
+        this.escalationGateway = escalationGateway;
+        this.messageGateway = messageGateway;
         this.chatbotScopePolicy = chatbotScopePolicy;
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
-        this.userWebClient = userWebClient;
         this.chatbotAiClient = chatbotAiClient;
         this.chatbotAiProperties = chatbotAiProperties;
+        this.userClient = userClient;
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
@@ -121,7 +125,7 @@ public class ChatbotService {
 
         List<Conversation> conversations = TYPE_CONTEXTUAL.equals(normalizedType)
                 ? this.readContextualConversations(userId, engagementLetterId)
-                : this.conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
+                : this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
 
         return conversations.stream()
                 .map(this::toConversationSummaryDto)
@@ -134,7 +138,7 @@ public class ChatbotService {
         int normalizedPage = this.normalizeHistoryPage(page);
         int normalizedSize = this.normalizeHistorySize(size);
 
-        Page<Message> pagedMessages = this.messagePersistence.findByConversationIdOrderedDesc(
+        Page<Message> pagedMessages = this.messageGateway.findByConversationIdOrderedDesc(
                 conversationId,
                 normalizedPage,
                 normalizedSize
@@ -182,7 +186,7 @@ public class ChatbotService {
     }
 
     private Conversation findOrCreateContextualConversation(String userId, String engagementLetterId) {
-        return this.conversationPersistence
+        return this.conversationGateway
                 .findActiveContextualConversation(userId, engagementLetterId, TYPE_CONTEXTUAL)
                 .orElseGet(() -> {
                     Conversation conversation = Conversation.builder()
@@ -194,7 +198,7 @@ public class ChatbotService {
                             .createdAt(LocalDateTime.now())
                             .build();
 
-                    this.conversationPersistence.create(conversation);
+                    this.conversationGateway.create(conversation);
                     return conversation;
                 });
     }
@@ -204,7 +208,7 @@ public class ChatbotService {
             throw new BadRequestException("engagementLetterId es obligatorio para listar conversaciones contextuales");
         }
 
-        return this.conversationPersistence.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+        return this.conversationGateway.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
                 userId,
                 engagementLetterId,
                 TYPE_CONTEXTUAL
@@ -226,7 +230,7 @@ public class ChatbotService {
     }
 
     private ChatbotConversationSummaryDto toConversationSummaryDto(Conversation conversation) {
-        Optional<Message> latestMessage = this.messagePersistence.findLatestByConversationId(conversation.getId());
+        Optional<Message> latestMessage = this.messageGateway.findLatestByConversationId(conversation.getId());
 
         return ChatbotConversationSummaryDto.builder()
                 .conversationId(conversation.getId())
@@ -269,7 +273,7 @@ public class ChatbotService {
                 .createdAt(date)
                 .build();
 
-        this.conversationPersistence.create(conversation);
+        this.conversationGateway.create(conversation);
 
         String messageId = this.saveMessage(
                 conversation.getId(),
@@ -535,7 +539,7 @@ public class ChatbotService {
         }
 
         conversation.setStatus(ConversationStatus.CLOSED);
-        this.conversationPersistence.update(conversation);
+        this.conversationGateway.update(conversation);
     }
 
     public void escalateConversation(String conversationId) {
@@ -547,8 +551,8 @@ public class ChatbotService {
 
         LocalDateTime now = LocalDateTime.now();
         conversation.setStatus(ConversationStatus.ARCHIVED);
-        this.conversationPersistence.update(conversation);
-        this.escalationPersistence.create(
+        this.conversationGateway.update(conversation);
+        this.escalationGateway.create(
                 Escalation.builder()
                         .id(UUID.randomUUID())
                         .conversationId(conversation.getId())
@@ -562,8 +566,8 @@ public class ChatbotService {
 
     public void deleteConversation(String conversationId) {
         this.requireOwnedConversation(conversationId, this.authenticatedUserId());
-        this.messagePersistence.deleteByConversationId(conversationId);
-        this.conversationPersistence.delete(conversationId);
+        this.messageGateway.deleteByConversationId(conversationId);
+        this.conversationGateway.delete(conversationId);
     }
 
     public void reopenConversation(String conversationId) {
@@ -581,7 +585,7 @@ public class ChatbotService {
         }
 
         conversation.setStatus(ConversationStatus.ACTIVE);
-        this.conversationPersistence.update(conversation);
+        this.conversationGateway.update(conversation);
     }
 
     private boolean requiresPlatformContext(PlatformQuestionType questionType) {
@@ -604,7 +608,7 @@ public class ChatbotService {
             String parentMessageId,
             LocalDateTime timestamp
     ) {
-        return this.messagePersistence.createAndReturnId(
+        return this.messageGateway.createAndReturnId(
                 Message.builder()
                         .id(UUID.randomUUID().toString())
                         .conversationId(conversationId)
@@ -622,7 +626,7 @@ public class ChatbotService {
             String conversationId,
             String userId
     ) {
-        Conversation conversation = this.conversationPersistence.readById(conversationId);
+        Conversation conversation = this.conversationGateway.readById(conversationId);
 
         if (!userId.equals(conversation.getUserId())) {
             throw new ForbiddenException("No tienes permisos sobre esta conversacion");
@@ -646,12 +650,12 @@ public class ChatbotService {
 
     // Devuelve el siguiente secuencial
     private Integer nextSequenceNumber(String conversationId) {
-        return this.messagePersistence.nextSequenceNumber(conversationId);
+        return this.messageGateway.nextSequenceNumber(conversationId);
     }
 
     private Optional<UserDto> readUserSafely(String userId) {
         try {
-            return Optional.ofNullable(this.userWebClient.readById(userId));
+            return Optional.ofNullable(this.userClient.readById(userId));
         } catch (RuntimeException ignored) {
             return Optional.empty();
         }
@@ -854,7 +858,7 @@ public class ChatbotService {
 
     private List<String> readRecentMessagesForPrompt(String conversationId) {
         try {
-            List<Message> messages = this.messagePersistence.findByConversationIdOrdered(conversationId);
+            List<Message> messages = this.messageGateway.findByConversationIdOrdered(conversationId);
 
             if (messages == null || messages.isEmpty()) {
                 return List.of();

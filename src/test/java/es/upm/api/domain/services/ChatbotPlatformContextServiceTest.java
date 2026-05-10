@@ -6,7 +6,7 @@ import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
-import es.upm.api.infrastructure.webclients.EngagementWebClient;
+import es.upm.api.domain.ports.out.EngagementClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,27 +27,27 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ChatbotPlatformContextServiceTest {
     @Mock
-    private EngagementWebClient engagementWebClient;
+    private EngagementClient engagementClient;
 
     @InjectMocks
     private ChatbotPlatformContextService chatbotPlatformContextService;
 
     @Test
     void loadContextShouldReturnEmptyWhenEngagementLetterIdIsBlank() {
-        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
 
         assertThat(service.loadContext(" ")).isEmpty();
 
-        verify(this.engagementWebClient, never()).readById(anyString());
-        verify(this.engagementWebClient, never()).readEventsByEngagementLetterId(anyString(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        verify(this.engagementClient, never()).readById(anyString());
+        verify(this.engagementClient, never()).readEventsByEngagementLetterId(anyString(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test
     void loadContextShouldReturnContextWithOwnerProceduresEventsAndSources() {
         String engagementLetterId = "eng-001";
-        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
 
-        when(this.engagementWebClient.readById(engagementLetterId))
+        when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
                         LocalDate.of(2026, 4, 1),
@@ -59,7 +59,7 @@ class ChatbotPlatformContextServiceTest {
                                 new LegalProcedureSummary("Seguimiento penal", LocalDate.of(2026, 4, 4), null, List.of())
                         )
                 ));
-        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of(
                         new EngagementEventSummary("MILESTONE", "OPEN", "Se registró escrito", "comentario", LocalDate.of(2026, 4, 10)),
                         new EngagementEventSummary("EVENT", "SCHEDULED", "Vista programada", "comentario", LocalDate.of(2026, 4, 11)),
@@ -85,11 +85,11 @@ class ChatbotPlatformContextServiceTest {
     @Test
     void loadContextShouldFallbackToDefaultOwnerWhenEngagementLetterIsUnavailableButEventsExist() {
         String engagementLetterId = "eng-002";
-        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
 
-        when(this.engagementWebClient.readById(engagementLetterId))
+        when(this.engagementClient.readById(engagementLetterId))
                 .thenThrow(new IllegalStateException("engagement unavailable"));
-        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of(
                         new EngagementEventSummary("EVENT", "OPEN", "Vista inicial", null, LocalDate.of(2026, 4, 16))
                 )));
@@ -105,10 +105,10 @@ class ChatbotPlatformContextServiceTest {
     @Test
     void loadContextShouldReturnEmptyWhenNoEngagementDataAndNoEventsAreAvailable() {
         String engagementLetterId = "eng-003";
-        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
 
-        when(this.engagementWebClient.readById(engagementLetterId)).thenReturn(null);
-        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+        when(this.engagementClient.readById(engagementLetterId)).thenReturn(null);
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of()));
 
         assertThat(service.loadContext(engagementLetterId)).isEmpty();
@@ -117,9 +117,9 @@ class ChatbotPlatformContextServiceTest {
     @Test
     void loadContextShouldKeepEngagementDataWhenEventsCannotBeLoaded() {
         String engagementLetterId = "eng-004";
-        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
 
-        when(this.engagementWebClient.readById(engagementLetterId))
+        when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
                         LocalDate.of(2026, 4, 5),
@@ -131,7 +131,7 @@ class ChatbotPlatformContextServiceTest {
                                 new LegalProcedureSummary("Procedimiento B", LocalDate.of(2026, 4, 8), null, List.of())
                         )
                 ));
-        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenThrow(new IllegalStateException("events unavailable"));
 
         var result = service.loadContext(engagementLetterId);
@@ -150,9 +150,9 @@ class ChatbotPlatformContextServiceTest {
     @Test
     void loadContextShouldUseFallbackTitleForBlankEventsAndLimitSourcesSummaryToTwoEvents() {
         String engagementLetterId = "eng-005";
-        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
 
-        when(this.engagementWebClient.readById(engagementLetterId))
+        when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
                         LocalDate.of(2026, 4, 1),
@@ -160,7 +160,7 @@ class ChatbotPlatformContextServiceTest {
                         new UserSummary(UUID.randomUUID(), "Lucia", "Perez", "lucia@goa.es", "600000001"),
                         List.of()
                 ));
-        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of(
                         new EngagementEventSummary("EVENT", "OPEN", " ", null, LocalDate.of(2026, 4, 10)),
                         new EngagementEventSummary("EVENT", "OPEN", "Evento 1", null, LocalDate.of(2026, 4, 11)),
@@ -186,11 +186,11 @@ class ChatbotPlatformContextServiceTest {
     @Test
     void loadContextShouldFallbackToDefaultOwnerAndLimitProcedureSourcesWhenOwnerDisplayNameIsBlank() {
         String engagementLetterId = "eng-006";
-        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
         UserSummary owner = org.mockito.Mockito.mock(UserSummary.class);
 
         when(owner.displayName()).thenReturn(" ");
-        when(this.engagementWebClient.readById(engagementLetterId))
+        when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
                         LocalDate.of(2026, 4, 1),
@@ -203,7 +203,7 @@ class ChatbotPlatformContextServiceTest {
                                 new LegalProcedureSummary("Procedimiento C", LocalDate.of(2026, 4, 5), null, List.of())
                         )
                 ));
-        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of()));
 
         var result = service.loadContext(engagementLetterId);
@@ -221,13 +221,13 @@ class ChatbotPlatformContextServiceTest {
     @Test
     void loadContextShouldIgnoreNullOrBlankEventTexts() {
         String engagementLetterId = "eng-007";
-        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementWebClient);
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
         EngagementEventSummary nullTextEvent = org.mockito.Mockito.mock(EngagementEventSummary.class);
         EngagementEventSummary blankTextEvent = org.mockito.Mockito.mock(EngagementEventSummary.class);
         EngagementEventSummary validEvent = org.mockito.Mockito.mock(EngagementEventSummary.class);
         EngagementEventSummary secondValidEvent = org.mockito.Mockito.mock(EngagementEventSummary.class);
 
-        when(this.engagementWebClient.readById(engagementLetterId))
+        when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
                         LocalDate.of(2026, 4, 1),
@@ -239,7 +239,7 @@ class ChatbotPlatformContextServiceTest {
         when(blankTextEvent.displayText()).thenReturn(" ");
         when(validEvent.displayText()).thenReturn("Evento valido");
         when(secondValidEvent.displayText()).thenReturn("Evento adicional");
-        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of(
                         nullTextEvent,
                         blankTextEvent,
@@ -279,7 +279,7 @@ class ChatbotPlatformContextServiceTest {
                 List.of(procedure)
         );
 
-        when(this.engagementWebClient.readById("engagement-001"))
+        when(this.engagementClient.readById("engagement-001"))
                 .thenReturn(engagementLetter);
 
         Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-001");
@@ -314,7 +314,7 @@ class ChatbotPlatformContextServiceTest {
                 List.of(procedure)
         );
 
-        when(this.engagementWebClient.readById("engagement-001"))
+        when(this.engagementClient.readById("engagement-001"))
                 .thenReturn(engagementLetter);
 
         Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-001");
@@ -342,7 +342,7 @@ class ChatbotPlatformContextServiceTest {
                 List.of(procedure)
         );
 
-        when(this.engagementWebClient.readById("engagement-001"))
+        when(this.engagementClient.readById("engagement-001"))
                 .thenReturn(engagementLetter);
 
         Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-001");

@@ -15,9 +15,9 @@ import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
-import es.upm.api.domain.ports.out.ChatbotAiFinder;
-import es.upm.api.infrastructure.webclients.EngagementWebClient;
-import es.upm.api.infrastructure.webclients.UserWebClient;
+import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.ports.out.EngagementClient;
+import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.functionaltests.support.ChatbotTestMessages;
 import es.upm.api.infrastructure.resources.ChatbotResource;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
@@ -82,20 +82,20 @@ class ChatbotResourceFT {
     private JwtDecoder jwtDecoder;
 
     @MockitoBean
-    private EngagementWebClient engagementWebClient;
+    private EngagementClient engagementClient;
 
     @MockitoBean
-    private ChatbotAiFinder chatbotAiClient;
+    private ChatbotAiClient chatbotAiClient;
 
     @MockitoBean
-    private UserWebClient userWebClient;
+    private UserClient userClient;
 
     @BeforeEach
     void setUp() {
         this.escalationRepository.deleteAll();
         this.messageRepository.deleteAll();
         this.conversationRepository.deleteAll();
-        when(this.userWebClient.readById(anyString())).thenAnswer(invocation -> {
+        when(this.userClient.readById(anyString())).thenAnswer(invocation -> {
             String userId = invocation.getArgument(0, String.class);
             return UserDto.builder()
                     .id(UUID.nameUUIDFromBytes(userId.getBytes()))
@@ -1388,7 +1388,7 @@ class ChatbotResourceFT {
     @Test
     void testSendMessageInContextualConversationUsesPlatformDataWhenContextIsAvailable() {
         String engagementLetterId = "aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000";
-        when(this.engagementWebClient.readById(engagementLetterId))
+        when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.fromString(engagementLetterId),
                         LocalDate.of(2026, 4, 1),
@@ -1407,7 +1407,7 @@ class ChatbotResourceFT {
                                 List.of("Revisión documental")
                         ))
                 ));
-        when(this.engagementWebClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of(
                         new EngagementEventSummary(
                                 "MILESTONE",
@@ -1484,7 +1484,7 @@ class ChatbotResourceFT {
 
     @Test
     void testSendMessageInContextualConversationWhenPlatformContextIsUnavailableReturnsRestrictedReply() {
-        when(this.engagementWebClient.readById(anyString()))
+        when(this.engagementClient.readById(anyString()))
                 .thenThrow(new IllegalStateException("platform unavailable"));
         HttpHeaders headers = this.authHeaders("fake-token-context-unavailable", "customer-1", List.of("customer"));
 
