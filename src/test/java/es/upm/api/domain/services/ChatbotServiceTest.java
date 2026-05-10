@@ -11,6 +11,7 @@ import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.configuration.ChatbotMessageResult;
@@ -25,7 +26,6 @@ import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -181,8 +181,7 @@ class ChatbotServiceTest {
         when(conversationPersistence.findActiveContextualConversation("customer-42", "EL-1", "CONTEXTUAL"))
                 .thenReturn(Optional.of(existingConversation));
 
-        ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
-        request.setEngagementLetterId("EL-1");
+        ChatbotContextualConversationCommand request = new ChatbotContextualConversationCommand("EL-1");
 
         var response = chatbotService.startContextualConversation(request);
 
@@ -199,8 +198,7 @@ class ChatbotServiceTest {
         when(conversationPersistence.findActiveContextualConversation("customer-77", "EL-77", "CONTEXTUAL"))
                 .thenReturn(Optional.empty());
 
-        ChatbotContextualConversationRequestDto request = new ChatbotContextualConversationRequestDto();
-        request.setEngagementLetterId("EL-77");
+        ChatbotContextualConversationCommand request = new ChatbotContextualConversationCommand("EL-77");
 
         var response = chatbotService.startContextualConversation(request);
 

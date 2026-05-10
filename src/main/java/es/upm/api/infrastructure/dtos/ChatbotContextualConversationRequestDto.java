@@ -1,5 +1,6 @@
 package es.upm.api.infrastructure.dtos;
 
+import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,4 +18,9 @@ public class ChatbotContextualConversationRequestDto {
                 : engagementLetterId;
     }
 
+    public ChatbotContextualConversationCommand toCommand() {
+        return ChatbotContextualConversationCommand.builder()
+                .engagementLetterId(this.engagementLetterId)
+                .build();
+    }
 }

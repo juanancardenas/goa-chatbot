@@ -28,7 +28,7 @@ import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotMessageResult;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
+import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotHistoryMessageDto;
@@ -103,10 +103,13 @@ public class ChatbotService {
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
     public ChatbotContextualConversationResponseDto startContextualConversation(
-            ChatbotContextualConversationRequestDto requestDto
+            ChatbotContextualConversationCommand command
     ) {
         String userId = this.authenticatedUserId();
-        Conversation conversation = this.findOrCreateContextualConversation(userId, requestDto.getEngagementLetterId());
+        Conversation conversation = this.findOrCreateContextualConversation(
+                userId,
+                command.getEngagementLetterId()
+        );
 
         return new ChatbotContextualConversationResponseDto(
                 conversation.getId(),
