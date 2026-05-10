@@ -11,6 +11,7 @@ import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
@@ -24,7 +25,6 @@ import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,7 +114,7 @@ class ChatbotServiceTest {
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Necesito ayuda");
+        ChatbotMessageCommand request = new ChatbotMessageCommand(null, "Necesito ayuda");
 
         var response = chatbotService.startGeneralConversation(request);
 
@@ -153,7 +153,7 @@ class ChatbotServiceTest {
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(null, "Necesito soporte");
+        ChatbotMessageCommand request = new ChatbotMessageCommand(null, "Necesito soporte");
 
         var response = chatbotService.startGeneralConversation(request);
 
@@ -453,7 +453,7 @@ class ChatbotServiceTest {
     @Test
     void sendMessageShouldRejectBlankConversationId() {
         this.authenticate("professional-1", "ROLE_PROFESSIONAL");
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("   ", "Hola");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("   ", "Hola");
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
@@ -492,7 +492,7 @@ class ChatbotServiceTest {
                 .thenReturn(Optional.empty());
         when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-contextual-unavailable",
                 "Cuáles son las tareas legales de este encargo?"
         );
@@ -540,7 +540,7 @@ class ChatbotServiceTest {
                 .thenReturn(Optional.of(platformContext));
         when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-contextual-no-legal-tasks",
                 "Cuáles son las tareas legales?"
         );
@@ -591,7 +591,7 @@ class ChatbotServiceTest {
                 .thenReturn(Optional.of(platformContext));
         when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-contextual-legal-tasks",
                 "Cuáles son las tareas legales de este encargo?"
         );
@@ -635,7 +635,7 @@ class ChatbotServiceTest {
                                 .build()
                 ));
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Dame contexto del caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Dame contexto del caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -665,7 +665,7 @@ class ChatbotServiceTest {
                         true
                 ));
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-99",
                 "Quiero una estrategia legal definitiva"
         );
@@ -719,7 +719,7 @@ class ChatbotServiceTest {
                         .finishReason("SUCCESS")
                         .build());
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-ai",
                 "Explícame qué puedes hacer"
         );
@@ -762,7 +762,7 @@ class ChatbotServiceTest {
                         .error("AI_PROVIDER_ERROR")
                         .build());
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-ai-fallback",
                 "Explícame qué puedes hacer"
         );
@@ -797,7 +797,7 @@ class ChatbotServiceTest {
                         true
                 ));
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-restricted",
                 "Dame asesoría legal definitiva"
         );
@@ -814,7 +814,7 @@ class ChatbotServiceTest {
 
         when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(5);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-long-message",
                 "mensaje demasiado largo"
         );
@@ -835,7 +835,7 @@ class ChatbotServiceTest {
 
         when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(5);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 null,
                 "mensaje demasiado largo"
         );
@@ -890,7 +890,7 @@ class ChatbotServiceTest {
                                 .build()
                 );
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que documentos hay en el expediente");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que documentos hay en el expediente");
 
         var response = chatbotService.sendMessage(request);
 
@@ -936,7 +936,7 @@ class ChatbotServiceTest {
                                 .build()
                 ));
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Dame contexto del caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Dame contexto del caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -973,7 +973,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Cual es el estado de mi caso"))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Cual es el estado de mi caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Cual es el estado de mi caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1006,7 +1006,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Que hitos recientes tiene el caso"))
                 .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que hitos recientes tiene el caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que hitos recientes tiene el caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1038,7 +1038,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Que documentos hay en el expediente"))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que documentos hay en el expediente");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que documentos hay en el expediente");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1070,7 +1070,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Dame un resumen del caso"))
                 .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Dame un resumen del caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Dame un resumen del caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1101,7 +1101,7 @@ class ChatbotServiceTest {
         when(chatbotPlatformContextService.loadContext("EL-100"))
                 .thenReturn(Optional.empty());
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Dame contexto del caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Dame contexto del caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1142,7 +1142,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Cual es el estado del encargo"))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Cual es el estado del encargo");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Cual es el estado del encargo");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1186,7 +1186,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Que hitos recientes tiene el caso"))
                 .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que hitos recientes tiene el caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que hitos recientes tiene el caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1226,7 +1226,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Que documentos hay en el caso"))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que documentos hay en el caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que documentos hay en el caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1265,7 +1265,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Cual es el estado de mi caso"))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Cual es el estado de mi caso");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Cual es el estado de mi caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1305,7 +1305,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Que documentos hay en el expediente"))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Que documentos hay en el expediente");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que documentos hay en el expediente");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1335,7 +1335,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify(userMessage))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-general",
                 userMessage
         );
@@ -1370,7 +1370,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify(userMessage))
                 .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-general",
                 userMessage
         );
@@ -1405,7 +1405,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify(userMessage))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-general",
                 userMessage
         );
@@ -1440,7 +1440,7 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify(userMessage))
                 .thenReturn(null);
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-general",
                 userMessage
         );
@@ -1473,7 +1473,7 @@ class ChatbotServiceTest {
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Compáralo con EL-200")))
                 .thenReturn(ChatbotScopeDecision.allow());
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto("conversation-ctx", "Compáralo con EL-200");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Compáralo con EL-200");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1507,7 +1507,7 @@ class ChatbotServiceTest {
                         false
                 ));
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-general",
                 userMessage
         );
@@ -1546,7 +1546,7 @@ class ChatbotServiceTest {
                         false
                 ));
 
-        ChatbotMessageRequestDto request = new ChatbotMessageRequestDto(
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-ctx",
                 userMessage
         );
@@ -1591,8 +1591,8 @@ class ChatbotServiceTest {
                                 .build()
                 ));
 
-        ChatbotMessageRequestDto request =
-                new ChatbotMessageRequestDto("conversation-ctx-events", "¿Qué hitos recientes tiene este caso?");
+        ChatbotMessageCommand request =
+                new ChatbotMessageCommand("conversation-ctx-events", "¿Qué hitos recientes tiene este caso?");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1634,8 +1634,8 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("Que hitos tiene mi caso"))
                 .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
 
-        ChatbotMessageRequestDto request =
-                new ChatbotMessageRequestDto("conversation-ctx-empty-events", "Que hitos tiene mi caso");
+        ChatbotMessageCommand request =
+                new ChatbotMessageCommand("conversation-ctx-empty-events", "Que hitos tiene mi caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1676,8 +1676,8 @@ class ChatbotServiceTest {
         when(chatbotQuestionClassifier.classify("¿Qué documentos hay en este caso?"))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
 
-        ChatbotMessageRequestDto request =
-                new ChatbotMessageRequestDto("conversation-ctx-docs", "¿Qué documentos hay en este caso?");
+        ChatbotMessageCommand request =
+                new ChatbotMessageCommand("conversation-ctx-docs", "¿Qué documentos hay en este caso?");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1726,8 +1726,8 @@ class ChatbotServiceTest {
                         .sourcesSummary(List.of("Repositorio documental"))
                         .build());
 
-        ChatbotMessageRequestDto request =
-                new ChatbotMessageRequestDto("conversation-ctx-docs-visible", "Que documentos veo en mi caso");
+        ChatbotMessageCommand request =
+                new ChatbotMessageCommand("conversation-ctx-docs-visible", "Que documentos veo en mi caso");
 
         var response = chatbotService.sendMessage(request);
 
@@ -1934,7 +1934,7 @@ class ChatbotServiceTest {
 
         ConflictException exception = assertThrows(
                 ConflictException.class,
-                () -> chatbotService.sendMessage(new ChatbotMessageRequestDto("conversation-closed", "Hola"))
+                () -> chatbotService.sendMessage(new ChatbotMessageCommand("conversation-closed", "Hola"))
         );
 
         assertThat(exception).hasMessageContaining("La conversacion no esta activa");
@@ -2056,7 +2056,7 @@ class ChatbotServiceTest {
                         .build());
 
         ChatbotMessageResponseDto response = this.chatbotService.sendMessage(
-                new ChatbotMessageRequestDto("conversation-ai-table", "Muéstramelo en tabla")
+                new ChatbotMessageCommand("conversation-ai-table", "Muéstramelo en tabla")
         );
 
         assertThat(response.getMessage()).isEqualTo(String.join(
@@ -2129,7 +2129,7 @@ class ChatbotServiceTest {
                         .build());
 
         ChatbotMessageResponseDto response = this.chatbotService.sendMessage(
-                new ChatbotMessageRequestDto("conversation-ai-context", "Qué tareas legales hay en mi caso")
+                new ChatbotMessageCommand("conversation-ai-context", "Qué tareas legales hay en mi caso")
         );
 
         ArgumentCaptor<ChatbotAiRequest> requestCaptor = ArgumentCaptor.forClass(ChatbotAiRequest.class);
@@ -2166,3 +2166,4 @@ class ChatbotServiceTest {
         );
     }
 }
+

@@ -26,12 +26,12 @@ import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
+import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotHistoryMessageDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -258,9 +258,11 @@ public class ChatbotService {
 
     // Starts General Conversation, this type of conversation is not linked to other process or entity
     public ChatbotMessageResponseDto startGeneralConversation(
-            ChatbotMessageRequestDto requestDto
+            ChatbotMessageCommand command
     ) {
-        this.validateUserMessageLength(requestDto.getMessage());
+        String userMessage = command.getMessage();
+
+        this.validateUserMessageLength(userMessage);
 
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
@@ -279,7 +281,7 @@ public class ChatbotService {
                 conversation.getId(),
                 MessageSenderType.USER,
                 MessageType.REQUEST,
-                requestDto.getMessage(),
+                userMessage,
                 1,
                 null,
                 date
@@ -291,7 +293,7 @@ public class ChatbotService {
         String assistantReply = this.generateConfiguredAssistantReply(
                 conversation,
                 profile,
-                requestDto.getMessage(),
+                userMessage,
                 baseReply,
                 Optional.empty()
         );
@@ -317,21 +319,22 @@ public class ChatbotService {
         );
     }
 
-    // Starts General Conversation, this type of conversation is not linked to other process or entity
+    // Send Message: method called each time that user clicks on Sent button in the front-end
     public ChatbotMessageResponseDto sendMessage(
-            ChatbotMessageRequestDto requestDto
+            ChatbotMessageCommand command
     ) {
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
+        String userMessage = command.getMessage();
 
-        if (requestDto.getConversationId() == null || requestDto.getConversationId().isBlank()) {
+        if (command.getConversationId() == null || command.getConversationId().isBlank()) {
             throw new BadRequestException("conversationId es obligatorio para enviar mensajes");
         }
 
-        this.validateUserMessageLength(requestDto.getMessage());
+        this.validateUserMessageLength(userMessage);
 
         Conversation conversation = this.requireActiveOwnedConversation(
-                requestDto.getConversationId(),
+                command.getConversationId(),
                 userId
         );
 
@@ -341,7 +344,7 @@ public class ChatbotService {
                 conversation.getId(),
                 MessageSenderType.USER,
                 MessageType.REQUEST,
-                requestDto.getMessage(),
+                userMessage,
                 nextSequence,
                 null,
                 date
@@ -349,7 +352,7 @@ public class ChatbotService {
 
         ChatbotScopeDecision scopeDecision = this.chatbotScopePolicy.evaluate(
                 conversation,
-                requestDto.getMessage()
+                userMessage
         );
 
         String assistantReply;
@@ -358,7 +361,7 @@ public class ChatbotService {
         List<String> sourcesSummary;
         ConversationProfileType profile = this.resolveConversationProfile();
 
-        if (this.isCourtesyMessage(requestDto.getMessage())) {
+        if (this.isCourtesyMessage(userMessage)) {
             assistantReply = this.courtesyReply(profile);
             responseMode = RESPONSE_MODE_GENERAL;
             usedPlatformData = false;
@@ -385,7 +388,7 @@ public class ChatbotService {
             );
         }
 
-        if (this.referencesAnotherEngagement(conversation, requestDto.getMessage())) {
+        if (this.referencesAnotherEngagement(conversation, userMessage)) {
             assistantReply = ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY;
             responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
             usedPlatformData = false;
@@ -414,7 +417,7 @@ public class ChatbotService {
 
         if (scopeDecision.isAllowed()) {
             if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
-                PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(requestDto.getMessage());
+                PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
 
                 if (this.requiresPlatformContext(questionType)) {
                     Optional<ChatbotPlatformContext> platformContext = this.chatbotPlatformContextService
@@ -423,7 +426,7 @@ public class ChatbotService {
                     if (platformContext.isPresent()) {
                         String baseReply = this.contextualPlatformReply(
                                 profile,
-                                requestDto.getMessage(),
+                                userMessage,
                                 conversation,
                                 platformContext.get()
                         );
@@ -431,7 +434,7 @@ public class ChatbotService {
                         assistantReply = this.generateConfiguredAssistantReply(
                                 conversation,
                                 profile,
-                                requestDto.getMessage(),
+                                userMessage,
                                 baseReply,
                                 platformContext
                         );
@@ -440,12 +443,12 @@ public class ChatbotService {
                         usedPlatformData = true;
                         sourcesSummary = platformContext.get().getSourcesSummary();
                     } else {
-                        String baseReply = this.contextualFallbackReply(profile, requestDto.getMessage());
+                        String baseReply = this.contextualFallbackReply(profile, userMessage);
 
                         assistantReply = this.generateConfiguredAssistantReply(
                                 conversation,
                                 profile,
-                                requestDto.getMessage(),
+                                userMessage,
                                 baseReply,
                                 Optional.empty()
                         );
@@ -455,12 +458,12 @@ public class ChatbotService {
                         sourcesSummary = List.of();
                     }
                 } else {
-                    String baseReply = this.generalFaqReply(profile, requestDto.getMessage());
+                    String baseReply = this.generalFaqReply(profile, userMessage);
 
                     assistantReply = this.generateConfiguredAssistantReply(
                             conversation,
                             profile,
-                            requestDto.getMessage(),
+                            userMessage,
                             baseReply,
                             Optional.empty()
                     );
@@ -470,12 +473,12 @@ public class ChatbotService {
                     sourcesSummary = List.of();
                 }
             } else {
-                String baseReply = this.generalFaqReply(profile, requestDto.getMessage());
+                String baseReply = this.generalFaqReply(profile, userMessage);
 
                 assistantReply = this.generateConfiguredAssistantReply(
                         conversation,
                         profile,
-                        requestDto.getMessage(),
+                        userMessage,
                         baseReply,
                         Optional.empty()
                 );
