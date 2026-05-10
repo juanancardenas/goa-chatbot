@@ -1,6 +1,8 @@
 package es.upm.api.infrastructure.dtos;
 
+import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,6 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ChatbotMessageRequestDto {
 
     private String conversationId;
@@ -15,9 +18,10 @@ public class ChatbotMessageRequestDto {
     @NotBlank
     private String message;
 
-    public ChatbotMessageRequestDto(String conversationId, String message) {
-        this.conversationId = conversationId;
-        this.message = message;
+    public ChatbotMessageCommand toCommand() {
+        return ChatbotMessageCommand.builder()
+                .conversationId(this.conversationId)
+                .message(this.message)
+                .build();
     }
-
 }

@@ -1,5 +1,7 @@
 package es.upm.api.infrastructure.dtos;
 
+import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,6 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ChatbotContextualConversationResponseDto {
 
     private String conversationId;
@@ -14,16 +17,14 @@ public class ChatbotContextualConversationResponseDto {
     private String createdAt;
     private String error;
 
-    public ChatbotContextualConversationResponseDto(
-            String conversationId,
-            String engagementLetterId,
-            String createdAt,
-            String error
+    public static ChatbotContextualConversationResponseDto fromDomain(
+            ChatbotContextualConversationResult result
     ) {
-        this.conversationId = conversationId;
-        this.engagementLetterId = engagementLetterId;
-        this.createdAt = createdAt;
-        this.error = error;
+        return ChatbotContextualConversationResponseDto.builder()
+                .conversationId(result.getConversationId())
+                .engagementLetterId(result.getEngagementLetterId())
+                .createdAt(result.getCreatedAt())
+                .error(result.getError())
+                .build();
     }
-
 }

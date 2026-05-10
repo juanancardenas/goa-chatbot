@@ -52,7 +52,10 @@ public class ChatbotResource {
             @RequestParam String type,
             @RequestParam(required = false) String engagementLetterId
     ) {
-        return this.chatbotService.readConversationHistoryList(type, engagementLetterId);
+        return this.chatbotService.readConversationHistoryList(type, engagementLetterId)
+                .stream()
+                .map(ChatbotConversationSummaryDto::fromDomain)
+                .toList();
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
@@ -60,25 +63,31 @@ public class ChatbotResource {
     public ChatbotContextualConversationResponseDto startContextualConversation(
             @Valid @RequestBody ChatbotContextualConversationRequestDto requestDto
     ) {
-        return this.chatbotService.startContextualConversation(requestDto);
+        return ChatbotContextualConversationResponseDto.fromDomain(
+                this.chatbotService.startContextualConversation(requestDto.toCommand())
+        );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PostMapping(GENERAL_CONVERSATIONS)
     public ChatbotMessageResponseDto startGeneralConversation(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
-        return this.chatbotService.startGeneralConversation(requestDto);
+        return ChatbotMessageResponseDto.fromDomain(
+                this.chatbotService.startGeneralConversation(requestDto.toCommand())
+        );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PostMapping(MESSAGES)
     public ChatbotMessageResponseDto sendMessage(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
-        return this.chatbotService.sendMessage(requestDto);
+        return ChatbotMessageResponseDto.fromDomain(
+                this.chatbotService.sendMessage(requestDto.toCommand())
+        );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @GetMapping(CONFIGURATION_STATUS)
     public ChatbotConfigurationStatusDto readConfigurationStatus() {
-        return this.chatbotService.readConfigurationStatus();
+        return ChatbotConfigurationStatusDto.fromDomain(this.chatbotService.readConfigurationStatus());
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
@@ -88,7 +97,9 @@ public class ChatbotResource {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
-        return this.chatbotService.readConversationHistory(conversationId, page, size);
+        return ChatbotConversationHistoryResponseDto.fromDomain(
+                this.chatbotService.readConversationHistory(conversationId, page, size)
+        );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)

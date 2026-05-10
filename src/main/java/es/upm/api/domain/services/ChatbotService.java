@@ -25,14 +25,14 @@ import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.ports.out.UserClient;
-import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
-import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
-import es.upm.api.infrastructure.dtos.ChatbotHistoryMessageDto;
-import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
+import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
+import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
+import es.upm.api.domain.model.configuration.ChatbotMessageResult;
+import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
+import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult;
+import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
+import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
+import es.upm.api.domain.model.configuration.ChatbotConversationSummaryResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
@@ -53,6 +53,7 @@ import java.util.regex.Pattern;
 
 @Service
 public class ChatbotService {
+
     // Constants
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
@@ -102,21 +103,26 @@ public class ChatbotService {
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
-    public ChatbotContextualConversationResponseDto startContextualConversation(
-            ChatbotContextualConversationRequestDto requestDto
+    public ChatbotContextualConversationResult startContextualConversation(
+            ChatbotContextualConversationCommand command
     ) {
         String userId = this.authenticatedUserId();
-        Conversation conversation = this.findOrCreateContextualConversation(userId, requestDto.getEngagementLetterId());
 
-        return new ChatbotContextualConversationResponseDto(
-                conversation.getId(),
-                conversation.getEngagementLetterId(),
-                conversation.getCreatedAt().toString(),
-                null
+        Conversation conversation = this.findOrCreateContextualConversation(
+                userId,
+                command.getEngagementLetterId()
         );
+
+        return ChatbotContextualConversationResult.builder()
+                .conversationId(conversation.getId())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .createdAt(conversation.getCreatedAt().toString())
+                .error(null)
+                .build();
     }
 
-    public List<ChatbotConversationSummaryDto> readConversationHistoryList(
+    // Reading Conversation History List
+    public List<ChatbotConversationSummaryResult> readConversationHistoryList(
             String type,
             String engagementLetterId
     ) {
@@ -128,11 +134,26 @@ public class ChatbotService {
                 : this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
 
         return conversations.stream()
-                .map(this::toConversationSummaryDto)
+                .map(this::toConversationSummaryResult)
                 .toList();
     }
 
-    public ChatbotConversationHistoryResponseDto readConversationHistory(String conversationId, Integer page, Integer size) {
+    private ChatbotConversationSummaryResult toConversationSummaryResult(Conversation conversation) {
+        Optional<Message> latestMessage = this.messageGateway.findLatestByConversationId(conversation.getId());
+
+        return ChatbotConversationSummaryResult.builder()
+                .conversationId(conversation.getId())
+                .type(conversation.getType())
+                .status(conversation.getStatus().name())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .createdAt(conversation.getCreatedAt().toString())
+                .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
+                .preview(latestMessage.map(Message::getContent).orElse(null))
+                .build();
+    }
+
+    // Reading the messages of a conversation
+    public ChatbotConversationHistoryResult readConversationHistory(String conversationId, Integer page, Integer size) {
         Conversation conversation = this.requireOwnedConversation(conversationId, this.authenticatedUserId());
 
         int normalizedPage = this.normalizeHistoryPage(page);
@@ -147,12 +168,12 @@ public class ChatbotService {
         List<Message> messagesChunk = new ArrayList<>(pagedMessages.getContent());
         messagesChunk.sort((left, right) -> Integer.compare(left.getSequenceNumber(), right.getSequenceNumber()));
 
-        List<ChatbotHistoryMessageDto> messages = messagesChunk
+        List<ChatbotHistoryMessageResult> messages = messagesChunk
                 .stream()
-                .map(this::toHistoryMessageDto)
+                .map(this::toHistoryMessageResult)
                 .toList();
 
-        return ChatbotConversationHistoryResponseDto.builder()
+        return ChatbotConversationHistoryResult.builder()
                 .conversationId(conversation.getId())
                 .engagementLetterId(conversation.getEngagementLetterId())
                 .type(conversation.getType())
@@ -162,6 +183,19 @@ public class ChatbotService {
                 .hasMore(pagedMessages.hasNext())
                 .totalMessages(pagedMessages.getTotalElements())
                 .messages(messages)
+                .build();
+    }
+
+    private ChatbotHistoryMessageResult toHistoryMessageResult(Message message) {
+        return ChatbotHistoryMessageResult.builder()
+                .id(message.getId())
+                .conversationId(message.getConversationId())
+                .senderType(message.getSenderType().name())
+                .messageType(message.getMessageType().name())
+                .content(message.getContent())
+                .timestamp(message.getTimestamp().toString())
+                .sequenceNumber(message.getSequenceNumber())
+                .parentMessageId(message.getParentMessageId())
                 .build();
     }
 
@@ -229,38 +263,13 @@ public class ChatbotService {
         return normalizedType;
     }
 
-    private ChatbotConversationSummaryDto toConversationSummaryDto(Conversation conversation) {
-        Optional<Message> latestMessage = this.messageGateway.findLatestByConversationId(conversation.getId());
-
-        return ChatbotConversationSummaryDto.builder()
-                .conversationId(conversation.getId())
-                .type(conversation.getType())
-                .status(conversation.getStatus().name())
-                .engagementLetterId(conversation.getEngagementLetterId())
-                .createdAt(conversation.getCreatedAt().toString())
-                .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
-                .preview(latestMessage.map(Message::getContent).orElse(null))
-                .build();
-    }
-
-    private ChatbotHistoryMessageDto toHistoryMessageDto(Message message) {
-        return ChatbotHistoryMessageDto.builder()
-                .id(message.getId())
-                .conversationId(message.getConversationId())
-                .senderType(message.getSenderType().name())
-                .messageType(message.getMessageType().name())
-                .content(message.getContent())
-                .timestamp(message.getTimestamp().toString())
-                .sequenceNumber(message.getSequenceNumber())
-                .parentMessageId(message.getParentMessageId())
-                .build();
-    }
-
     // Starts General Conversation, this type of conversation is not linked to other process or entity
-    public ChatbotMessageResponseDto startGeneralConversation(
-            ChatbotMessageRequestDto requestDto
+    public ChatbotMessageResult startGeneralConversation(
+            ChatbotMessageCommand command
     ) {
-        this.validateUserMessageLength(requestDto.getMessage());
+        String userMessage = command.getMessage();
+
+        this.validateUserMessageLength(userMessage);
 
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
@@ -279,7 +288,7 @@ public class ChatbotService {
                 conversation.getId(),
                 MessageSenderType.USER,
                 MessageType.REQUEST,
-                requestDto.getMessage(),
+                userMessage,
                 1,
                 null,
                 date
@@ -291,7 +300,7 @@ public class ChatbotService {
         String assistantReply = this.generateConfiguredAssistantReply(
                 conversation,
                 profile,
-                requestDto.getMessage(),
+                userMessage,
                 baseReply,
                 Optional.empty()
         );
@@ -306,32 +315,53 @@ public class ChatbotService {
                 date
         );
 
-        return new ChatbotMessageResponseDto(
-                conversation.getId(),
-                assistantReply,
-                null,
-                date.toString(),
-                RESPONSE_MODE_GENERAL,
-                false,
-                List.of()
-        );
+        return ChatbotMessageResult.builder()
+                .conversationId(conversation.getId())
+                .message(assistantReply)
+                .error(null)
+                .createdAt(date.toString())
+                .responseMode(RESPONSE_MODE_GENERAL)
+                .usedPlatformData(false)
+                .sourcesSummary(List.of())
+                .build();
     }
 
-    // Starts General Conversation, this type of conversation is not linked to other process or entity
-    public ChatbotMessageResponseDto sendMessage(
-            ChatbotMessageRequestDto requestDto
+    private ChatbotMessageResult buildMessageResult(
+            String conversationId,
+            String message,
+            String error,
+            LocalDateTime createdAt,
+            String responseMode,
+            boolean usedPlatformData,
+            List<String> sourcesSummary
+    ) {
+        return ChatbotMessageResult.builder()
+                .conversationId(conversationId)
+                .message(message)
+                .error(error)
+                .createdAt(createdAt.toString())
+                .responseMode(responseMode)
+                .usedPlatformData(usedPlatformData)
+                .sourcesSummary(sourcesSummary)
+                .build();
+    }
+
+    // Send Message: method called each time that user clicks on Sent button in the front-end
+    public ChatbotMessageResult sendMessage(
+            ChatbotMessageCommand command
     ) {
         String userId = this.authenticatedUserId();
         LocalDateTime date = LocalDateTime.now();
+        String userMessage = command.getMessage();
 
-        if (requestDto.getConversationId() == null || requestDto.getConversationId().isBlank()) {
+        if (command.getConversationId() == null || command.getConversationId().isBlank()) {
             throw new BadRequestException("conversationId es obligatorio para enviar mensajes");
         }
 
-        this.validateUserMessageLength(requestDto.getMessage());
+        this.validateUserMessageLength(userMessage);
 
         Conversation conversation = this.requireActiveOwnedConversation(
-                requestDto.getConversationId(),
+                command.getConversationId(),
                 userId
         );
 
@@ -341,7 +371,7 @@ public class ChatbotService {
                 conversation.getId(),
                 MessageSenderType.USER,
                 MessageType.REQUEST,
-                requestDto.getMessage(),
+                userMessage,
                 nextSequence,
                 null,
                 date
@@ -349,7 +379,7 @@ public class ChatbotService {
 
         ChatbotScopeDecision scopeDecision = this.chatbotScopePolicy.evaluate(
                 conversation,
-                requestDto.getMessage()
+                userMessage
         );
 
         String assistantReply;
@@ -358,7 +388,7 @@ public class ChatbotService {
         List<String> sourcesSummary;
         ConversationProfileType profile = this.resolveConversationProfile();
 
-        if (this.isCourtesyMessage(requestDto.getMessage())) {
+        if (this.isCourtesyMessage(userMessage)) {
             assistantReply = this.courtesyReply(profile);
             responseMode = RESPONSE_MODE_GENERAL;
             usedPlatformData = false;
@@ -374,18 +404,18 @@ public class ChatbotService {
                     date
             );
 
-            return new ChatbotMessageResponseDto(
+            return this.buildMessageResult(
                     conversation.getId(),
                     assistantReply,
                     null,
-                    date.toString(),
+                    date,
                     responseMode,
                     usedPlatformData,
                     sourcesSummary
             );
         }
 
-        if (this.referencesAnotherEngagement(conversation, requestDto.getMessage())) {
+        if (this.referencesAnotherEngagement(conversation, userMessage)) {
             assistantReply = ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY;
             responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
             usedPlatformData = false;
@@ -401,11 +431,11 @@ public class ChatbotService {
                     date
             );
 
-            return new ChatbotMessageResponseDto(
+            return this.buildMessageResult(
                     conversation.getId(),
                     assistantReply,
                     null,
-                    date.toString(),
+                    date,
                     responseMode,
                     usedPlatformData,
                     sourcesSummary
@@ -414,7 +444,7 @@ public class ChatbotService {
 
         if (scopeDecision.isAllowed()) {
             if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
-                PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(requestDto.getMessage());
+                PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
 
                 if (this.requiresPlatformContext(questionType)) {
                     Optional<ChatbotPlatformContext> platformContext = this.chatbotPlatformContextService
@@ -423,7 +453,7 @@ public class ChatbotService {
                     if (platformContext.isPresent()) {
                         String baseReply = this.contextualPlatformReply(
                                 profile,
-                                requestDto.getMessage(),
+                                userMessage,
                                 conversation,
                                 platformContext.get()
                         );
@@ -431,7 +461,7 @@ public class ChatbotService {
                         assistantReply = this.generateConfiguredAssistantReply(
                                 conversation,
                                 profile,
-                                requestDto.getMessage(),
+                                userMessage,
                                 baseReply,
                                 platformContext
                         );
@@ -440,12 +470,12 @@ public class ChatbotService {
                         usedPlatformData = true;
                         sourcesSummary = platformContext.get().getSourcesSummary();
                     } else {
-                        String baseReply = this.contextualFallbackReply(profile, requestDto.getMessage());
+                        String baseReply = this.contextualFallbackReply(profile, userMessage);
 
                         assistantReply = this.generateConfiguredAssistantReply(
                                 conversation,
                                 profile,
-                                requestDto.getMessage(),
+                                userMessage,
                                 baseReply,
                                 Optional.empty()
                         );
@@ -455,12 +485,12 @@ public class ChatbotService {
                         sourcesSummary = List.of();
                     }
                 } else {
-                    String baseReply = this.generalFaqReply(profile, requestDto.getMessage());
+                    String baseReply = this.generalFaqReply(profile, userMessage);
 
                     assistantReply = this.generateConfiguredAssistantReply(
                             conversation,
                             profile,
-                            requestDto.getMessage(),
+                            userMessage,
                             baseReply,
                             Optional.empty()
                     );
@@ -470,12 +500,12 @@ public class ChatbotService {
                     sourcesSummary = List.of();
                 }
             } else {
-                String baseReply = this.generalFaqReply(profile, requestDto.getMessage());
+                String baseReply = this.generalFaqReply(profile, userMessage);
 
                 assistantReply = this.generateConfiguredAssistantReply(
                         conversation,
                         profile,
-                        requestDto.getMessage(),
+                        userMessage,
                         baseReply,
                         Optional.empty()
                 );
@@ -505,19 +535,19 @@ public class ChatbotService {
                 date
         );
 
-        return new ChatbotMessageResponseDto(
+        return this.buildMessageResult(
                 conversation.getId(),
                 assistantReply,
                 null,
-                date.toString(),
+                date,
                 responseMode,
                 usedPlatformData,
                 sourcesSummary
         );
     }
 
-    public ChatbotConfigurationStatusDto readConfigurationStatus() {
-        return ChatbotConfigurationStatusDto.builder()
+    public ChatbotConfigurationStatus readConfigurationStatus() {
+        return ChatbotConfigurationStatus.builder()
                 .enabled(this.chatbotAiProperties.isEnabled())
                 .provider(this.chatbotAiProperties.normalizedProvider())
                 .model(this.chatbotAiProperties.getModel())
