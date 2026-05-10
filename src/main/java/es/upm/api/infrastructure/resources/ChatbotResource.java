@@ -66,13 +66,17 @@ public class ChatbotResource {
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PostMapping(GENERAL_CONVERSATIONS)
     public ChatbotMessageResponseDto startGeneralConversation(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
-        return this.chatbotService.startGeneralConversation(requestDto.toCommand());
+        return ChatbotMessageResponseDto.fromDomain(
+                this.chatbotService.startGeneralConversation(requestDto.toCommand())
+        );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PostMapping(MESSAGES)
     public ChatbotMessageResponseDto sendMessage(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
-        return this.chatbotService.sendMessage(requestDto.toCommand());
+        return ChatbotMessageResponseDto.fromDomain(
+                this.chatbotService.sendMessage(requestDto.toCommand())
+        );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)

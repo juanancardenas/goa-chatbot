@@ -13,6 +13,7 @@ import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.UserDto;
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
+import es.upm.api.domain.model.configuration.ChatbotMessageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ConversationGateway;
@@ -25,7 +26,6 @@ import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -497,7 +497,7 @@ class ChatbotServiceTest {
                 "Cuáles son las tareas legales de este encargo?"
         );
 
-        ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
+        ChatbotMessageResult response = this.chatbotService.sendMessage(request);
 
         assertThat(response.getMessage()).contains("No he podido recuperar");
         assertThat(response.getMessage()).contains("Tareas Legales");
@@ -545,7 +545,7 @@ class ChatbotServiceTest {
                 "Cuáles son las tareas legales?"
         );
 
-        ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
+        ChatbotMessageResult response = this.chatbotService.sendMessage(request);
 
         assertThat(response.getMessage()).contains("No se han encontrado");
         assertThat(response.getMessage()).contains("Tareas Legales");
@@ -596,7 +596,7 @@ class ChatbotServiceTest {
                 "Cuáles son las tareas legales de este encargo?"
         );
 
-        ChatbotMessageResponseDto response = this.chatbotService.sendMessage(request);
+        ChatbotMessageResult response = this.chatbotService.sendMessage(request);
 
         assertThat(response.getMessage()).contains("Tareas Legales");
         assertThat(response.getMessage()).contains("Estudio de antecedentes y documentación");
@@ -2055,7 +2055,7 @@ class ChatbotServiceTest {
                         .finishReason("SUCCESS")
                         .build());
 
-        ChatbotMessageResponseDto response = this.chatbotService.sendMessage(
+        ChatbotMessageResult response = this.chatbotService.sendMessage(
                 new ChatbotMessageCommand("conversation-ai-table", "Muéstramelo en tabla")
         );
 
@@ -2128,7 +2128,7 @@ class ChatbotServiceTest {
                         .finishReason("SUCCESS")
                         .build());
 
-        ChatbotMessageResponseDto response = this.chatbotService.sendMessage(
+        ChatbotMessageResult response = this.chatbotService.sendMessage(
                 new ChatbotMessageCommand("conversation-ai-context", "Qué tareas legales hay en mi caso")
         );
 

@@ -1,5 +1,7 @@
 package es.upm.api.infrastructure.dtos;
 
+import es.upm.api.domain.model.configuration.ChatbotMessageResult;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,6 +11,7 @@ import java.util.List;
 @Builder
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ChatbotMessageResponseDto {
 
     private String conversationId;
@@ -19,22 +22,15 @@ public class ChatbotMessageResponseDto {
     private Boolean usedPlatformData;
     private List<String> sourcesSummary;
 
-    public ChatbotMessageResponseDto(
-            String conversationId,
-            String message,
-            String error,
-            String createdAt,
-            String responseMode,
-            Boolean usedPlatformData,
-            List<String> sourcesSummary
-    ) {
-        this.conversationId = conversationId;
-        this.message = message;
-        this.error = error;
-        this.createdAt = createdAt;
-        this.responseMode = responseMode;
-        this.usedPlatformData = usedPlatformData;
-        this.sourcesSummary = sourcesSummary;
+    public static ChatbotMessageResponseDto fromDomain(ChatbotMessageResult result) {
+        return ChatbotMessageResponseDto.builder()
+                .conversationId(result.getConversationId())
+                .message(result.getMessage())
+                .error(result.getError())
+                .createdAt(result.getCreatedAt())
+                .responseMode(result.getResponseMode())
+                .usedPlatformData(result.getUsedPlatformData())
+                .sourcesSummary(result.getSourcesSummary())
+                .build();
     }
-
 }

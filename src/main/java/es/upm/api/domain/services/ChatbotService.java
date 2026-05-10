@@ -27,12 +27,12 @@ import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
+import es.upm.api.domain.model.configuration.ChatbotMessageResult;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotHistoryMessageDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
@@ -257,7 +257,7 @@ public class ChatbotService {
     }
 
     // Starts General Conversation, this type of conversation is not linked to other process or entity
-    public ChatbotMessageResponseDto startGeneralConversation(
+    public ChatbotMessageResult startGeneralConversation(
             ChatbotMessageCommand command
     ) {
         String userMessage = command.getMessage();
@@ -308,19 +308,39 @@ public class ChatbotService {
                 date
         );
 
-        return new ChatbotMessageResponseDto(
-                conversation.getId(),
-                assistantReply,
-                null,
-                date.toString(),
-                RESPONSE_MODE_GENERAL,
-                false,
-                List.of()
-        );
+        return ChatbotMessageResult.builder()
+                .conversationId(conversation.getId())
+                .message(assistantReply)
+                .error(null)
+                .createdAt(date.toString())
+                .responseMode(RESPONSE_MODE_GENERAL)
+                .usedPlatformData(false)
+                .sourcesSummary(List.of())
+                .build();
+    }
+
+    private ChatbotMessageResult buildMessageResult(
+            String conversationId,
+            String message,
+            String error,
+            LocalDateTime createdAt,
+            String responseMode,
+            boolean usedPlatformData,
+            List<String> sourcesSummary
+    ) {
+        return ChatbotMessageResult.builder()
+                .conversationId(conversationId)
+                .message(message)
+                .error(error)
+                .createdAt(createdAt.toString())
+                .responseMode(responseMode)
+                .usedPlatformData(usedPlatformData)
+                .sourcesSummary(sourcesSummary)
+                .build();
     }
 
     // Send Message: method called each time that user clicks on Sent button in the front-end
-    public ChatbotMessageResponseDto sendMessage(
+    public ChatbotMessageResult sendMessage(
             ChatbotMessageCommand command
     ) {
         String userId = this.authenticatedUserId();
@@ -377,11 +397,11 @@ public class ChatbotService {
                     date
             );
 
-            return new ChatbotMessageResponseDto(
+            return this.buildMessageResult(
                     conversation.getId(),
                     assistantReply,
                     null,
-                    date.toString(),
+                    date,
                     responseMode,
                     usedPlatformData,
                     sourcesSummary
@@ -404,11 +424,11 @@ public class ChatbotService {
                     date
             );
 
-            return new ChatbotMessageResponseDto(
+            return this.buildMessageResult(
                     conversation.getId(),
                     assistantReply,
                     null,
-                    date.toString(),
+                    date,
                     responseMode,
                     usedPlatformData,
                     sourcesSummary
@@ -508,11 +528,11 @@ public class ChatbotService {
                 date
         );
 
-        return new ChatbotMessageResponseDto(
+        return this.buildMessageResult(
                 conversation.getId(),
                 assistantReply,
                 null,
-                date.toString(),
+                date,
                 responseMode,
                 usedPlatformData,
                 sourcesSummary
