@@ -78,7 +78,7 @@ public class ChatbotResource {
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @GetMapping(CONFIGURATION_STATUS)
     public ChatbotConfigurationStatusDto readConfigurationStatus() {
-        return this.chatbotService.readConfigurationStatus();
+        return ChatbotConfigurationStatusDto.fromDomain(this.chatbotService.readConfigurationStatus());
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)

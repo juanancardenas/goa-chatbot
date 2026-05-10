@@ -25,7 +25,7 @@ import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.ports.out.UserClient;
-import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
+import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
@@ -516,8 +516,8 @@ public class ChatbotService {
         );
     }
 
-    public ChatbotConfigurationStatusDto readConfigurationStatus() {
-        return ChatbotConfigurationStatusDto.builder()
+    public ChatbotConfigurationStatus readConfigurationStatus() {
+        return ChatbotConfigurationStatus.builder()
                 .enabled(this.chatbotAiProperties.isEnabled())
                 .provider(this.chatbotAiProperties.normalizedProvider())
                 .model(this.chatbotAiProperties.getModel())

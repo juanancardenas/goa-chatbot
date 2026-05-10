@@ -11,6 +11,7 @@ import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ConversationGateway;
@@ -22,7 +23,6 @@ import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
-import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
@@ -2008,7 +2008,7 @@ class ChatbotServiceTest {
         when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(6);
         when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(true);
 
-        ChatbotConfigurationStatusDto response = this.chatbotService.readConfigurationStatus();
+        ChatbotConfigurationStatus response = this.chatbotService.readConfigurationStatus();
 
         assertThat(response.isEnabled()).isTrue();
         assertThat(response.getProvider()).isEqualTo("openai");
