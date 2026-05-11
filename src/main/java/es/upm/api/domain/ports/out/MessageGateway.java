@@ -1,7 +1,7 @@
 package es.upm.api.domain.ports.out;
 
 import es.upm.api.domain.model.Message;
-import org.springframework.data.domain.Page;
+import es.upm.api.domain.model.configuration.PageResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,7 +20,7 @@ public interface MessageGateway {
 
     List<Message> findByConversationIdOrdered(String conversationId);
 
-    Page<Message> findByConversationIdOrderedDesc(String conversationId, int page, int size);
+    PageResult<Message> findByConversationIdOrderedDesc(String conversationId, int page, int size);
 
     void deleteByConversationId(String conversationId);
 }

@@ -93,6 +93,9 @@ class MessagePersistenceMongodbTest {
 
         assertThat(latestMessage).isPresent();
         assertThat(latestMessage.orElseThrow().getId()).isEqualTo("message-10");
+        assertThat(page.getPage()).isEqualTo(0);
+        assertThat(page.getSize()).isEqualTo(5);
+        assertThat(page.isHasNext()).isFalse();
         assertThat(page.getTotalElements()).isEqualTo(1);
         assertThat(page.getContent().get(0).getSequenceNumber()).isEqualTo(10);
     }

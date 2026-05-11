@@ -1,6 +1,7 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
 import es.upm.api.domain.model.Message;
+import es.upm.api.domain.model.configuration.PageResult;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
@@ -63,10 +64,18 @@ public class MessagePersistenceMongodb implements MessageGateway {
     }
 
     @Override
-    public Page<Message> findByConversationIdOrderedDesc(String conversationId, int page, int size) {
-        return this.messageRepository
+    public PageResult<Message> findByConversationIdOrderedDesc(String conversationId, int page, int size) {
+        Page<Message> pagedMessages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberDesc(conversationId, PageRequest.of(page, size))
                 .map(MessageEntity::toMessage);
+
+        return PageResult.<Message>builder()
+                .content(pagedMessages.getContent())
+                .page(page)
+                .size(size)
+                .hasNext(pagedMessages.hasNext())
+                .totalElements(pagedMessages.getTotalElements())
+                .build();
     }
 
     @Override

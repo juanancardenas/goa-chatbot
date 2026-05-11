@@ -15,6 +15,7 @@ import es.upm.api.domain.model.configuration.ChatbotContextualConversationComman
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.configuration.ChatbotMessageResult;
+import es.upm.api.domain.model.configuration.PageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ConversationGateway;
@@ -34,8 +35,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -361,11 +360,13 @@ class ChatbotServiceTest {
 
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
         when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 10))
-                .thenReturn(new PageImpl<>(
-                        List.of(newestInPage, oldestInPage),
-                        PageRequest.of(0, 10),
-                        12
-                ));
+                .thenReturn(PageResult.<Message>builder()
+                        .content(List.of(newestInPage, oldestInPage))
+                        .page(0)
+                        .size(10)
+                        .hasNext(true)
+                        .totalElements(12)
+                        .build());
 
         var response = chatbotService.readConversationHistory("conversation-history", null, null);
 
