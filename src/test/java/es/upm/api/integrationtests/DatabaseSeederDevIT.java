@@ -48,8 +48,11 @@ class DatabaseSeederDevIT {
         assertThat(this.conversationRepository.findById("conversation-dev-001"))
                 .isPresent()
                 .get()
-                .extracting(ConversationEntity::getStatus)
-                .isEqualTo(ConversationStatus.ACTIVE);
+                .satisfies(conversation -> {
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
 
         assertThat(this.conversationRepository.findById("conversation-dev-002"))
                 .isPresent()
@@ -65,8 +68,8 @@ class DatabaseSeederDevIT {
                 .get()
                 .satisfies(conversation -> {
                     assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
-                    assertThat(conversation.getType()).isEqualTo("CONTEXTUAL");
-                    assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-dev-003");
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
                 });
 
         assertThat(this.conversationRepository.findById("conversation-dev-004"))
@@ -74,9 +77,9 @@ class DatabaseSeederDevIT {
                 .get()
                 .satisfies(conversation -> {
                     assertThat(conversation.getUserId()).isEqualTo("6");
-                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-                    assertThat(conversation.getType()).isEqualTo("CONTEXTUAL");
-                    assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-dev-006-a");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
                 });
 
         assertThat(this.conversationRepository.findById("conversation-dev-005"))
@@ -95,8 +98,8 @@ class DatabaseSeederDevIT {
                 .satisfies(conversation -> {
                     assertThat(conversation.getUserId()).isEqualTo("6");
                     assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
-                    assertThat(conversation.getType()).isEqualTo("CONTEXTUAL");
-                    assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-dev-006-b");
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
                 });
 
         assertThat(this.conversationRepository.findById("conversation-dev-007"))

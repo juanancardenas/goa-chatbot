@@ -18,7 +18,6 @@ import java.util.UUID;
 @Service
 @Profile({"dev", "test"})
 public class DatabaseSeederDev {
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
     private static final Logger log = LogManager.getLogger(DatabaseSeederDev.class);
@@ -58,9 +57,9 @@ public class DatabaseSeederDev {
         ConversationEntity conversation1 = new ConversationEntity(
                 "conversation-dev-001",
                 "customer-dev-001",
-                "engagement-dev-001",
-                ConversationStatus.ACTIVE,
-                TYPE_CONTEXTUAL,
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
                 baseTime
         );
         ConversationEntity conversation2 = new ConversationEntity(
@@ -75,18 +74,18 @@ public class DatabaseSeederDev {
         ConversationEntity conversation3 = new ConversationEntity(
                 "conversation-dev-003",
                 "customer-dev-003",
-                "engagement-dev-003",
+                null,
                 ConversationStatus.ARCHIVED,
-                TYPE_CONTEXTUAL,
+                TYPE_GENERAL,
                 baseTime.plusMinutes(20)
         );
 
         ConversationEntity conversation4 = new ConversationEntity(
                 "conversation-dev-004",
                 "6",
-                "engagement-dev-006-a",
-                ConversationStatus.ACTIVE,
-                TYPE_CONTEXTUAL,
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
                 baseTime.plusMinutes(30)
         );
         ConversationEntity conversation5 = new ConversationEntity(
@@ -100,9 +99,9 @@ public class DatabaseSeederDev {
         ConversationEntity conversation6 = new ConversationEntity(
                 "conversation-dev-006",
                 "6",
-                "engagement-dev-006-b",
+                null,
                 ConversationStatus.ARCHIVED,
-                TYPE_CONTEXTUAL,
+                TYPE_GENERAL,
                 baseTime.plusMinutes(50)
         );
         ConversationEntity conversation7 = new ConversationEntity(
