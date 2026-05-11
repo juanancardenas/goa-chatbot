@@ -1,8 +1,7 @@
-package es.upm.api.domain.services.ai;
+package es.upm.api.domain.services.prompt;
 
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
-import es.upm.api.domain.services.prompt.ChatbotPromptBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -10,9 +9,9 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ChatbotPromptTemplateTest {
+class ChatbotPromptBuilderTest {
     private ChatbotAiProperties chatbotAiProperties;
-    private ChatbotPromptBuilder chatbotPromptTemplate;
+    private ChatbotPromptBuilder chatbotPromptBuilder;
 
     @BeforeEach
     void setUp() {
@@ -20,7 +19,7 @@ class ChatbotPromptTemplateTest {
         this.chatbotAiProperties.setBasePrompt("Prompt base de pruebas para GOA.");
         this.chatbotAiProperties.setMaxContextMessages(2);
         this.chatbotAiProperties.setDocumentsAvailable(false);
-        this.chatbotPromptTemplate = new ChatbotPromptBuilder(this.chatbotAiProperties);
+        this.chatbotPromptBuilder = new ChatbotPromptBuilder(this.chatbotAiProperties);
     }
 
     @Test
@@ -34,7 +33,7 @@ class ChatbotPromptTemplateTest {
                 .recentMessages(List.of())
                 .build();
 
-        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
         assertThat(prompt).contains("Prompt personalizado");
         assertThat(prompt).contains("[TIPO DE CONVERSACIÓN]");
@@ -55,7 +54,7 @@ class ChatbotPromptTemplateTest {
                 .recentMessages(List.of())
                 .build();
 
-        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
         assertThat(prompt).contains("Prompt contextual");
         assertThat(prompt).contains("Conversación contextual");
@@ -85,7 +84,7 @@ class ChatbotPromptTemplateTest {
                 .recentMessages(List.of())
                 .build();
 
-        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
         assertThat(prompt).contains("Si existe una sección \"Legal Tasks\"");
         assertThat(prompt).contains("úsala como fuente principal");
@@ -103,7 +102,7 @@ class ChatbotPromptTemplateTest {
                 .recentMessages(List.of())
                 .build();
 
-        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
         assertThat(prompt).contains("[RESTRICCIÓN DE ÁMBITO]");
         assertThat(prompt).contains("No proporciones asesoramiento legal vinculante");
@@ -120,7 +119,7 @@ class ChatbotPromptTemplateTest {
                 .recentMessages(List.of())
                 .build();
 
-        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
         assertThat(prompt).contains("El servicio documental no está disponible actualmente");
         assertThat(prompt).contains("No afirmes haber leído documentos reales");
@@ -137,7 +136,7 @@ class ChatbotPromptTemplateTest {
                 .recentMessages(List.of())
                 .build();
 
-        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
         assertThat(prompt).contains("El servicio documental está disponible");
         assertThat(prompt).contains("Usa únicamente documentos autorizados");
@@ -157,7 +156,7 @@ class ChatbotPromptTemplateTest {
                 ))
                 .build();
 
-        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
         assertThat(prompt).doesNotContain("USER: primer mensaje");
         assertThat(prompt).contains("ASSISTANT: primera respuesta");
@@ -174,7 +173,7 @@ class ChatbotPromptTemplateTest {
                 .recentMessages(List.of())
                 .build();
 
-        String prompt = this.chatbotPromptTemplate.buildSystemPrompt(request);
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
         assertThat(prompt).contains("[CONTEXTO DE PLATAFORMA]");
         assertThat(prompt).contains("No disponible");

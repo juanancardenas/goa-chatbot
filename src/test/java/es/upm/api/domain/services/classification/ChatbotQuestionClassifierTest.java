@@ -1,7 +1,6 @@
-package es.upm.api.domain.services;
+package es.upm.api.domain.services.classification;
 
 import es.upm.api.domain.enums.PlatformQuestionType;
-import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

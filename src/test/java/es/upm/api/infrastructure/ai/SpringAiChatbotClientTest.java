@@ -1,10 +1,9 @@
-package es.upm.api.domain.services.ai;
+package es.upm.api.infrastructure.ai;
 
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.services.prompt.ChatbotPromptBuilder;
-import es.upm.api.infrastructure.ai.SpringAiChatbotClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
