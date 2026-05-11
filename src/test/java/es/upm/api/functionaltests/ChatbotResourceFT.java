@@ -581,6 +581,10 @@ class ChatbotResourceFT {
         assertThat(response.getBody().getConversationId()).isEqualTo(conversationId);
         assertThat(response.getBody().getType()).isEqualTo(TYPE_CONTEXTUAL);
         assertThat(response.getBody().getStatus()).isEqualTo(ConversationStatus.CLOSED.name());
+        assertThat(response.getBody().getPage()).isEqualTo(0);
+        assertThat(response.getBody().getSize()).isEqualTo(10);
+        assertThat(response.getBody().getHasMore()).isFalse();
+        assertThat(response.getBody().getTotalMessages()).isEqualTo(2);
         assertThat(response.getBody().getMessages()).hasSize(2);
         assertThat(response.getBody().getMessages())
                 .extracting(message -> message.getSequenceNumber())
