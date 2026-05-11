@@ -41,9 +41,9 @@ class DatabaseSeederDevIT {
         List<EscalationEntity> escalations = this.escalationRepository.findAll();
         List<MessageEntity> messages = this.messageRepository.findAll();
 
-        assertThat(conversations).hasSize(6);
+        assertThat(conversations).hasSize(8);
         assertThat(escalations).hasSize(3);
-        assertThat(messages).hasSize(21);
+        assertThat(messages).hasSize(25);
 
         assertThat(this.conversationRepository.findById("conversation-dev-001"))
                 .isPresent()
@@ -97,6 +97,26 @@ class DatabaseSeederDevIT {
                     assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
                     assertThat(conversation.getType()).isEqualTo("CONTEXTUAL");
                     assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-dev-006-b");
+                });
+
+        assertThat(this.conversationRepository.findById("conversation-dev-007"))
+                .isPresent()
+                .get()
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("6");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
+
+        assertThat(this.conversationRepository.findById("conversation-dev-008"))
+                .isPresent()
+                .get()
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("6");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
                 });
 
         assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-001"))
@@ -159,6 +179,28 @@ class DatabaseSeederDevIT {
                         "Escalacion registrada y conversacion archivada para seguimiento."
                 );
 
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-007"))
+                .hasSize(2)
+                .extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-007"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Necesito dejar cerrada una consulta general sobre plazos.",
+                        "La consulta general sobre plazos queda registrada como cerrada."
+                );
+
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-008"))
+                .hasSize(2)
+                .extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-008"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Quiero cerrar una duda general sobre documentacion pendiente.",
+                        "La duda general sobre documentacion queda cerrada en el historial."
+                );
+
         assertThat(this.escalationRepository.findById(UUID.fromString("11111111-1111-1111-1111-111111111111")))
                 .isPresent()
                 .get()
@@ -191,7 +233,7 @@ class DatabaseSeederDevIT {
 
         assertThat(conversations)
                 .filteredOn(conversation -> "6".equals(conversation.getUserId()))
-                .hasSize(3);
+                .hasSize(5);
 
         assertThat(messages)
                 .extracting(MessageEntity::getConversationId)
@@ -201,7 +243,9 @@ class DatabaseSeederDevIT {
                         "conversation-dev-003",
                         "conversation-dev-004",
                         "conversation-dev-005",
-                        "conversation-dev-006"
+                        "conversation-dev-006",
+                        "conversation-dev-007",
+                        "conversation-dev-008"
                 );
     }
 }

@@ -105,6 +105,22 @@ public class DatabaseSeederDev {
                 TYPE_CONTEXTUAL,
                 baseTime.plusMinutes(50)
         );
+        ConversationEntity conversation7 = new ConversationEntity(
+                "conversation-dev-007",
+                "6",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                baseTime.plusMinutes(60)
+        );
+        ConversationEntity conversation8 = new ConversationEntity(
+                "conversation-dev-008",
+                "6",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                baseTime.plusMinutes(70)
+        );
 
         this.conversationRepository.saveAll(List.of(
                 conversation1,
@@ -112,7 +128,9 @@ public class DatabaseSeederDev {
                 conversation3,
                 conversation4,
                 conversation5,
-                conversation6
+                conversation6,
+                conversation7,
+                conversation8
         ));
 
         EscalationEntity escalation1 = new EscalationEntity(
@@ -348,6 +366,44 @@ public class DatabaseSeederDev {
                 .sequenceNumber(4)
                 .parentMessageId(message20.getId())
                 .build();
+        MessageEntity message22 = MessageEntity.builder()
+                .id("message-dev-022")
+                .conversationId(conversation7.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Necesito dejar cerrada una consulta general sobre plazos.")
+                .timestamp(baseTime.plusMinutes(60).plusSeconds(10))
+                .sequenceNumber(1)
+                .build();
+        MessageEntity message23 = MessageEntity.builder()
+                .id("message-dev-023")
+                .conversationId(conversation7.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("La consulta general sobre plazos queda registrada como cerrada.")
+                .timestamp(baseTime.plusMinutes(60).plusSeconds(20))
+                .sequenceNumber(2)
+                .parentMessageId(message22.getId())
+                .build();
+        MessageEntity message24 = MessageEntity.builder()
+                .id("message-dev-024")
+                .conversationId(conversation8.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Quiero cerrar una duda general sobre documentacion pendiente.")
+                .timestamp(baseTime.plusMinutes(70).plusSeconds(10))
+                .sequenceNumber(1)
+                .build();
+        MessageEntity message25 = MessageEntity.builder()
+                .id("message-dev-025")
+                .conversationId(conversation8.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("La duda general sobre documentacion queda cerrada en el historial.")
+                .timestamp(baseTime.plusMinutes(70).plusSeconds(20))
+                .sequenceNumber(2)
+                .parentMessageId(message24.getId())
+                .build();
 
         this.messageRepository.saveAll(List.of(
                 message1, message2, message3,
@@ -355,10 +411,12 @@ public class DatabaseSeederDev {
                 message7, message8, message9,
                 message10, message11, message12, message13,
                 message14, message15, message16, message17,
-                message18, message19, message20, message21
+                message18, message19, message20, message21,
+                message22, message23,
+                message24, message25
         ));
 
-        log.warn("------- Seeded {} conversations, {} escalations and {} messages -----------", 6, 3, 21);
+        log.warn("------- Seeded {} conversations, {} escalations and {} messages -----------", 8, 3, 25);
     }
 
 }
