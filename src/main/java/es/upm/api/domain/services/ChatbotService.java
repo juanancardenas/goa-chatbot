@@ -33,8 +33,8 @@ import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult
 import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
 import es.upm.api.domain.model.configuration.ChatbotConversationSummaryResult;
+import es.upm.api.domain.model.configuration.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -159,7 +159,7 @@ public class ChatbotService {
         int normalizedPage = this.normalizeHistoryPage(page);
         int normalizedSize = this.normalizeHistorySize(size);
 
-        Page<Message> pagedMessages = this.messageGateway.findByConversationIdOrderedDesc(
+        PageResult<Message> pagedMessages = this.messageGateway.findByConversationIdOrderedDesc(
                 conversationId,
                 normalizedPage,
                 normalizedSize
@@ -180,7 +180,7 @@ public class ChatbotService {
                 .status(conversation.getStatus().name())
                 .page(normalizedPage)
                 .size(normalizedSize)
-                .hasMore(pagedMessages.hasNext())
+                .hasMore(pagedMessages.isHasNext())
                 .totalMessages(pagedMessages.getTotalElements())
                 .messages(messages)
                 .build();
