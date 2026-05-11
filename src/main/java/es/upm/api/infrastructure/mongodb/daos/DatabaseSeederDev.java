@@ -18,6 +18,7 @@ import java.util.UUID;
 @Service
 @Profile({"dev", "test"})
 public class DatabaseSeederDev {
+    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
     private static final Logger log = LogManager.getLogger(DatabaseSeederDev.class);
@@ -120,6 +121,14 @@ public class DatabaseSeederDev {
                 TYPE_GENERAL,
                 baseTime.plusMinutes(70)
         );
+        ConversationEntity conversation9 = new ConversationEntity(
+                "conversation-dev-009",
+                "6",
+                "aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001",
+                ConversationStatus.ACTIVE,
+                TYPE_CONTEXTUAL,
+                baseTime.plusMinutes(80)
+        );
 
         this.conversationRepository.saveAll(List.of(
                 conversation1,
@@ -129,7 +138,8 @@ public class DatabaseSeederDev {
                 conversation5,
                 conversation6,
                 conversation7,
-                conversation8
+                conversation8,
+                conversation9
         ));
 
         EscalationEntity escalation1 = new EscalationEntity(
@@ -403,6 +413,25 @@ public class DatabaseSeederDev {
                 .sequenceNumber(2)
                 .parentMessageId(message24.getId())
                 .build();
+        MessageEntity message26 = MessageEntity.builder()
+                .id("message-dev-026")
+                .conversationId(conversation9.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Necesito revisar el estado del engagement aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001.")
+                .timestamp(baseTime.plusMinutes(80).plusSeconds(10))
+                .sequenceNumber(1)
+                .build();
+        MessageEntity message27 = MessageEntity.builder()
+                .id("message-dev-027")
+                .conversationId(conversation9.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("Conversacion contextual preparada para el engagement aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001.")
+                .timestamp(baseTime.plusMinutes(80).plusSeconds(20))
+                .sequenceNumber(2)
+                .parentMessageId(message26.getId())
+                .build();
 
         this.messageRepository.saveAll(List.of(
                 message1, message2, message3,
@@ -412,10 +441,11 @@ public class DatabaseSeederDev {
                 message14, message15, message16, message17,
                 message18, message19, message20, message21,
                 message22, message23,
-                message24, message25
+                message24, message25,
+                message26, message27
         ));
 
-        log.warn("------- Seeded {} conversations, {} escalations and {} messages -----------", 8, 3, 25);
+        log.warn("------- Seeded {} conversations, {} escalations and {} messages -----------", 9, 3, 27);
     }
 
 }
