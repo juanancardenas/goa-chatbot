@@ -15,6 +15,7 @@ import es.upm.api.domain.model.configuration.ChatbotContextualConversationComman
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.configuration.ChatbotMessageResult;
+import es.upm.api.domain.model.configuration.AuthenticatedUserContext;
 import es.upm.api.domain.model.configuration.PageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
@@ -27,7 +28,6 @@ import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,8 +35,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -87,11 +85,7 @@ class ChatbotServiceTest {
 
     @InjectMocks
     private ChatbotService chatbotService;
-
-    @AfterEach
-    void clearSecurityContext() {
-        SecurityContextHolder.clearContext();
-    }
+    private AuthenticatedUserContext authenticatedUser;
 
     @BeforeEach
     void configureChatbotAiProperties() {
@@ -115,7 +109,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand(null, "Necesito ayuda");
 
-        var response = chatbotService.startGeneralConversation(request);
+        var response = chatbotService.startGeneralConversation(this.authenticatedUser, request);
 
         ArgumentCaptor<Conversation> conversationCaptor = ArgumentCaptor.forClass(Conversation.class);
         verify(conversationPersistence).create(conversationCaptor.capture());
@@ -154,7 +148,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand(null, "Necesito soporte");
 
-        var response = chatbotService.startGeneralConversation(request);
+        var response = chatbotService.startGeneralConversation(this.authenticatedUser, request);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
@@ -182,7 +176,7 @@ class ChatbotServiceTest {
 
         ChatbotContextualConversationCommand request = new ChatbotContextualConversationCommand("EL-1");
 
-        var response = chatbotService.startContextualConversation(request);
+        var response = chatbotService.startContextualConversation(this.authenticatedUser, request);
 
         verify(conversationPersistence, never()).create(any(Conversation.class));
         verify(messagePersistence, never()).createAndReturnId(any(Message.class));
@@ -199,7 +193,7 @@ class ChatbotServiceTest {
 
         ChatbotContextualConversationCommand request = new ChatbotContextualConversationCommand("EL-77");
 
-        var response = chatbotService.startContextualConversation(request);
+        var response = chatbotService.startContextualConversation(this.authenticatedUser, request);
 
         ArgumentCaptor<Conversation> conversationCaptor = ArgumentCaptor.forClass(Conversation.class);
         verify(conversationPersistence).create(conversationCaptor.capture());
@@ -247,7 +241,7 @@ class ChatbotServiceTest {
         when(messagePersistence.findLatestByConversationId("conversation-2"))
                 .thenReturn(Optional.empty());
 
-        var response = chatbotService.readConversationHistoryList(" general ", null);
+        var response = chatbotService.readConversationHistoryList(this.authenticatedUser, " general ", null);
 
         assertThat(response).hasSize(2);
         assertThat(response.get(0).getConversationId()).isEqualTo("conversation-1");
@@ -278,7 +272,7 @@ class ChatbotServiceTest {
         )).thenReturn(List.of(conversation));
         when(messagePersistence.findLatestByConversationId("conversation-ctx-1")).thenReturn(Optional.empty());
 
-        var response = chatbotService.readConversationHistoryList(" contextual ", "EL-9");
+        var response = chatbotService.readConversationHistoryList(this.authenticatedUser, " contextual ", "EL-9");
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-ctx-1");
@@ -291,7 +285,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> chatbotService.readConversationHistoryList("other", null)
+                () -> chatbotService.readConversationHistoryList(this.authenticatedUser, "other", null)
         );
 
         assertThat(exception).hasMessageContaining("type debe ser GENERAL o CONTEXTUAL");
@@ -304,7 +298,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> chatbotService.readConversationHistoryList("   ", null)
+                () -> chatbotService.readConversationHistoryList(this.authenticatedUser, "   ", null)
         );
 
         assertThat(exception).hasMessageContaining("type es obligatorio");
@@ -317,7 +311,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> chatbotService.readConversationHistoryList("CONTEXTUAL", " ")
+                () -> chatbotService.readConversationHistoryList(this.authenticatedUser, "CONTEXTUAL", " ")
         );
 
         assertThat(exception).hasMessageContaining("engagementLetterId es obligatorio");
@@ -368,7 +362,7 @@ class ChatbotServiceTest {
                         .totalElements(12)
                         .build());
 
-        var response = chatbotService.readConversationHistory("conversation-history", null, null);
+        var response = chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", null, null);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-history");
         assertThat(response.getEngagementLetterId()).isEqualTo("EL-10");
@@ -398,7 +392,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> chatbotService.readConversationHistory("conversation-history", -1, 10)
+                () -> chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", -1, 10)
         );
 
         assertThat(exception).hasMessageContaining("page debe ser mayor o igual que 0");
@@ -420,7 +414,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> chatbotService.readConversationHistory("conversation-history", 0, 101)
+                () -> chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", 0, 101)
         );
 
         assertThat(exception).hasMessageContaining("size debe estar entre 1 y 100");
@@ -442,7 +436,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> chatbotService.readConversationHistory("conversation-history", 0, 0)
+                () -> chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", 0, 0)
         );
 
         assertThat(exception).hasMessageContaining("size debe estar entre 1 y 100");
@@ -456,7 +450,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> chatbotService.sendMessage(request)
+                () -> chatbotService.sendMessage(this.authenticatedUser, request)
         );
 
         assertThat(exception).hasMessageContaining("conversationId es obligatorio");
@@ -496,7 +490,7 @@ class ChatbotServiceTest {
                 "Cuáles son las tareas legales de este encargo?"
         );
 
-        ChatbotMessageResult response = this.chatbotService.sendMessage(request);
+        ChatbotMessageResult response = this.chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getMessage()).contains("No he podido recuperar");
         assertThat(response.getMessage()).contains("Tareas Legales");
@@ -544,7 +538,7 @@ class ChatbotServiceTest {
                 "Cuáles son las tareas legales?"
         );
 
-        ChatbotMessageResult response = this.chatbotService.sendMessage(request);
+        ChatbotMessageResult response = this.chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getMessage()).contains("No se han encontrado");
         assertThat(response.getMessage()).contains("Tareas Legales");
@@ -595,7 +589,7 @@ class ChatbotServiceTest {
                 "Cuáles son las tareas legales de este encargo?"
         );
 
-        ChatbotMessageResult response = this.chatbotService.sendMessage(request);
+        ChatbotMessageResult response = this.chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getMessage()).contains("Tareas Legales");
         assertThat(response.getMessage()).contains("Estudio de antecedentes y documentación");
@@ -636,7 +630,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Dame contexto del caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getUsedPlatformData()).isTrue();
@@ -669,7 +663,7 @@ class ChatbotServiceTest {
                 "Quiero una estrategia legal definitiva"
         );
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
@@ -723,7 +717,7 @@ class ChatbotServiceTest {
                 "Explícame qué puedes hacer"
         );
 
-        var response = this.chatbotService.sendMessage(request);
+        var response = this.chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getMessage()).isEqualTo("Respuesta generada por Ollama");
         verify(this.chatbotAiClient).generate(any());
@@ -766,7 +760,7 @@ class ChatbotServiceTest {
                 "Explícame qué puedes hacer"
         );
 
-        var response = this.chatbotService.sendMessage(request);
+        var response = this.chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getMessage()).isNotBlank();
         assertThat(response.getMessage()).isNotEqualTo("Ahora mismo no puedo generar una respuesta con IA.");
@@ -801,7 +795,7 @@ class ChatbotServiceTest {
                 "Dame asesoría legal definitiva"
         );
 
-        var response = this.chatbotService.sendMessage(request);
+        var response = this.chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getMessage()).isEqualTo("No puedo ofrecer asesoramiento legal vinculante.");
         verify(this.chatbotAiClient, never()).generate(any());
@@ -820,7 +814,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> this.chatbotService.sendMessage(request)
+                () -> this.chatbotService.sendMessage(this.authenticatedUser, request)
         );
 
         assertThat(exception).hasMessageContaining("limite maximo de caracteres");
@@ -841,7 +835,7 @@ class ChatbotServiceTest {
 
         BadRequestException exception = assertThrows(
                 BadRequestException.class,
-                () -> this.chatbotService.startGeneralConversation(request)
+                () -> this.chatbotService.startGeneralConversation(this.authenticatedUser, request)
         );
 
         assertThat(exception).hasMessageContaining("limite maximo de caracteres");
@@ -891,7 +885,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que documentos hay en el expediente");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getMessage()).contains("integración documental real aún no está disponible");
@@ -937,7 +931,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Dame contexto del caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getUsedPlatformData()).isTrue();
@@ -974,7 +968,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Cual es el estado de mi caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
         assertThat(response.getUsedPlatformData()).isFalse();
@@ -1007,7 +1001,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que hitos recientes tiene el caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
         assertThat(response.getUsedPlatformData()).isFalse();
@@ -1039,7 +1033,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que documentos hay en el expediente");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
         assertThat(response.getUsedPlatformData()).isFalse();
@@ -1071,7 +1065,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Dame un resumen del caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
         assertThat(response.getUsedPlatformData()).isFalse();
@@ -1102,7 +1096,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Dame contexto del caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
         assertThat(response.getUsedPlatformData()).isFalse();
@@ -1143,7 +1137,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Cual es el estado del encargo");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getMessage()).contains("EL-100");
@@ -1187,7 +1181,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que hitos recientes tiene el caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getMessage()).contains("Se registró escrito");
@@ -1227,7 +1221,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que documentos hay en el caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getMessage()).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
@@ -1266,7 +1260,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Cual es el estado de mi caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getMessage()).contains("puedo explicarte el caso");
@@ -1306,7 +1300,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Que documentos hay en el expediente");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getMessage()).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
@@ -1339,7 +1333,7 @@ class ChatbotServiceTest {
                 userMessage
         );
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
         assertThat(response.getResponseMode()).isEqualTo("GENERAL");
@@ -1374,7 +1368,7 @@ class ChatbotServiceTest {
                 userMessage
         );
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
         assertThat(response.getResponseMode()).isEqualTo("GENERAL");
@@ -1409,7 +1403,7 @@ class ChatbotServiceTest {
                 userMessage
         );
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
         assertThat(response.getResponseMode()).isEqualTo("GENERAL");
@@ -1444,7 +1438,7 @@ class ChatbotServiceTest {
                 userMessage
         );
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
         assertThat(response.getResponseMode()).isEqualTo("GENERAL");
@@ -1474,7 +1468,7 @@ class ChatbotServiceTest {
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Compáralo con EL-200");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
         assertThat(response.getUsedPlatformData()).isFalse();
@@ -1511,7 +1505,7 @@ class ChatbotServiceTest {
                 userMessage
         );
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
         assertThat(response.getResponseMode()).isEqualTo("GENERAL");
@@ -1550,7 +1544,7 @@ class ChatbotServiceTest {
                 userMessage
         );
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-ctx");
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
@@ -1593,7 +1587,7 @@ class ChatbotServiceTest {
         ChatbotMessageCommand request =
                 new ChatbotMessageCommand("conversation-ctx-events", "¿Qué hitos recientes tiene este caso?");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getUsedPlatformData()).isTrue();
@@ -1636,7 +1630,7 @@ class ChatbotServiceTest {
         ChatbotMessageCommand request =
                 new ChatbotMessageCommand("conversation-ctx-empty-events", "Que hitos tiene mi caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getUsedPlatformData()).isTrue();
@@ -1678,7 +1672,7 @@ class ChatbotServiceTest {
         ChatbotMessageCommand request =
                 new ChatbotMessageCommand("conversation-ctx-docs", "¿Qué documentos hay en este caso?");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getUsedPlatformData()).isTrue();
@@ -1728,7 +1722,7 @@ class ChatbotServiceTest {
         ChatbotMessageCommand request =
                 new ChatbotMessageCommand("conversation-ctx-docs-visible", "Que documentos veo en mi caso");
 
-        var response = chatbotService.sendMessage(request);
+        var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
         assertThat(response.getUsedPlatformData()).isTrue();
@@ -1750,7 +1744,7 @@ class ChatbotServiceTest {
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
 
-        chatbotService.closeConversation("conversation-1");
+        chatbotService.closeConversation(this.authenticatedUser, "conversation-1");
 
         assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         verify(conversationPersistence).update(existingConversation);
@@ -1771,7 +1765,7 @@ class ChatbotServiceTest {
 
         ForbiddenException exception = assertThrows(
                 ForbiddenException.class,
-                () -> chatbotService.closeConversation("conversation-1")
+                () -> chatbotService.closeConversation(this.authenticatedUser, "conversation-1")
         );
 
         assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
@@ -1790,7 +1784,7 @@ class ChatbotServiceTest {
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
 
-        chatbotService.closeConversation("conversation-1");
+        chatbotService.closeConversation(this.authenticatedUser, "conversation-1");
 
         assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         verify(conversationPersistence, never()).update(any(Conversation.class));
@@ -1817,7 +1811,7 @@ class ChatbotServiceTest {
                         .build()
         );
 
-        chatbotService.escalateConversation("conversation-escalate");
+        chatbotService.escalateConversation(this.authenticatedUser, "conversation-escalate");
 
         assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
         verify(conversationPersistence).update(existingConversation);
@@ -1846,7 +1840,7 @@ class ChatbotServiceTest {
         when(conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
         when(userClient.readById("customer-1")).thenThrow(new RuntimeException("user service unavailable"));
 
-        chatbotService.escalateConversation("conversation-escalate");
+        chatbotService.escalateConversation(this.authenticatedUser, "conversation-escalate");
 
         ArgumentCaptor<Escalation> escalationCaptor = ArgumentCaptor.forClass(Escalation.class);
         verify(escalationPersistence).create(escalationCaptor.capture());
@@ -1870,7 +1864,7 @@ class ChatbotServiceTest {
 
         ForbiddenException exception = assertThrows(
                 ForbiddenException.class,
-                () -> chatbotService.escalateConversation("conversation-escalate")
+                () -> chatbotService.escalateConversation(this.authenticatedUser, "conversation-escalate")
         );
 
         assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
@@ -1890,7 +1884,7 @@ class ChatbotServiceTest {
                 .build();
         when(conversationPersistence.readById("conversation-delete")).thenReturn(existingConversation);
 
-        chatbotService.deleteConversation("conversation-delete");
+        chatbotService.deleteConversation(this.authenticatedUser, "conversation-delete");
 
         verify(messagePersistence).deleteByConversationId("conversation-delete");
         verify(conversationPersistence).delete("conversation-delete");
@@ -1910,7 +1904,7 @@ class ChatbotServiceTest {
 
         ForbiddenException exception = assertThrows(
                 ForbiddenException.class,
-                () -> chatbotService.deleteConversation("conversation-delete")
+                () -> chatbotService.deleteConversation(this.authenticatedUser, "conversation-delete")
         );
 
         assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
@@ -1933,7 +1927,7 @@ class ChatbotServiceTest {
 
         ConflictException exception = assertThrows(
                 ConflictException.class,
-                () -> chatbotService.sendMessage(new ChatbotMessageCommand("conversation-closed", "Hola"))
+                () -> chatbotService.sendMessage(this.authenticatedUser, new ChatbotMessageCommand("conversation-closed", "Hola"))
         );
 
         assertThat(exception).hasMessageContaining("La conversacion no esta activa");
@@ -1953,7 +1947,7 @@ class ChatbotServiceTest {
                 .build();
         when(conversationPersistence.readById("conversation-closed")).thenReturn(existingConversation);
 
-        chatbotService.reopenConversation("conversation-closed");
+        chatbotService.reopenConversation(this.authenticatedUser, "conversation-closed");
 
         assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         verify(conversationPersistence).update(existingConversation);
@@ -1971,7 +1965,7 @@ class ChatbotServiceTest {
                 .build();
         when(conversationPersistence.readById("conversation-active")).thenReturn(existingConversation);
 
-        chatbotService.reopenConversation("conversation-active");
+        chatbotService.reopenConversation(this.authenticatedUser, "conversation-active");
 
         verify(conversationPersistence, never()).update(any(Conversation.class));
     }
@@ -1990,7 +1984,7 @@ class ChatbotServiceTest {
 
         ConflictException exception = assertThrows(
                 ConflictException.class,
-                () -> chatbotService.reopenConversation("conversation-archived")
+                () -> chatbotService.reopenConversation(this.authenticatedUser, "conversation-archived")
         );
 
         assertThat(exception).hasMessageContaining("La conversacion archivada no se puede reabrir");
@@ -2054,7 +2048,7 @@ class ChatbotServiceTest {
                         .finishReason("SUCCESS")
                         .build());
 
-        ChatbotMessageResult response = this.chatbotService.sendMessage(
+        ChatbotMessageResult response = this.chatbotService.sendMessage(this.authenticatedUser, 
                 new ChatbotMessageCommand("conversation-ai-table", "Muéstramelo en tabla")
         );
 
@@ -2127,7 +2121,7 @@ class ChatbotServiceTest {
                         .finishReason("SUCCESS")
                         .build());
 
-        ChatbotMessageResult response = this.chatbotService.sendMessage(
+        ChatbotMessageResult response = this.chatbotService.sendMessage(this.authenticatedUser, 
                 new ChatbotMessageCommand("conversation-ai-context", "Qué tareas legales hay en mi caso")
         );
 
@@ -2160,9 +2154,15 @@ class ChatbotServiceTest {
     }
 
     private void authenticate(String userId, String... authorities) {
-        SecurityContextHolder.getContext().setAuthentication(
-                new TestingAuthenticationToken(userId, "password", authorities)
-        );
+        boolean isCustomer = List.of(authorities).stream()
+                .anyMatch("ROLE_CUSTOMER"::equals);
+
+        this.authenticatedUser = AuthenticatedUserContext.builder()
+                .userId(userId)
+                .profile(isCustomer ? ConversationProfileType.CLIENT : ConversationProfileType.PROFESSIONAL)
+                .build();
     }
 }
+
+
 
