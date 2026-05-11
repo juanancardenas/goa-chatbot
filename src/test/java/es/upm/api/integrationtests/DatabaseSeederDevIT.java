@@ -41,15 +41,18 @@ class DatabaseSeederDevIT {
         List<EscalationEntity> escalations = this.escalationRepository.findAll();
         List<MessageEntity> messages = this.messageRepository.findAll();
 
-        assertThat(conversations).hasSize(3);
-        assertThat(escalations).hasSize(2);
-        assertThat(messages).hasSize(9);
+        assertThat(conversations).hasSize(8);
+        assertThat(escalations).hasSize(3);
+        assertThat(messages).hasSize(25);
 
         assertThat(this.conversationRepository.findById("conversation-dev-001"))
                 .isPresent()
                 .get()
-                .extracting(ConversationEntity::getStatus)
-                .isEqualTo(ConversationStatus.ACTIVE);
+                .satisfies(conversation -> {
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
 
         assertThat(this.conversationRepository.findById("conversation-dev-002"))
                 .isPresent()
@@ -65,8 +68,58 @@ class DatabaseSeederDevIT {
                 .get()
                 .satisfies(conversation -> {
                     assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
-                    assertThat(conversation.getType()).isEqualTo("CONTEXTUAL");
-                    assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-dev-003");
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
+
+        assertThat(this.conversationRepository.findById("conversation-dev-004"))
+                .isPresent()
+                .get()
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("6");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
+
+        assertThat(this.conversationRepository.findById("conversation-dev-005"))
+                .isPresent()
+                .get()
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("6");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
+
+        assertThat(this.conversationRepository.findById("conversation-dev-006"))
+                .isPresent()
+                .get()
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("6");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
+
+        assertThat(this.conversationRepository.findById("conversation-dev-007"))
+                .isPresent()
+                .get()
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("6");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
+                });
+
+        assertThat(this.conversationRepository.findById("conversation-dev-008"))
+                .isPresent()
+                .get()
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("6");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+                    assertThat(conversation.getType()).isEqualTo("GENERAL");
+                    assertThat(conversation.getEngagementLetterId()).isNull();
                 });
 
         assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-001"))
@@ -96,6 +149,61 @@ class DatabaseSeederDevIT {
                         "He recuperado la conversacion asociada a tu engagement letter."
                 );
 
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-004"))
+                .hasSize(4)
+                .extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2, 3, 4);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-004"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Necesito contexto actualizado de mi encargo activo.",
+                        "Resumen preparado con los ultimos hitos asociados al encargo."
+                );
+
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-005"))
+                .hasSize(4)
+                .extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2, 3, 4);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-005"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Quiero abrir una conversacion general sobre facturacion.",
+                        "La conversacion queda cerrada con la ultima informacion disponible."
+                );
+
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-006"))
+                .hasSize(4)
+                .extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2, 3, 4);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-006"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Quiero escalar mi caso a una persona del equipo.",
+                        "Escalacion registrada y conversacion archivada para seguimiento."
+                );
+
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-007"))
+                .hasSize(2)
+                .extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-007"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Necesito dejar cerrada una consulta general sobre plazos.",
+                        "La consulta general sobre plazos queda registrada como cerrada."
+                );
+
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-008"))
+                .hasSize(2)
+                .extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-008"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Quiero cerrar una duda general sobre documentacion pendiente.",
+                        "La duda general sobre documentacion queda cerrada en el historial."
+                );
+
         assertThat(this.escalationRepository.findById(UUID.fromString("11111111-1111-1111-1111-111111111111")))
                 .isPresent()
                 .get()
@@ -116,8 +224,31 @@ class DatabaseSeederDevIT {
                     assertThat(escalation.getEmail()).isEqualTo("customer2@example.com");
                 });
 
+        assertThat(this.escalationRepository.findById(UUID.fromString("66666666-6666-6666-6666-666666666666")))
+                .isPresent()
+                .get()
+                .satisfies(escalation -> {
+                    assertThat(escalation.getConversationId()).isEqualTo("conversation-dev-006");
+                    assertThat(escalation.getUserId()).isEqualTo("6");
+                    assertThat(escalation.getPhone()).isEqualTo("+34600600606");
+                    assertThat(escalation.getEmail()).isEqualTo("user6@example.com");
+                });
+
+        assertThat(conversations)
+                .filteredOn(conversation -> "6".equals(conversation.getUserId()))
+                .hasSize(5);
+
         assertThat(messages)
                 .extracting(MessageEntity::getConversationId)
-                .containsOnly("conversation-dev-001", "conversation-dev-002", "conversation-dev-003");
+                .containsOnly(
+                        "conversation-dev-001",
+                        "conversation-dev-002",
+                        "conversation-dev-003",
+                        "conversation-dev-004",
+                        "conversation-dev-005",
+                        "conversation-dev-006",
+                        "conversation-dev-007",
+                        "conversation-dev-008"
+                );
     }
 }

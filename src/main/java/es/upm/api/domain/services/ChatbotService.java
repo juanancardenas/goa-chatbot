@@ -34,10 +34,8 @@ import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
 import es.upm.api.domain.model.configuration.ChatbotConversationSummaryResult;
 import es.upm.api.domain.model.configuration.PageResult;
+import es.upm.api.domain.model.configuration.AuthenticatedUserContext;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -104,12 +102,11 @@ public class ChatbotService {
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
     public ChatbotContextualConversationResult startContextualConversation(
+            AuthenticatedUserContext authenticatedUser,
             ChatbotContextualConversationCommand command
     ) {
-        String userId = this.authenticatedUserId();
-
         Conversation conversation = this.findOrCreateContextualConversation(
-                userId,
+                authenticatedUser.getUserId(),
                 command.getEngagementLetterId()
         );
 
@@ -123,11 +120,12 @@ public class ChatbotService {
 
     // Reading Conversation History List
     public List<ChatbotConversationSummaryResult> readConversationHistoryList(
+            AuthenticatedUserContext authenticatedUser,
             String type,
             String engagementLetterId
     ) {
         String normalizedType = this.normalizeConversationType(type);
-        String userId = this.authenticatedUserId();
+        String userId = authenticatedUser.getUserId();
 
         List<Conversation> conversations = TYPE_CONTEXTUAL.equals(normalizedType)
                 ? this.readContextualConversations(userId, engagementLetterId)
@@ -153,8 +151,16 @@ public class ChatbotService {
     }
 
     // Reading the messages of a conversation
-    public ChatbotConversationHistoryResult readConversationHistory(String conversationId, Integer page, Integer size) {
-        Conversation conversation = this.requireOwnedConversation(conversationId, this.authenticatedUserId());
+    public ChatbotConversationHistoryResult readConversationHistory(
+            AuthenticatedUserContext authenticatedUser,
+            String conversationId,
+            Integer page,
+            Integer size
+    ) {
+        Conversation conversation = this.requireOwnedConversation(
+                conversationId,
+                authenticatedUser.getUserId()
+        );
 
         int normalizedPage = this.normalizeHistoryPage(page);
         int normalizedSize = this.normalizeHistorySize(size);
@@ -265,13 +271,14 @@ public class ChatbotService {
 
     // Starts General Conversation, this type of conversation is not linked to other process or entity
     public ChatbotMessageResult startGeneralConversation(
+            AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
     ) {
         String userMessage = command.getMessage();
 
         this.validateUserMessageLength(userMessage);
 
-        String userId = this.authenticatedUserId();
+        String userId = authenticatedUser.getUserId();
         LocalDateTime date = LocalDateTime.now();
 
         Conversation conversation = Conversation.builder()
@@ -294,7 +301,7 @@ public class ChatbotService {
                 date
         );
 
-        ConversationProfileType profile = this.resolveConversationProfile();
+        ConversationProfileType profile = authenticatedUser.getProfile();
         String baseReply = this.generalStartReply(profile);
 
         String assistantReply = this.generateConfiguredAssistantReply(
@@ -348,9 +355,10 @@ public class ChatbotService {
 
     // Send Message: method called each time that user clicks on Sent button in the front-end
     public ChatbotMessageResult sendMessage(
+            AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
     ) {
-        String userId = this.authenticatedUserId();
+        String userId = authenticatedUser.getUserId();
         LocalDateTime date = LocalDateTime.now();
         String userMessage = command.getMessage();
 
@@ -386,7 +394,7 @@ public class ChatbotService {
         String responseMode;
         boolean usedPlatformData;
         List<String> sourcesSummary;
-        ConversationProfileType profile = this.resolveConversationProfile();
+        ConversationProfileType profile = authenticatedUser.getProfile();
 
         if (this.isCourtesyMessage(userMessage)) {
             assistantReply = this.courtesyReply(profile);
@@ -558,10 +566,13 @@ public class ChatbotService {
                 .build();
     }
 
-    public void closeConversation(String conversationId) {
+    public void closeConversation(
+            AuthenticatedUserContext authenticatedUser,
+            String conversationId
+    ) {
         Conversation conversation = this.requireOwnedConversation(
                 conversationId,
-                this.authenticatedUserId()
+                authenticatedUser.getUserId()
         );
 
         if (conversation.getStatus() != ConversationStatus.ACTIVE) {
@@ -572,11 +583,15 @@ public class ChatbotService {
         this.conversationGateway.update(conversation);
     }
 
-    public void escalateConversation(String conversationId) {
+    public void escalateConversation(
+            AuthenticatedUserContext authenticatedUser,
+            String conversationId
+    ) {
         Conversation conversation = this.requireActiveOwnedConversation(
                 conversationId,
-                this.authenticatedUserId()
+                authenticatedUser.getUserId()
         );
+
         Optional<UserDto> user = this.readUserSafely(conversation.getUserId());
 
         LocalDateTime now = LocalDateTime.now();
@@ -594,16 +609,22 @@ public class ChatbotService {
         );
     }
 
-    public void deleteConversation(String conversationId) {
-        this.requireOwnedConversation(conversationId, this.authenticatedUserId());
+    public void deleteConversation(
+            AuthenticatedUserContext authenticatedUser,
+            String conversationId
+    ) {
+        this.requireOwnedConversation(conversationId, authenticatedUser.getUserId());
         this.messageGateway.deleteByConversationId(conversationId);
         this.conversationGateway.delete(conversationId);
     }
 
-    public void reopenConversation(String conversationId) {
+    public void reopenConversation(
+            AuthenticatedUserContext authenticatedUser,
+            String conversationId
+    ) {
         Conversation conversation = this.requireOwnedConversation(
                 conversationId,
-                this.authenticatedUserId()
+                authenticatedUser.getUserId()
         );
 
         if (conversation.getStatus() == ConversationStatus.ACTIVE) {
@@ -683,38 +704,13 @@ public class ChatbotService {
         return this.messageGateway.nextSequenceNumber(conversationId);
     }
 
+    // Recupera el usuario vía cliente web
     private Optional<UserDto> readUserSafely(String userId) {
         try {
             return Optional.ofNullable(this.userClient.readById(userId));
         } catch (RuntimeException ignored) {
             return Optional.empty();
         }
-    }
-
-    private String authenticatedUserId() {
-        return this.currentAuthentication().getName();
-    }
-
-    private ConversationProfileType resolveConversationProfile() {
-        Authentication authentication = this.currentAuthentication();
-
-        boolean isCustomer = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .map(this::normalizeAuthority)
-                .anyMatch("CUSTOMER"::equals);
-
-        return isCustomer ? ConversationProfileType.CLIENT : ConversationProfileType.PROFESSIONAL;
-    }
-
-    private Authentication currentAuthentication() {
-        return SecurityContextHolder.getContext().getAuthentication();
-    }
-
-    private String normalizeAuthority(String authority) {
-        if (authority == null) {
-            return "";
-        }
-        return authority.replace("ROLE_", "").toUpperCase(Locale.ROOT);
     }
 
     private String generateConfiguredAssistantReply(

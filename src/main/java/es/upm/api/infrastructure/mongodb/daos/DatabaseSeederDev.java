@@ -18,7 +18,6 @@ import java.util.UUID;
 @Service
 @Profile({"dev", "test"})
 public class DatabaseSeederDev {
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String TYPE_GENERAL = "GENERAL";
 
     private static final Logger log = LogManager.getLogger(DatabaseSeederDev.class);
@@ -58,9 +57,9 @@ public class DatabaseSeederDev {
         ConversationEntity conversation1 = new ConversationEntity(
                 "conversation-dev-001",
                 "customer-dev-001",
-                "engagement-dev-001",
-                ConversationStatus.ACTIVE,
-                TYPE_CONTEXTUAL,
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
                 baseTime
         );
         ConversationEntity conversation2 = new ConversationEntity(
@@ -75,13 +74,63 @@ public class DatabaseSeederDev {
         ConversationEntity conversation3 = new ConversationEntity(
                 "conversation-dev-003",
                 "customer-dev-003",
-                "engagement-dev-003",
+                null,
                 ConversationStatus.ARCHIVED,
-                TYPE_CONTEXTUAL,
+                TYPE_GENERAL,
                 baseTime.plusMinutes(20)
         );
 
-        this.conversationRepository.saveAll(List.of(conversation1, conversation2, conversation3));
+        ConversationEntity conversation4 = new ConversationEntity(
+                "conversation-dev-004",
+                "6",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                baseTime.plusMinutes(30)
+        );
+        ConversationEntity conversation5 = new ConversationEntity(
+                "conversation-dev-005",
+                "6",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                baseTime.plusMinutes(40)
+        );
+        ConversationEntity conversation6 = new ConversationEntity(
+                "conversation-dev-006",
+                "6",
+                null,
+                ConversationStatus.ARCHIVED,
+                TYPE_GENERAL,
+                baseTime.plusMinutes(50)
+        );
+        ConversationEntity conversation7 = new ConversationEntity(
+                "conversation-dev-007",
+                "6",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                baseTime.plusMinutes(60)
+        );
+        ConversationEntity conversation8 = new ConversationEntity(
+                "conversation-dev-008",
+                "6",
+                null,
+                ConversationStatus.CLOSED,
+                TYPE_GENERAL,
+                baseTime.plusMinutes(70)
+        );
+
+        this.conversationRepository.saveAll(List.of(
+                conversation1,
+                conversation2,
+                conversation3,
+                conversation4,
+                conversation5,
+                conversation6,
+                conversation7,
+                conversation8
+        ));
 
         EscalationEntity escalation1 = new EscalationEntity(
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
@@ -99,8 +148,16 @@ public class DatabaseSeederDev {
                 null,
                 "customer2@example.com"
         );
+        EscalationEntity escalation3 = new EscalationEntity(
+                UUID.fromString("66666666-6666-6666-6666-666666666666"),
+                conversation6.getId(),
+                conversation6.getUserId(),
+                baseTime.plusMinutes(55),
+                "+34600600606",
+                "user6@example.com"
+        );
 
-        this.escalationRepository.saveAll(List.of(escalation1, escalation2));
+        this.escalationRepository.saveAll(List.of(escalation1, escalation2, escalation3));
 
         MessageEntity message1 = MessageEntity.builder()
                 .id("message-dev-001")
@@ -192,13 +249,173 @@ public class DatabaseSeederDev {
                 .parentMessageId(message8.getId())
                 .build();
 
+        MessageEntity message10 = MessageEntity.builder()
+                .id("message-dev-010")
+                .conversationId(conversation4.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Necesito contexto actualizado de mi encargo activo.")
+                .timestamp(baseTime.plusMinutes(30).plusSeconds(10))
+                .sequenceNumber(1)
+                .build();
+        MessageEntity message11 = MessageEntity.builder()
+                .id("message-dev-011")
+                .conversationId(conversation4.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("Puedo ayudarte con el contexto del encargo engagement-dev-006-a.")
+                .timestamp(baseTime.plusMinutes(30).plusSeconds(20))
+                .sequenceNumber(2)
+                .parentMessageId(message10.getId())
+                .build();
+        MessageEntity message12 = MessageEntity.builder()
+                .id("message-dev-012")
+                .conversationId(conversation4.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Dame un resumen de los ultimos hitos disponibles.")
+                .timestamp(baseTime.plusMinutes(30).plusSeconds(30))
+                .sequenceNumber(3)
+                .build();
+        MessageEntity message13 = MessageEntity.builder()
+                .id("message-dev-013")
+                .conversationId(conversation4.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("Resumen preparado con los ultimos hitos asociados al encargo.")
+                .timestamp(baseTime.plusMinutes(30).plusSeconds(40))
+                .sequenceNumber(4)
+                .parentMessageId(message12.getId())
+                .build();
+
+        MessageEntity message14 = MessageEntity.builder()
+                .id("message-dev-014")
+                .conversationId(conversation5.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Quiero abrir una conversacion general sobre facturacion.")
+                .timestamp(baseTime.plusMinutes(40).plusSeconds(10))
+                .sequenceNumber(1)
+                .build();
+        MessageEntity message15 = MessageEntity.builder()
+                .id("message-dev-015")
+                .conversationId(conversation5.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("Puedo ayudarte con dudas generales de facturacion.")
+                .timestamp(baseTime.plusMinutes(40).plusSeconds(20))
+                .sequenceNumber(2)
+                .parentMessageId(message14.getId())
+                .build();
+        MessageEntity message16 = MessageEntity.builder()
+                .id("message-dev-016")
+                .conversationId(conversation5.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Necesito saber si hay importes pendientes.")
+                .timestamp(baseTime.plusMinutes(40).plusSeconds(30))
+                .sequenceNumber(3)
+                .build();
+        MessageEntity message17 = MessageEntity.builder()
+                .id("message-dev-017")
+                .conversationId(conversation5.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("La conversacion queda cerrada con la ultima informacion disponible.")
+                .timestamp(baseTime.plusMinutes(40).plusSeconds(40))
+                .sequenceNumber(4)
+                .parentMessageId(message16.getId())
+                .build();
+
+        MessageEntity message18 = MessageEntity.builder()
+                .id("message-dev-018")
+                .conversationId(conversation6.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Quiero escalar mi caso a una persona del equipo.")
+                .timestamp(baseTime.plusMinutes(50).plusSeconds(10))
+                .sequenceNumber(1)
+                .build();
+        MessageEntity message19 = MessageEntity.builder()
+                .id("message-dev-019")
+                .conversationId(conversation6.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("He preparado la escalacion sobre el encargo engagement-dev-006-b.")
+                .timestamp(baseTime.plusMinutes(50).plusSeconds(20))
+                .sequenceNumber(2)
+                .parentMessageId(message18.getId())
+                .build();
+        MessageEntity message20 = MessageEntity.builder()
+                .id("message-dev-020")
+                .conversationId(conversation6.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Confirmo mis datos de contacto para la llamada.")
+                .timestamp(baseTime.plusMinutes(50).plusSeconds(30))
+                .sequenceNumber(3)
+                .build();
+        MessageEntity message21 = MessageEntity.builder()
+                .id("message-dev-021")
+                .conversationId(conversation6.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("Escalacion registrada y conversacion archivada para seguimiento.")
+                .timestamp(baseTime.plusMinutes(50).plusSeconds(40))
+                .sequenceNumber(4)
+                .parentMessageId(message20.getId())
+                .build();
+        MessageEntity message22 = MessageEntity.builder()
+                .id("message-dev-022")
+                .conversationId(conversation7.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Necesito dejar cerrada una consulta general sobre plazos.")
+                .timestamp(baseTime.plusMinutes(60).plusSeconds(10))
+                .sequenceNumber(1)
+                .build();
+        MessageEntity message23 = MessageEntity.builder()
+                .id("message-dev-023")
+                .conversationId(conversation7.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("La consulta general sobre plazos queda registrada como cerrada.")
+                .timestamp(baseTime.plusMinutes(60).plusSeconds(20))
+                .sequenceNumber(2)
+                .parentMessageId(message22.getId())
+                .build();
+        MessageEntity message24 = MessageEntity.builder()
+                .id("message-dev-024")
+                .conversationId(conversation8.getId())
+                .senderType(MessageSenderType.USER)
+                .messageType(MessageType.REQUEST)
+                .content("Quiero cerrar una duda general sobre documentacion pendiente.")
+                .timestamp(baseTime.plusMinutes(70).plusSeconds(10))
+                .sequenceNumber(1)
+                .build();
+        MessageEntity message25 = MessageEntity.builder()
+                .id("message-dev-025")
+                .conversationId(conversation8.getId())
+                .senderType(MessageSenderType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
+                .content("La duda general sobre documentacion queda cerrada en el historial.")
+                .timestamp(baseTime.plusMinutes(70).plusSeconds(20))
+                .sequenceNumber(2)
+                .parentMessageId(message24.getId())
+                .build();
+
         this.messageRepository.saveAll(List.of(
                 message1, message2, message3,
                 message4, message5, message6,
-                message7, message8, message9
+                message7, message8, message9,
+                message10, message11, message12, message13,
+                message14, message15, message16, message17,
+                message18, message19, message20, message21,
+                message22, message23,
+                message24, message25
         ));
 
-        log.warn("------- Seeded {} conversations, {} escalations and {} messages -----------", 3, 2, 9);
+        log.warn("------- Seeded {} conversations, {} escalations and {} messages -----------", 8, 3, 25);
     }
 
 }

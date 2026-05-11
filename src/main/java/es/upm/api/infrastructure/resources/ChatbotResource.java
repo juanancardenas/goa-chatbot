@@ -8,6 +8,7 @@ import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
+import es.upm.api.infrastructure.security.AuthenticatedUserContextResolver;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -40,19 +42,29 @@ public class ChatbotResource {
     public static final String CONFIGURATION_STATUS = "/configuration/status";
 
     private final ChatbotService chatbotService;
+    private final AuthenticatedUserContextResolver authenticatedUserContextResolver;
 
     @Autowired
-    public ChatbotResource(ChatbotService chatbotService) {
+    public ChatbotResource(
+            ChatbotService chatbotService,
+            AuthenticatedUserContextResolver authenticatedUserContextResolver
+    ) {
         this.chatbotService = chatbotService;
+        this.authenticatedUserContextResolver = authenticatedUserContextResolver;
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @GetMapping(CONVERSATIONS)
     public List<ChatbotConversationSummaryDto> readConversations(
             @RequestParam String type,
-            @RequestParam(required = false) String engagementLetterId
+            @RequestParam(required = false) String engagementLetterId,
+            Authentication authentication
     ) {
-        return this.chatbotService.readConversationHistoryList(type, engagementLetterId)
+        return this.chatbotService.readConversationHistoryList(
+                        this.authenticatedUserContextResolver.resolve(authentication),
+                        type,
+                        engagementLetterId
+                )
                 .stream()
                 .map(ChatbotConversationSummaryDto::fromDomain)
                 .toList();
@@ -61,26 +73,42 @@ public class ChatbotResource {
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PostMapping(CONTEXTUAL_CONVERSATIONS)
     public ChatbotContextualConversationResponseDto startContextualConversation(
-            @Valid @RequestBody ChatbotContextualConversationRequestDto requestDto
+            @Valid @RequestBody ChatbotContextualConversationRequestDto requestDto,
+            Authentication authentication
     ) {
         return ChatbotContextualConversationResponseDto.fromDomain(
-                this.chatbotService.startContextualConversation(requestDto.toCommand())
+                this.chatbotService.startContextualConversation(
+                        this.authenticatedUserContextResolver.resolve(authentication),
+                        requestDto.toCommand()
+                )
         );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PostMapping(GENERAL_CONVERSATIONS)
-    public ChatbotMessageResponseDto startGeneralConversation(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
+    public ChatbotMessageResponseDto startGeneralConversation(
+            @Valid @RequestBody ChatbotMessageRequestDto requestDto,
+            Authentication authentication
+    ) {
         return ChatbotMessageResponseDto.fromDomain(
-                this.chatbotService.startGeneralConversation(requestDto.toCommand())
+                this.chatbotService.startGeneralConversation(
+                        this.authenticatedUserContextResolver.resolve(authentication),
+                        requestDto.toCommand()
+                )
         );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PostMapping(MESSAGES)
-    public ChatbotMessageResponseDto sendMessage(@Valid @RequestBody ChatbotMessageRequestDto requestDto) {
+    public ChatbotMessageResponseDto sendMessage(
+            @Valid @RequestBody ChatbotMessageRequestDto requestDto,
+            Authentication authentication
+    ) {
         return ChatbotMessageResponseDto.fromDomain(
-                this.chatbotService.sendMessage(requestDto.toCommand())
+                this.chatbotService.sendMessage(
+                        this.authenticatedUserContextResolver.resolve(authentication),
+                        requestDto.toCommand()
+                )
         );
     }
 
@@ -95,38 +123,72 @@ public class ChatbotResource {
     public ChatbotConversationHistoryResponseDto readConversationHistory(
             @PathVariable String conversationId,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size
+            @RequestParam(required = false) Integer size,
+            Authentication authentication
     ) {
         return ChatbotConversationHistoryResponseDto.fromDomain(
-                this.chatbotService.readConversationHistory(conversationId, page, size)
+                this.chatbotService.readConversationHistory(
+                        this.authenticatedUserContextResolver.resolve(authentication),
+                        conversationId,
+                        page,
+                        size
+                )
         );
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @DeleteMapping(DELETE_CONVERSATION)
-    public ResponseEntity<Void> deleteConversation(@PathVariable String conversationId) {
-        this.chatbotService.deleteConversation(conversationId);
+    public ResponseEntity<Void> deleteConversation(
+            @PathVariable String conversationId,
+            Authentication authentication
+    ) {
+        this.chatbotService.deleteConversation(
+                this.authenticatedUserContextResolver.resolve(authentication),
+                conversationId
+        );
+
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PatchMapping(CLOSE_CONVERSATION)
-    public ResponseEntity<Void> closeConversation(@PathVariable String conversationId) {
-        this.chatbotService.closeConversation(conversationId);
+    public ResponseEntity<Void> closeConversation(
+            @PathVariable String conversationId,
+            Authentication authentication
+    ) {
+        this.chatbotService.closeConversation(
+                this.authenticatedUserContextResolver.resolve(authentication),
+                conversationId
+        );
+
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PatchMapping(REOPEN_CONVERSATION)
-    public ResponseEntity<Void> reopenConversation(@PathVariable String conversationId) {
-        this.chatbotService.reopenConversation(conversationId);
+    public ResponseEntity<Void> reopenConversation(
+            @PathVariable String conversationId,
+            Authentication authentication
+    ) {
+        this.chatbotService.reopenConversation(
+                this.authenticatedUserContextResolver.resolve(authentication),
+                conversationId
+        );
+
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @PatchMapping(ESCALATE_CONVERSATION)
-    public ResponseEntity<Void> escalateConversation(@PathVariable String conversationId) {
-        this.chatbotService.escalateConversation(conversationId);
+    public ResponseEntity<Void> escalateConversation(
+            @PathVariable String conversationId,
+            Authentication authentication
+    ) {
+        this.chatbotService.escalateConversation(
+                this.authenticatedUserContextResolver.resolve(authentication),
+                conversationId
+        );
+
         return ResponseEntity.noContent().build();
     }
 }
