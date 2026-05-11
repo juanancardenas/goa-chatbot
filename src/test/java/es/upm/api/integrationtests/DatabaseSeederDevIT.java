@@ -41,9 +41,9 @@ class DatabaseSeederDevIT {
         List<EscalationEntity> escalations = this.escalationRepository.findAll();
         List<MessageEntity> messages = this.messageRepository.findAll();
 
-        assertThat(conversations).hasSize(8);
+        assertThat(conversations).hasSize(9);
         assertThat(escalations).hasSize(3);
-        assertThat(messages).hasSize(25);
+        assertThat(messages).hasSize(27);
 
         assertThat(this.conversationRepository.findById("conversation-dev-001"))
                 .isPresent()
@@ -120,6 +120,17 @@ class DatabaseSeederDevIT {
                     assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
                     assertThat(conversation.getType()).isEqualTo("GENERAL");
                     assertThat(conversation.getEngagementLetterId()).isNull();
+                });
+
+        assertThat(this.conversationRepository.findById("conversation-dev-009"))
+                .isPresent()
+                .get()
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("6");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+                    assertThat(conversation.getType()).isEqualTo("CONTEXTUAL");
+                    assertThat(conversation.getEngagementLetterId())
+                            .isEqualTo("aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001");
                 });
 
         assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-001"))
@@ -204,6 +215,17 @@ class DatabaseSeederDevIT {
                         "La duda general sobre documentacion queda cerrada en el historial."
                 );
 
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-009"))
+                .hasSize(2)
+                .extracting(MessageEntity::getSequenceNumber)
+                .containsExactly(1, 2);
+        assertThat(this.messageRepository.findByConversationIdOrderBySequenceNumberAsc("conversation-dev-009"))
+                .extracting(MessageEntity::getContent)
+                .contains(
+                        "Necesito revisar el estado del engagement aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001.",
+                        "Conversacion contextual preparada para el engagement aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001."
+                );
+
         assertThat(this.escalationRepository.findById(UUID.fromString("11111111-1111-1111-1111-111111111111")))
                 .isPresent()
                 .get()
@@ -236,7 +258,7 @@ class DatabaseSeederDevIT {
 
         assertThat(conversations)
                 .filteredOn(conversation -> "6".equals(conversation.getUserId()))
-                .hasSize(5);
+                .hasSize(6);
 
         assertThat(messages)
                 .extracting(MessageEntity::getConversationId)
@@ -248,7 +270,8 @@ class DatabaseSeederDevIT {
                         "conversation-dev-005",
                         "conversation-dev-006",
                         "conversation-dev-007",
-                        "conversation-dev-008"
+                        "conversation-dev-008",
+                        "conversation-dev-009"
                 );
     }
 }
