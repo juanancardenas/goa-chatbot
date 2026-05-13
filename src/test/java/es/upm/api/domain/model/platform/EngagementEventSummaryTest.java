@@ -33,4 +33,43 @@ class EngagementEventSummaryTest {
 
         assertThat(summary.displayText()).isEqualTo("Evento sin t\u00edtulo");
     }
+
+    @Test
+    void displayTextShouldAppendOnlyTypeWhenStateIsBlank() {
+        EngagementEventSummary summary = new EngagementEventSummary(
+                "  EVENT  ",
+                "   ",
+                "  Vista inicial  ",
+                null,
+                LocalDate.of(2026, 5, 5)
+        );
+
+        assertThat(summary.displayText()).isEqualTo("Vista inicial [EVENT]");
+    }
+
+    @Test
+    void displayTextShouldAppendOnlyStateWhenTypeIsBlank() {
+        EngagementEventSummary summary = new EngagementEventSummary(
+                "   ",
+                "  OPEN  ",
+                "  Vista inicial  ",
+                null,
+                LocalDate.of(2026, 5, 6)
+        );
+
+        assertThat(summary.displayText()).isEqualTo("Vista inicial - OPEN");
+    }
+
+    @Test
+    void displayTextShouldUseFallbackTitleWhenTitleIsNull() {
+        EngagementEventSummary summary = new EngagementEventSummary(
+                "  MILESTONE  ",
+                "  DONE  ",
+                null,
+                null,
+                LocalDate.of(2026, 5, 7)
+        );
+
+        assertThat(summary.displayText()).isEqualTo("Evento sin t\u00edtulo [MILESTONE] - DONE");
+    }
 }
