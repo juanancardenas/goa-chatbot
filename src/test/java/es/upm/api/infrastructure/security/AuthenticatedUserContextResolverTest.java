@@ -8,10 +8,12 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
+import java.util.Collection;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -93,8 +95,9 @@ class AuthenticatedUserContextResolverTest {
         Authentication authentication = mock(Authentication.class);
         GrantedAuthority nullAuthority = () -> null;
         GrantedAuthority managerAuthority = () -> "ROLE_MANAGER";
+        Collection<GrantedAuthority> authorities = List.of(nullAuthority, managerAuthority);
         when(authentication.getName()).thenReturn("manager-2");
-        when(authentication.getAuthorities()).thenReturn(List.of(nullAuthority, managerAuthority));
+        doReturn(authorities).when(authentication).getAuthorities();
 
         AuthenticatedUserContext context = this.resolver.resolve(authentication);
 
