@@ -17,10 +17,7 @@ import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
-import es.upm.api.domain.services.conversation.ChatbotConversationService;
-import es.upm.api.domain.services.conversation.ChatbotHistoryService;
-import es.upm.api.domain.services.conversation.ChatbotMessageService;
-import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
+import es.upm.api.domain.services.conversation.*;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
@@ -61,17 +58,15 @@ public class ChatbotService {
     private final ChatbotResponseSanitizer chatbotResponseSanitizer;
     private final ChatbotConversationService chatbotConversationService;
     private final ChatbotHistoryService chatbotHistoryService;
+    private final ChatbotEscalationService chatbotEscalationService;
     private final ChatbotDocumentContextService chatbotDocumentContextService;
     private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ChatbotScopePolicy chatbotScopePolicy;
     private final ChatbotAiProperties chatbotAiProperties;
 
-    private final UserClient userClient;
     private final ChatbotAiClient chatbotAiClient;
 
-    private final ConversationGateway conversationGateway;
-    private final EscalationGateway escalationGateway;
 
     // Constructors
     @Autowired
@@ -79,29 +74,25 @@ public class ChatbotService {
                           ChatbotResponseSanitizer chatbotResponseSanitizer,
                           ChatbotConversationService chatbotConversationService,
                           ChatbotHistoryService chatbotHistoryService,
+                          ChatbotEscalationService chatbotEscalationService,
                           ChatbotDocumentContextService chatbotDocumentContextService,
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
                           ChatbotScopePolicy chatbotScopePolicy,
                           ChatbotAiProperties chatbotAiProperties,
-                          UserClient userClient,
-                          ChatbotAiClient chatbotAiClient,
-                          ConversationGateway conversationGateway,
-                          EscalationGateway escalationGateway
+                          ChatbotAiClient chatbotAiClient
     ) {
         this.chatbotMessageService = chatbotMessageService;
         this.chatbotResponseSanitizer = chatbotResponseSanitizer;
         this.chatbotConversationService = chatbotConversationService;
         this.chatbotHistoryService = chatbotHistoryService;
+        this.chatbotEscalationService = chatbotEscalationService;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
         this.chatbotScopePolicy = chatbotScopePolicy;
         this.chatbotAiProperties = chatbotAiProperties;
-        this.userClient = userClient;
         this.chatbotAiClient = chatbotAiClient;
-        this.conversationGateway = conversationGateway;
-        this.escalationGateway = escalationGateway;
     }
 
     /**
@@ -473,25 +464,9 @@ public class ChatbotService {
             AuthenticatedUserContext authenticatedUser,
             String conversationId
     ) {
-        Conversation conversation = this.chatbotConversationService.requireActiveOwnedConversation(
+        this.chatbotEscalationService.escalateConversation(
                 conversationId,
                 authenticatedUser.getUserId()
-        );
-
-        Optional<UserDto> user = this.readUserSafely(conversation.getUserId());
-
-        LocalDateTime now = LocalDateTime.now();
-        conversation.setStatus(ConversationStatus.ARCHIVED);
-        this.conversationGateway.update(conversation);
-        this.escalationGateway.create(
-                Escalation.builder()
-                        .id(UUID.randomUUID())
-                        .conversationId(conversation.getId())
-                        .userId(conversation.getUserId())
-                        .createdAt(now)
-                        .phone(user.map(UserDto::getMobile).orElse(null))
-                        .email(user.map(UserDto::getEmail).orElse(null))
-                        .build()
         );
     }
 
@@ -531,15 +506,6 @@ public class ChatbotService {
         return switch (questionType) {
             case ENGAGEMENT_STATUS, LEGAL_TASKS, TIMELINE_EVENTS, DOCUMENTS, GENERAL_CONTEXT -> true;
         };
-    }
-
-    // Recupera el usuario vía cliente web
-    private Optional<UserDto> readUserSafely(String userId) {
-        try {
-            return Optional.ofNullable(this.userClient.readById(userId));
-        } catch (RuntimeException ignored) {
-            return Optional.empty();
-        }
     }
 
     private String generateConfiguredAssistantReply(
