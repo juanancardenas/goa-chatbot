@@ -21,6 +21,8 @@ import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
+import es.upm.api.domain.services.conversation.ChatbotMessageService;
+import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
@@ -40,7 +42,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -62,6 +63,8 @@ public class ChatbotService {
     private static final Pattern ENGAGEMENT_ID_PATTERN = Pattern.compile("\\bEL-\\d+\\b", Pattern.CASE_INSENSITIVE);
 
     // Attributes
+    private final ChatbotMessageService chatbotMessageService;
+    private final ChatbotResponseSanitizer chatbotResponseSanitizer;
     private final ChatbotDocumentContextService chatbotDocumentContextService;
     private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
@@ -77,27 +80,31 @@ public class ChatbotService {
 
     // Constructores
     @Autowired
-    public ChatbotService(ConversationGateway conversationGateway,
-                          EscalationGateway escalationGateway,
-                          MessageGateway messageGateway,
-                          ChatbotScopePolicy chatbotScopePolicy,
+    public ChatbotService(ChatbotMessageService chatbotMessageService,
+                          ChatbotResponseSanitizer chatbotResponseSanitizer,
+                          ChatbotDocumentContextService chatbotDocumentContextService,
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
-                          ChatbotDocumentContextService chatbotDocumentContextService,
-                          ChatbotAiClient chatbotAiClient,
+                          ChatbotScopePolicy chatbotScopePolicy,
                           ChatbotAiProperties chatbotAiProperties,
-                          UserClient userClient
+                          UserClient userClient,
+                          ChatbotAiClient chatbotAiClient,
+                          ConversationGateway conversationGateway,
+                          EscalationGateway escalationGateway,
+                          MessageGateway messageGateway
     ) {
+        this.chatbotMessageService = chatbotMessageService;
+        this.chatbotResponseSanitizer = chatbotResponseSanitizer;
+        this.chatbotDocumentContextService = chatbotDocumentContextService;
+        this.chatbotPlatformContextService = chatbotPlatformContextService;
+        this.chatbotQuestionClassifier = chatbotQuestionClassifier;
+        this.chatbotScopePolicy = chatbotScopePolicy;
+        this.chatbotAiProperties = chatbotAiProperties;
+        this.userClient = userClient;
+        this.chatbotAiClient = chatbotAiClient;
         this.conversationGateway = conversationGateway;
         this.escalationGateway = escalationGateway;
         this.messageGateway = messageGateway;
-        this.chatbotScopePolicy = chatbotScopePolicy;
-        this.chatbotPlatformContextService = chatbotPlatformContextService;
-        this.chatbotQuestionClassifier = chatbotQuestionClassifier;
-        this.chatbotDocumentContextService = chatbotDocumentContextService;
-        this.chatbotAiClient = chatbotAiClient;
-        this.chatbotAiProperties = chatbotAiProperties;
-        this.userClient = userClient;
     }
 
     // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
@@ -176,7 +183,7 @@ public class ChatbotService {
 
         List<ChatbotHistoryMessageResult> messages = messagesChunk
                 .stream()
-                .map(this::toHistoryMessageResult)
+                .map(this.chatbotMessageService::toHistoryMessageResult)
                 .toList();
 
         return ChatbotConversationHistoryResult.builder()
@@ -189,19 +196,6 @@ public class ChatbotService {
                 .hasMore(pagedMessages.isHasNext())
                 .totalMessages(pagedMessages.getTotalElements())
                 .messages(messages)
-                .build();
-    }
-
-    private ChatbotHistoryMessageResult toHistoryMessageResult(Message message) {
-        return ChatbotHistoryMessageResult.builder()
-                .id(message.getId())
-                .conversationId(message.getConversationId())
-                .senderType(message.getSenderType().name())
-                .messageType(message.getMessageType().name())
-                .content(message.getContent())
-                .timestamp(message.getTimestamp().toString())
-                .sequenceNumber(message.getSequenceNumber())
-                .parentMessageId(message.getParentMessageId())
                 .build();
     }
 
@@ -291,7 +285,7 @@ public class ChatbotService {
 
         this.conversationGateway.create(conversation);
 
-        String messageId = this.saveMessage(
+        String messageId = this.chatbotMessageService.saveMessage(
                 conversation.getId(),
                 MessageSenderType.USER,
                 MessageType.REQUEST,
@@ -312,7 +306,7 @@ public class ChatbotService {
                 Optional.empty()
         );
 
-        this.saveMessage(
+        this.chatbotMessageService.saveMessage(
                 conversation.getId(),
                 MessageSenderType.ASSISTANT,
                 MessageType.RESPONSE,
@@ -373,9 +367,9 @@ public class ChatbotService {
                 userId
         );
 
-        Integer nextSequence = this.nextSequenceNumber(conversation.getId());
+        Integer nextSequence = this.chatbotMessageService.nextSequenceNumber(conversation.getId());
 
-        String messageId = this.saveMessage(
+        String messageId = this.chatbotMessageService.saveMessage(
                 conversation.getId(),
                 MessageSenderType.USER,
                 MessageType.REQUEST,
@@ -402,7 +396,7 @@ public class ChatbotService {
             usedPlatformData = false;
             sourcesSummary = List.of();
 
-            this.saveMessage(
+            this.chatbotMessageService.saveMessage(
                     conversation.getId(),
                     MessageSenderType.ASSISTANT,
                     MessageType.RESPONSE,
@@ -429,7 +423,7 @@ public class ChatbotService {
             usedPlatformData = false;
             sourcesSummary = List.of();
 
-            this.saveMessage(
+            this.chatbotMessageService.saveMessage(
                     conversation.getId(),
                     MessageSenderType.ASSISTANT,
                     MessageType.RESPONSE,
@@ -531,9 +525,9 @@ public class ChatbotService {
             sourcesSummary = List.of();
         }
 
-        assistantReply = this.normalizeReplyForFrontend(assistantReply);
+        assistantReply = this.chatbotResponseSanitizer.normalizeReplyForFrontend(assistantReply);
 
-        this.saveMessage(
+        this.chatbotMessageService.saveMessage(
                 conversation.getId(),
                 MessageSenderType.ASSISTANT,
                 MessageType.RESPONSE,
@@ -649,30 +643,6 @@ public class ChatbotService {
         };
     }
 
-    // Crea un mensaje y devuelve su ID de BD
-    private String saveMessage(
-            String conversationId,
-            MessageSenderType senderType,
-            MessageType messageType,
-            String content,
-            Integer sequenceNumber,
-            String parentMessageId,
-            LocalDateTime timestamp
-    ) {
-        return this.messageGateway.createAndReturnId(
-                Message.builder()
-                        .id(UUID.randomUUID().toString())
-                        .conversationId(conversationId)
-                        .senderType(senderType)
-                        .messageType(messageType)
-                        .content(content)
-                        .timestamp(timestamp)
-                        .sequenceNumber(sequenceNumber)
-                        .parentMessageId(parentMessageId)
-                        .build()
-        );
-    }
-
     private Conversation requireOwnedConversation(
             String conversationId,
             String userId
@@ -697,11 +667,6 @@ public class ChatbotService {
         }
 
         return conversation;
-    }
-
-    // Devuelve el siguiente secuencial
-    private Integer nextSequenceNumber(String conversationId) {
-        return this.messageGateway.nextSequenceNumber(conversationId);
     }
 
     // Recupera el usuario vía cliente web
@@ -733,7 +698,12 @@ public class ChatbotService {
                     .roleProfile(profile.name())
                     .conversationType(conversation.getType())
                     .platformContext(this.buildPlatformContextForPrompt(platformContext))
-                    .recentMessages(this.readRecentMessagesForPrompt(conversation.getId()))
+                    .recentMessages(
+                            this.chatbotMessageService.readRecentMessagesForPrompt(
+                                    conversation.getId(),
+                                    this.chatbotAiProperties.getMaxContextMessages()
+                            )
+                    )
                     .model(this.chatbotAiProperties.getModel())
                     .maxOutputTokens(this.chatbotAiProperties.getMaxOutputTokens())
                     .temperature(this.chatbotAiProperties.getTemperature())
@@ -879,32 +849,6 @@ public class ChatbotService {
                 legalTasks,
                 events,
                 sources
-        );
-    }
-
-    private List<String> readRecentMessagesForPrompt(String conversationId) {
-        try {
-            List<Message> messages = this.messageGateway.findByConversationIdOrdered(conversationId);
-
-            if (messages == null || messages.isEmpty()) {
-                return List.of();
-            }
-
-            int maxMessages = this.chatbotAiProperties.getMaxContextMessages();
-
-            return messages.stream()
-                    .skip(Math.max(0, messages.size() - maxMessages))
-                    .map(this::toPromptHistoryLine)
-                    .toList();
-        } catch (RuntimeException ignored) {
-            return List.of();
-        }
-    }
-
-    private String toPromptHistoryLine(Message message) {
-        return "%s: %s".formatted(
-                message.getSenderType().name(),
-                this.safeText(message.getContent(), "")
         );
     }
 
@@ -1267,75 +1211,6 @@ public class ChatbotService {
             case CLIENT -> ChatbotResponseMessages.CLIENT_COURTESY_REPLY;
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_COURTESY_REPLY;
         };
-    }
-
-    private String normalizeReplyForFrontend(String reply) {
-        if (reply == null || reply.isBlank()) {
-            return reply;
-        }
-
-        List<String> lines = Arrays.asList(reply.split("\\R"));
-        boolean hasPipes = lines.stream().anyMatch(line -> line.contains("|"));
-
-        if (!hasPipes) {
-            return reply;
-        }
-
-        StringBuilder sanitized = new StringBuilder();
-
-        for (String rawLine : lines) {
-            String line = rawLine == null ? "" : rawLine.trim();
-
-            if (line.isBlank()) {
-                if (!sanitized.isEmpty()) {
-                    sanitized.append(System.lineSeparator());
-                }
-                continue;
-            }
-
-            if (!line.contains("|")) {
-                sanitized.append(line).append(System.lineSeparator());
-                continue;
-            }
-
-            String compact = line.replace(" ", "");
-            if (compact.matches("[|:\\-]+")) {
-                continue;
-            }
-
-            String normalizedLine = line;
-            if (normalizedLine.startsWith("|")) {
-                normalizedLine = normalizedLine.substring(1);
-            }
-            if (normalizedLine.endsWith("|")) {
-                normalizedLine = normalizedLine.substring(0, normalizedLine.length() - 1);
-            }
-
-            String[] cells = Arrays.stream(normalizedLine.split("\\|"))
-                    .map(String::trim)
-                    .filter(cell -> !cell.isBlank())
-                    .toArray(String[]::new);
-
-            if (cells.length == 0) {
-                continue;
-            }
-
-            if (cells.length == 1) {
-                sanitized.append("- ").append(cells[0]).append(System.lineSeparator());
-                continue;
-            }
-
-            sanitized.append("- ").append(cells[0]).append(": ");
-            for (int i = 1; i < cells.length; i++) {
-                if (i > 1) {
-                    sanitized.append("; ");
-                }
-                sanitized.append(cells[i]);
-            }
-            sanitized.append(System.lineSeparator());
-        }
-
-        return sanitized.toString().trim();
     }
 
     private boolean referencesAnotherEngagement(Conversation conversation, String message) {
