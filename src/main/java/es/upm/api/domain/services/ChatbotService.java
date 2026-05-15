@@ -7,8 +7,6 @@ import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.exceptions.BadRequestException;
-import es.upm.api.domain.exceptions.ConflictException;
-import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
@@ -21,6 +19,7 @@ import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
+import es.upm.api.domain.services.conversation.ChatbotConversationService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
@@ -65,6 +64,7 @@ public class ChatbotService {
     // Attributes
     private final ChatbotMessageService chatbotMessageService;
     private final ChatbotResponseSanitizer chatbotResponseSanitizer;
+    private final ChatbotConversationService chatbotConversationService;
     private final ChatbotDocumentContextService chatbotDocumentContextService;
     private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
@@ -82,6 +82,7 @@ public class ChatbotService {
     @Autowired
     public ChatbotService(ChatbotMessageService chatbotMessageService,
                           ChatbotResponseSanitizer chatbotResponseSanitizer,
+                          ChatbotConversationService chatbotConversationService,
                           ChatbotDocumentContextService chatbotDocumentContextService,
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
@@ -95,6 +96,7 @@ public class ChatbotService {
     ) {
         this.chatbotMessageService = chatbotMessageService;
         this.chatbotResponseSanitizer = chatbotResponseSanitizer;
+        this.chatbotConversationService = chatbotConversationService;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
@@ -112,7 +114,7 @@ public class ChatbotService {
             AuthenticatedUserContext authenticatedUser,
             ChatbotContextualConversationCommand command
     ) {
-        Conversation conversation = this.findOrCreateContextualConversation(
+        Conversation conversation = this.chatbotConversationService.findOrCreateContextualConversation(
                 authenticatedUser.getUserId(),
                 command.getEngagementLetterId()
         );
@@ -164,7 +166,7 @@ public class ChatbotService {
             Integer page,
             Integer size
     ) {
-        Conversation conversation = this.requireOwnedConversation(
+        Conversation conversation = this.chatbotConversationService.requireOwnedConversation(
                 conversationId,
                 authenticatedUser.getUserId()
         );
@@ -219,24 +221,6 @@ public class ChatbotService {
         return size;
     }
 
-    private Conversation findOrCreateContextualConversation(String userId, String engagementLetterId) {
-        return this.conversationGateway
-                .findActiveContextualConversation(userId, engagementLetterId, TYPE_CONTEXTUAL)
-                .orElseGet(() -> {
-                    Conversation conversation = Conversation.builder()
-                            .id(UUID.randomUUID().toString())
-                            .userId(userId)
-                            .engagementLetterId(engagementLetterId)
-                            .status(ConversationStatus.ACTIVE)
-                            .type(TYPE_CONTEXTUAL)
-                            .createdAt(LocalDateTime.now())
-                            .build();
-
-                    this.conversationGateway.create(conversation);
-                    return conversation;
-                });
-    }
-
     private List<Conversation> readContextualConversations(String userId, String engagementLetterId) {
         if (engagementLetterId == null || engagementLetterId.isBlank()) {
             throw new BadRequestException("engagementLetterId es obligatorio para listar conversaciones contextuales");
@@ -272,18 +256,12 @@ public class ChatbotService {
 
         this.validateUserMessageLength(userMessage);
 
-        String userId = authenticatedUser.getUserId();
         LocalDateTime date = LocalDateTime.now();
 
-        Conversation conversation = Conversation.builder()
-                .id(UUID.randomUUID().toString())
-                .userId(userId)
-                .status(ConversationStatus.ACTIVE)
-                .type(TYPE_GENERAL)
-                .createdAt(date)
-                .build();
-
-        this.conversationGateway.create(conversation);
+        Conversation conversation = this.chatbotConversationService.createGeneralConversation(
+                authenticatedUser.getUserId(),
+                date
+        );
 
         String messageId = this.chatbotMessageService.saveMessage(
                 conversation.getId(),
@@ -362,7 +340,7 @@ public class ChatbotService {
 
         this.validateUserMessageLength(userMessage);
 
-        Conversation conversation = this.requireActiveOwnedConversation(
+        Conversation conversation = this.chatbotConversationService.requireActiveOwnedConversation(
                 command.getConversationId(),
                 userId
         );
@@ -560,28 +538,31 @@ public class ChatbotService {
                 .build();
     }
 
+    /**
+     * Close a conversation
+     * It will be triggered once the user leaves the chatbot or selects a
+     * different conversation to reopen (previous would be closed)
+     */
     public void closeConversation(
             AuthenticatedUserContext authenticatedUser,
             String conversationId
     ) {
-        Conversation conversation = this.requireOwnedConversation(
+        this.chatbotConversationService.closeConversation(
                 conversationId,
                 authenticatedUser.getUserId()
         );
-
-        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
-            return;
-        }
-
-        conversation.setStatus(ConversationStatus.CLOSED);
-        this.conversationGateway.update(conversation);
     }
 
+    /**
+     * Escalate a conversation
+     * It will be triggered once the user selects this option, creating a new
+     * entry in the table escalations and locking the conversation
+     */
     public void escalateConversation(
             AuthenticatedUserContext authenticatedUser,
             String conversationId
     ) {
-        Conversation conversation = this.requireActiveOwnedConversation(
+        Conversation conversation = this.chatbotConversationService.requireActiveOwnedConversation(
                 conversationId,
                 authenticatedUser.getUserId()
         );
@@ -603,34 +584,32 @@ public class ChatbotService {
         );
     }
 
+    /**
+     * Delete a conversation
+     * It will be triggered from list of conversations, if user runs delete action
+     */
     public void deleteConversation(
             AuthenticatedUserContext authenticatedUser,
             String conversationId
     ) {
-        this.requireOwnedConversation(conversationId, authenticatedUser.getUserId());
-        this.messageGateway.deleteByConversationId(conversationId);
-        this.conversationGateway.delete(conversationId);
+        this.chatbotConversationService.deleteConversation(
+                conversationId,
+                authenticatedUser.getUserId()
+        );
     }
 
+    /**
+     * Reopen a conversation
+     * It will be triggered from list of conversations, once user selects one
+     */
     public void reopenConversation(
             AuthenticatedUserContext authenticatedUser,
             String conversationId
     ) {
-        Conversation conversation = this.requireOwnedConversation(
+        this.chatbotConversationService.reopenConversation(
                 conversationId,
                 authenticatedUser.getUserId()
         );
-
-        if (conversation.getStatus() == ConversationStatus.ACTIVE) {
-            return;
-        }
-
-        if (conversation.getStatus() == ConversationStatus.ARCHIVED) {
-            throw new ConflictException("La conversacion archivada no se puede reabrir");
-        }
-
-        conversation.setStatus(ConversationStatus.ACTIVE);
-        this.conversationGateway.update(conversation);
     }
 
     private boolean requiresPlatformContext(PlatformQuestionType questionType) {
@@ -641,32 +620,6 @@ public class ChatbotService {
         return switch (questionType) {
             case ENGAGEMENT_STATUS, LEGAL_TASKS, TIMELINE_EVENTS, DOCUMENTS, GENERAL_CONTEXT -> true;
         };
-    }
-
-    private Conversation requireOwnedConversation(
-            String conversationId,
-            String userId
-    ) {
-        Conversation conversation = this.conversationGateway.readById(conversationId);
-
-        if (!userId.equals(conversation.getUserId())) {
-            throw new ForbiddenException("No tienes permisos sobre esta conversacion");
-        }
-
-        return conversation;
-    }
-
-    private Conversation requireActiveOwnedConversation(
-            String conversationId,
-            String userId
-    ) {
-        Conversation conversation = this.requireOwnedConversation(conversationId, userId);
-
-        if (conversation.getStatus() != ConversationStatus.ACTIVE) {
-            throw new ConflictException("La conversacion no esta activa");
-        }
-
-        return conversation;
     }
 
     // Recupera el usuario vía cliente web
