@@ -25,6 +25,7 @@ import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
+import es.upm.api.domain.services.conversation.ChatbotConversationService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
@@ -103,6 +104,7 @@ class ChatbotServiceTest {
         this.chatbotService = new ChatbotService(
                 new ChatbotMessageService(this.messagePersistence),
                 new ChatbotResponseSanitizer(),
+                new ChatbotConversationService(this.conversationPersistence, this.messagePersistence),
                 this.chatbotDocumentContextService,
                 this.chatbotPlatformContextService,
                 this.chatbotQuestionClassifier,
