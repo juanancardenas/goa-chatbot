@@ -22,6 +22,7 @@ import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.UserClient;
+import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
 import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
 import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
@@ -120,6 +121,10 @@ class ChatbotServiceTest {
                 this.escalationPersistence,
                 this.userClient
         );
+        ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
+                this.chatbotQuestionClassifier,
+                this.chatbotDocumentContextService
+        );
 
         this.chatbotService = new ChatbotService(
                 chatbotMessageService,
@@ -127,7 +132,7 @@ class ChatbotServiceTest {
                 chatbotConversationService,
                 chatbotHistoryService,
                 chatbotEscalationService,
-                this.chatbotDocumentContextService,
+                chatbotBaseReplyBuilder,
                 this.chatbotPlatformContextService,
                 this.chatbotQuestionClassifier,
                 this.chatbotScopePolicy,
