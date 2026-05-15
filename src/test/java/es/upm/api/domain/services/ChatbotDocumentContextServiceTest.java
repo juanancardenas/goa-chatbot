@@ -2,6 +2,7 @@ package es.upm.api.domain.services;
 
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.model.Conversation;
+import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;

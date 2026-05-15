@@ -1,4 +1,4 @@
-package es.upm.api.domain.services;
+package es.upm.api.domain.services.basereply;
 
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;

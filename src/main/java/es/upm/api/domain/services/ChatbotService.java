@@ -11,6 +11,8 @@ import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
+import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.conversation.*;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;

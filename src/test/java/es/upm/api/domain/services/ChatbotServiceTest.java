@@ -22,6 +22,8 @@ import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.UserClient;
+import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
+import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.conversation.ChatbotConversationService;
 import es.upm.api.domain.services.conversation.ChatbotEscalationService;

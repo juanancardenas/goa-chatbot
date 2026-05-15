@@ -1,11 +1,10 @@
-package es.upm.api.domain.services.conversation;
+package es.upm.api.domain.services.basereply;
 
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
-import es.upm.api.domain.services.ChatbotDocumentContextService;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import org.springframework.stereotype.Service;
 
