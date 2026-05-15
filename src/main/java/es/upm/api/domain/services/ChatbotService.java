@@ -87,7 +87,7 @@ public class ChatbotService {
                           UserClient userClient,
                           ChatbotAiClient chatbotAiClient,
                           ConversationGateway conversationGateway,
-                          EscalationGateway escalationGateway,
+                          EscalationGateway escalationGateway
     ) {
         this.chatbotMessageService = chatbotMessageService;
         this.chatbotResponseSanitizer = chatbotResponseSanitizer;
@@ -104,7 +104,9 @@ public class ChatbotService {
         this.escalationGateway = escalationGateway;
     }
 
-    // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
+    /**
+     * Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
+     */
     public ChatbotContextualConversationResult startContextualConversation(
             AuthenticatedUserContext authenticatedUser,
             ChatbotContextualConversationCommand command
