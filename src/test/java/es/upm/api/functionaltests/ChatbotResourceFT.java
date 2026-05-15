@@ -582,7 +582,7 @@ class ChatbotResourceFT {
         assertThat(response.getBody().getType()).isEqualTo(TYPE_CONTEXTUAL);
         assertThat(response.getBody().getStatus()).isEqualTo(ConversationStatus.CLOSED.name());
         assertThat(response.getBody().getPage()).isEqualTo(0);
-        assertThat(response.getBody().getSize()).isEqualTo(10);
+        assertThat(response.getBody().getSize()).isEqualTo(20);
         assertThat(response.getBody().getHasMore()).isFalse();
         assertThat(response.getBody().getTotalMessages()).isEqualTo(2);
         assertThat(response.getBody().getMessages()).hasSize(2);
@@ -595,18 +595,19 @@ class ChatbotResourceFT {
     }
 
     @Test
-    void testReadContextualConversationHistoryListWithoutEngagementLetterReturnsBadRequest() {
+    void testReadContextualConversationHistoryListWithoutEngagementLetterReturnsAllContextualConversations() {
         HttpHeaders headers = this.authHeaders("fake-token-contextual-list-bad-request", "customer-1", List.of("customer"));
 
-        ResponseEntity<String> response = this.restTemplate.exchange(
+        ResponseEntity<ChatbotConversationSummaryDto[]> response = this.restTemplate.exchange(
                 "http://localhost:" + this.port + ChatbotResource.CHATBOT + ChatbotResource.CONVERSATIONS + "?type=CONTEXTUAL",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
-                String.class
+                ChatbotConversationSummaryDto[].class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).contains("engagementLetterId es obligatorio para listar conversaciones contextuales");
+        assertThat(response.getStatusCode()).isEqualTo(OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).isEmpty();
     }
 
     @Test

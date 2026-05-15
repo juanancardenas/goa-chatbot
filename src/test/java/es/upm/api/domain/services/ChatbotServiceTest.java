@@ -26,6 +26,7 @@ import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.conversation.ChatbotConversationService;
+import es.upm.api.domain.services.conversation.ChatbotHistoryService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
@@ -101,10 +102,23 @@ class ChatbotServiceTest {
         lenient().when(this.chatbotAiProperties.getTemperature()).thenReturn(0.2);
         lenient().when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(false);
 
+        ChatbotMessageService chatbotMessageService = new ChatbotMessageService(this.messagePersistence);
+        ChatbotConversationService chatbotConversationService = new ChatbotConversationService(
+                this.conversationPersistence,
+                this.messagePersistence
+        );
+        ChatbotHistoryService chatbotHistoryService = new ChatbotHistoryService(
+                this.conversationPersistence,
+                this.messagePersistence,
+                chatbotConversationService,
+                chatbotMessageService
+        );
+
         this.chatbotService = new ChatbotService(
-                new ChatbotMessageService(this.messagePersistence),
+                chatbotMessageService,
                 new ChatbotResponseSanitizer(),
-                new ChatbotConversationService(this.conversationPersistence, this.messagePersistence),
+                chatbotConversationService,
+                chatbotHistoryService,
                 this.chatbotDocumentContextService,
                 this.chatbotPlatformContextService,
                 this.chatbotQuestionClassifier,
@@ -113,8 +127,7 @@ class ChatbotServiceTest {
                 this.userClient,
                 this.chatbotAiClient,
                 this.conversationPersistence,
-                this.escalationPersistence,
-                this.messagePersistence
+                this.escalationPersistence
         );
     }
 
@@ -305,33 +318,55 @@ class ChatbotServiceTest {
                 () -> chatbotService.readConversationHistoryList(this.authenticatedUser, "other", null)
         );
 
-        assertThat(exception).hasMessageContaining("type debe ser GENERAL o CONTEXTUAL");
+        assertThat(exception).hasMessageContaining("Tipo de conversacion no soportado: other");
         verify(conversationPersistence, never()).findByUserIdAndTypeOrderByCreatedAtDesc(any(), any());
     }
 
     @Test
-    void readConversationHistoryListShouldRequireConversationType() {
+    void readConversationHistoryListShouldDefaultToGeneralTypeWhenBlank() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
-        BadRequestException exception = assertThrows(
-                BadRequestException.class,
-                () -> chatbotService.readConversationHistoryList(this.authenticatedUser, "   ", null)
-        );
+        Conversation conversation = Conversation.builder()
+                .id("conversation-general-1")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 9, 0))
+                .build();
 
-        assertThat(exception).hasMessageContaining("type es obligatorio");
-        verify(conversationPersistence, never()).findByUserIdAndTypeOrderByCreatedAtDesc(any(), any());
+        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL"))
+                .thenReturn(List.of(conversation));
+        when(messagePersistence.findLatestByConversationId("conversation-general-1")).thenReturn(Optional.empty());
+
+        var response = chatbotService.readConversationHistoryList(this.authenticatedUser, "   ", null);
+
+        assertThat(response).hasSize(1);
+        assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-general-1");
+        verify(conversationPersistence).findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL");
     }
 
     @Test
-    void readConversationHistoryListShouldRequireEngagementLetterIdForContextualType() {
+    void readConversationHistoryListShouldReturnAllContextualConversationsWhenEngagementLetterIdIsBlank() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
 
-        BadRequestException exception = assertThrows(
-                BadRequestException.class,
-                () -> chatbotService.readConversationHistoryList(this.authenticatedUser, "CONTEXTUAL", " ")
-        );
+        Conversation conversation = Conversation.builder()
+                .id("conversation-ctx-all")
+                .userId("customer-1")
+                .engagementLetterId("EL-33")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 12, 0))
+                .build();
 
-        assertThat(exception).hasMessageContaining("engagementLetterId es obligatorio");
+        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", "CONTEXTUAL"))
+                .thenReturn(List.of(conversation));
+        when(messagePersistence.findLatestByConversationId("conversation-ctx-all")).thenReturn(Optional.empty());
+
+        var response = chatbotService.readConversationHistoryList(this.authenticatedUser, "CONTEXTUAL", " ");
+
+        assertThat(response).hasSize(1);
+        assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-ctx-all");
+        verify(conversationPersistence).findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", "CONTEXTUAL");
         verify(conversationPersistence, never())
                 .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(any(), any(), any());
     }
@@ -370,11 +405,11 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
-        when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 10))
+        when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 20))
                 .thenReturn(PageResult.<Message>builder()
                         .content(List.of(newestInPage, oldestInPage))
                         .page(0)
-                        .size(10)
+                        .size(20)
                         .hasNext(true)
                         .totalElements(12)
                         .build());
@@ -384,7 +419,7 @@ class ChatbotServiceTest {
         assertThat(response.getConversationId()).isEqualTo("conversation-history");
         assertThat(response.getEngagementLetterId()).isEqualTo("EL-10");
         assertThat(response.getPage()).isEqualTo(0);
-        assertThat(response.getSize()).isEqualTo(10);
+        assertThat(response.getSize()).isEqualTo(20);
         assertThat(response.getHasMore()).isTrue();
         assertThat(response.getTotalMessages()).isEqualTo(12);
         assertThat(response.getMessages()).hasSize(2);
@@ -395,7 +430,7 @@ class ChatbotServiceTest {
     }
 
     @Test
-    void readConversationHistoryShouldRejectNegativePage() {
+    void readConversationHistoryShouldDefaultNegativePageToFirstPage() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
 
         Conversation conversation = Conversation.builder()
@@ -406,18 +441,24 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
+        when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 10))
+                .thenReturn(PageResult.<Message>builder()
+                        .content(List.of())
+                        .page(0)
+                        .size(10)
+                        .hasNext(false)
+                        .totalElements(0)
+                        .build());
 
-        BadRequestException exception = assertThrows(
-                BadRequestException.class,
-                () -> chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", -1, 10)
-        );
+        var response = chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", -1, 10);
 
-        assertThat(exception).hasMessageContaining("page debe ser mayor o igual que 0");
-        verify(messagePersistence, never()).findByConversationIdOrderedDesc(any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getSize()).isEqualTo(10);
+        verify(messagePersistence).findByConversationIdOrderedDesc("conversation-history", 0, 10);
     }
 
     @Test
-    void readConversationHistoryShouldRejectSizeOutsideSupportedRange() {
+    void readConversationHistoryShouldClampSizeToMaximum() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
 
         Conversation conversation = Conversation.builder()
@@ -428,18 +469,24 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
+        when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 100))
+                .thenReturn(PageResult.<Message>builder()
+                        .content(List.of())
+                        .page(0)
+                        .size(100)
+                        .hasNext(false)
+                        .totalElements(0)
+                        .build());
 
-        BadRequestException exception = assertThrows(
-                BadRequestException.class,
-                () -> chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", 0, 101)
-        );
+        var response = chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", 0, 101);
 
-        assertThat(exception).hasMessageContaining("size debe estar entre 1 y 100");
-        verify(messagePersistence, never()).findByConversationIdOrderedDesc(any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getSize()).isEqualTo(100);
+        verify(messagePersistence).findByConversationIdOrderedDesc("conversation-history", 0, 100);
     }
 
     @Test
-    void readConversationHistoryShouldRejectSizeBelowMinimum() {
+    void readConversationHistoryShouldDefaultSizeWhenBelowMinimum() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
 
         Conversation conversation = Conversation.builder()
@@ -450,14 +497,20 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
+        when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 20))
+                .thenReturn(PageResult.<Message>builder()
+                        .content(List.of())
+                        .page(0)
+                        .size(20)
+                        .hasNext(false)
+                        .totalElements(0)
+                        .build());
 
-        BadRequestException exception = assertThrows(
-                BadRequestException.class,
-                () -> chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", 0, 0)
-        );
+        var response = chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", 0, 0);
 
-        assertThat(exception).hasMessageContaining("size debe estar entre 1 y 100");
-        verify(messagePersistence, never()).findByConversationIdOrderedDesc(any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getSize()).isEqualTo(20);
+        verify(messagePersistence).findByConversationIdOrderedDesc("conversation-history", 0, 20);
     }
 
     @Test

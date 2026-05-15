@@ -11,15 +11,14 @@ import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
-import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.UserDto;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
-import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.conversation.ChatbotConversationService;
+import es.upm.api.domain.services.conversation.ChatbotHistoryService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
@@ -32,15 +31,12 @@ import es.upm.api.domain.model.configuration.ChatbotMessageResult;
 import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
 import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult;
 import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
-import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
 import es.upm.api.domain.model.configuration.ChatbotConversationSummaryResult;
-import es.upm.api.domain.model.configuration.PageResult;
 import es.upm.api.domain.model.configuration.AuthenticatedUserContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -54,7 +50,6 @@ public class ChatbotService {
 
     // Constants
     private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
-    private static final String TYPE_GENERAL = "GENERAL";
 
     private static final String RESPONSE_MODE_GENERAL = "GENERAL";
     private static final String RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA = "CONTEXTUAL_PLATFORM_DATA";
@@ -65,6 +60,7 @@ public class ChatbotService {
     private final ChatbotMessageService chatbotMessageService;
     private final ChatbotResponseSanitizer chatbotResponseSanitizer;
     private final ChatbotConversationService chatbotConversationService;
+    private final ChatbotHistoryService chatbotHistoryService;
     private final ChatbotDocumentContextService chatbotDocumentContextService;
     private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
@@ -76,13 +72,13 @@ public class ChatbotService {
 
     private final ConversationGateway conversationGateway;
     private final EscalationGateway escalationGateway;
-    private final MessageGateway messageGateway;
 
-    // Constructores
+    // Constructors
     @Autowired
     public ChatbotService(ChatbotMessageService chatbotMessageService,
                           ChatbotResponseSanitizer chatbotResponseSanitizer,
                           ChatbotConversationService chatbotConversationService,
+                          ChatbotHistoryService chatbotHistoryService,
                           ChatbotDocumentContextService chatbotDocumentContextService,
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
@@ -91,12 +87,12 @@ public class ChatbotService {
                           UserClient userClient,
                           ChatbotAiClient chatbotAiClient,
                           ConversationGateway conversationGateway,
-                          EscalationGateway escalationGateway,
-                          MessageGateway messageGateway
+                          EscalationGateway escalationGateway
     ) {
         this.chatbotMessageService = chatbotMessageService;
         this.chatbotResponseSanitizer = chatbotResponseSanitizer;
         this.chatbotConversationService = chatbotConversationService;
+        this.chatbotHistoryService = chatbotHistoryService;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
@@ -106,10 +102,11 @@ public class ChatbotService {
         this.chatbotAiClient = chatbotAiClient;
         this.conversationGateway = conversationGateway;
         this.escalationGateway = escalationGateway;
-        this.messageGateway = messageGateway;
     }
 
-    // Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
+    /**
+     * Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
+     */
     public ChatbotContextualConversationResult startContextualConversation(
             AuthenticatedUserContext authenticatedUser,
             ChatbotContextualConversationCommand command
@@ -127,127 +124,41 @@ public class ChatbotService {
                 .build();
     }
 
-    // Reading Conversation History List
+    /**
+     * Reading Conversation History List to display historic of conversations
+     */
     public List<ChatbotConversationSummaryResult> readConversationHistoryList(
             AuthenticatedUserContext authenticatedUser,
             String type,
             String engagementLetterId
     ) {
-        String normalizedType = this.normalizeConversationType(type);
-        String userId = authenticatedUser.getUserId();
-
-        List<Conversation> conversations = TYPE_CONTEXTUAL.equals(normalizedType)
-                ? this.readContextualConversations(userId, engagementLetterId)
-                : this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
-
-        return conversations.stream()
-                .map(this::toConversationSummaryResult)
-                .toList();
+        return this.chatbotHistoryService.readConversationHistoryList(
+                authenticatedUser.getUserId(),
+                type,
+                engagementLetterId
+        );
     }
 
-    private ChatbotConversationSummaryResult toConversationSummaryResult(Conversation conversation) {
-        Optional<Message> latestMessage = this.messageGateway.findLatestByConversationId(conversation.getId());
-
-        return ChatbotConversationSummaryResult.builder()
-                .conversationId(conversation.getId())
-                .type(conversation.getType())
-                .status(conversation.getStatus().name())
-                .engagementLetterId(conversation.getEngagementLetterId())
-                .createdAt(conversation.getCreatedAt().toString())
-                .lastMessageAt(latestMessage.map(message -> message.getTimestamp().toString()).orElse(null))
-                .preview(latestMessage.map(Message::getContent).orElse(null))
-                .build();
-    }
-
-    // Reading the messages of a conversation
+    /**
+     * Reading the messages of a conversation
+     */
     public ChatbotConversationHistoryResult readConversationHistory(
             AuthenticatedUserContext authenticatedUser,
             String conversationId,
             Integer page,
             Integer size
     ) {
-        Conversation conversation = this.chatbotConversationService.requireOwnedConversation(
+        return this.chatbotHistoryService.readConversationHistory(
+                authenticatedUser.getUserId(),
                 conversationId,
-                authenticatedUser.getUserId()
-        );
-
-        int normalizedPage = this.normalizeHistoryPage(page);
-        int normalizedSize = this.normalizeHistorySize(size);
-
-        PageResult<Message> pagedMessages = this.messageGateway.findByConversationIdOrderedDesc(
-                conversationId,
-                normalizedPage,
-                normalizedSize
-        );
-
-        List<Message> messagesChunk = new ArrayList<>(pagedMessages.getContent());
-        messagesChunk.sort((left, right) -> Integer.compare(left.getSequenceNumber(), right.getSequenceNumber()));
-
-        List<ChatbotHistoryMessageResult> messages = messagesChunk
-                .stream()
-                .map(this.chatbotMessageService::toHistoryMessageResult)
-                .toList();
-
-        return ChatbotConversationHistoryResult.builder()
-                .conversationId(conversation.getId())
-                .engagementLetterId(conversation.getEngagementLetterId())
-                .type(conversation.getType())
-                .status(conversation.getStatus().name())
-                .page(normalizedPage)
-                .size(normalizedSize)
-                .hasMore(pagedMessages.isHasNext())
-                .totalMessages(pagedMessages.getTotalElements())
-                .messages(messages)
-                .build();
-    }
-
-    private int normalizeHistoryPage(Integer page) {
-        if (page == null) {
-            return 0;
-        }
-        if (page < 0) {
-            throw new BadRequestException("page debe ser mayor o igual que 0");
-        }
-        return page;
-    }
-
-    private int normalizeHistorySize(Integer size) {
-        if (size == null) {
-            return 10;
-        }
-        if (size < 1 || size > 100) {
-            throw new BadRequestException("size debe estar entre 1 y 100");
-        }
-        return size;
-    }
-
-    private List<Conversation> readContextualConversations(String userId, String engagementLetterId) {
-        if (engagementLetterId == null || engagementLetterId.isBlank()) {
-            throw new BadRequestException("engagementLetterId es obligatorio para listar conversaciones contextuales");
-        }
-
-        return this.conversationGateway.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
-                userId,
-                engagementLetterId,
-                TYPE_CONTEXTUAL
+                page,
+                size
         );
     }
 
-    private String normalizeConversationType(String type) {
-        if (type == null || type.isBlank()) {
-            throw new BadRequestException("type es obligatorio");
-        }
-
-        String normalizedType = type.trim().toUpperCase(Locale.ROOT);
-
-        if (!TYPE_GENERAL.equals(normalizedType) && !TYPE_CONTEXTUAL.equals(normalizedType)) {
-            throw new BadRequestException("type debe ser GENERAL o CONTEXTUAL");
-        }
-
-        return normalizedType;
-    }
-
-    // Starts General Conversation, this type of conversation is not linked to other process or entity
+    /**
+     * Starts General Conversation, this type of conversation is not linked to other process or entity
+     */
     public ChatbotMessageResult startGeneralConversation(
             AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
