@@ -5,7 +5,6 @@ import es.upm.api.domain.enums.*;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
-import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
@@ -22,6 +21,7 @@ import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.UserClient;
+import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
 import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
 import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
 import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
@@ -125,6 +125,11 @@ class ChatbotServiceTest {
                 this.chatbotQuestionClassifier,
                 this.chatbotDocumentContextService
         );
+        ChatbotAiReplyService chatbotAiReplyService = new ChatbotAiReplyService(
+                this.chatbotAiClient,
+                this.chatbotAiProperties,
+                chatbotMessageService
+        );
 
         this.chatbotService = new ChatbotService(
                 chatbotMessageService,
@@ -133,11 +138,11 @@ class ChatbotServiceTest {
                 chatbotHistoryService,
                 chatbotEscalationService,
                 chatbotBaseReplyBuilder,
+                chatbotAiReplyService,
                 this.chatbotPlatformContextService,
                 this.chatbotQuestionClassifier,
                 this.chatbotScopePolicy,
-                this.chatbotAiProperties,
-                this.chatbotAiClient
+                this.chatbotAiProperties
         );
     }
 
@@ -800,50 +805,6 @@ class ChatbotServiceTest {
         var response = this.chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getMessage()).isEqualTo("Respuesta generada por Ollama");
-        verify(this.chatbotAiClient).generate(any());
-    }
-
-    @Test
-    void sendMessageShouldKeepBaseReplyWhenAiClientFails() {
-        this.authenticate("professional-1", "ROLE_ADMIN");
-
-        Conversation existingConversation = Conversation.builder()
-                .id("conversation-ai-fallback")
-                .userId("professional-1")
-                .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
-                .build();
-
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
-        when(this.conversationPersistence.readById("conversation-ai-fallback")).thenReturn(existingConversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-ai-fallback")).thenReturn(3);
-        when(this.messagePersistence.createAndReturnId(any(Message.class)))
-                .thenReturn("user-message-id", "assistant-message-id");
-        when(this.messagePersistence.findByConversationIdOrdered("conversation-ai-fallback"))
-                .thenReturn(List.of());
-        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Explícame qué puedes hacer")))
-                .thenReturn(ChatbotScopeDecision.allow());
-        when(this.chatbotQuestionClassifier.classify("Explícame qué puedes hacer"))
-                .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
-        when(this.chatbotAiClient.generate(any()))
-                .thenReturn(ChatbotAiResponse.builder()
-                        .content("Ahora mismo no puedo generar una respuesta con IA.")
-                        .provider("ollama")
-                        .model("llama3.2:3b")
-                        .finishReason("ERROR")
-                        .error("AI_PROVIDER_ERROR")
-                        .build());
-
-        ChatbotMessageCommand request = new ChatbotMessageCommand(
-                "conversation-ai-fallback",
-                "Explícame qué puedes hacer"
-        );
-
-        var response = this.chatbotService.sendMessage(this.authenticatedUser, request);
-
-        assertThat(response.getMessage()).isNotBlank();
-        assertThat(response.getMessage()).isNotEqualTo("Ahora mismo no puedo generar una respuesta con IA.");
         verify(this.chatbotAiClient).generate(any());
     }
 
@@ -2060,95 +2021,6 @@ class ChatbotServiceTest {
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(this.messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
         assertThat(messageCaptor.getAllValues().get(1).getContent()).isEqualTo(response.getMessage());
-    }
-
-    @Test
-    void sendMessageShouldBuildAiRequestWithContextAndRecentMessages() {
-        this.authenticate("customer-9", "ROLE_CUSTOMER");
-
-        Conversation existingConversation = Conversation.builder()
-                .id("conversation-ai-context")
-                .userId("customer-9")
-                .engagementLetterId("EL-555")
-                .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
-                .build();
-
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .engagementLetterId("EL-555")
-                .ownerDisplayName("Ana Ocaña")
-                .procedureTitles(List.of("Reclamación civil"))
-                .legalTaskSummaries(List.of("Revisar documentación", "Presentar escrito"))
-                .recentEventSummaries(List.of("Escrito presentado", "Vista señalada"))
-                .sourcesSummary(List.of("Hoja de encargo", "Cronología"))
-                .build();
-
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
-        when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(2);
-        when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(true);
-        when(this.conversationPersistence.readById("conversation-ai-context")).thenReturn(existingConversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-ai-context")).thenReturn(7);
-        when(this.messagePersistence.createAndReturnId(any(Message.class)))
-                .thenReturn("user-message-id", "assistant-message-id");
-        when(this.messagePersistence.findByConversationIdOrdered("conversation-ai-context"))
-                .thenReturn(List.of(
-                        Message.builder()
-                                .senderType(MessageSenderType.USER)
-                                .content("  Mensaje inicial  ")
-                                .build(),
-                        Message.builder()
-                                .senderType(MessageSenderType.ASSISTANT)
-                                .content("Respuesta previa")
-                                .build(),
-                        Message.builder()
-                                .senderType(MessageSenderType.USER)
-                                .content("Última pregunta")
-                                .build()
-                ));
-        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Qué tareas legales hay en mi caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
-        when(this.chatbotQuestionClassifier.classify("Qué tareas legales hay en mi caso"))
-                .thenReturn(PlatformQuestionType.LEGAL_TASKS);
-        when(this.chatbotPlatformContextService.loadContext("EL-555")).thenReturn(Optional.of(platformContext));
-        when(this.chatbotAiClient.generate(any()))
-                .thenReturn(ChatbotAiResponse.builder()
-                        .content("Respuesta IA contextual")
-                        .provider("ollama")
-                        .model("llama3.2:3b")
-                        .finishReason("SUCCESS")
-                        .build());
-
-        ChatbotMessageResult response = this.chatbotService.sendMessage(this.authenticatedUser, 
-                new ChatbotMessageCommand("conversation-ai-context", "Qué tareas legales hay en mi caso")
-        );
-
-        ArgumentCaptor<ChatbotAiRequest> requestCaptor = ArgumentCaptor.forClass(ChatbotAiRequest.class);
-        verify(this.chatbotAiClient).generate(requestCaptor.capture());
-
-        ChatbotAiRequest aiRequest = requestCaptor.getValue();
-        assertThat(aiRequest.getConversationId()).isEqualTo("conversation-ai-context");
-        assertThat(aiRequest.getUserId()).isEqualTo("customer-9");
-        assertThat(aiRequest.getRoleProfile()).isEqualTo("CLIENT");
-        assertThat(aiRequest.getConversationType()).isEqualTo("CONTEXTUAL");
-        assertThat(aiRequest.getModel()).isEqualTo("llama3.2:3b");
-        assertThat(aiRequest.getMaxOutputTokens()).isEqualTo(500);
-        assertThat(aiRequest.getTemperature()).isEqualTo(0.2);
-        assertThat(aiRequest.getDocumentsAvailable()).isTrue();
-        assertThat(aiRequest.getPlatformContext()).contains("EngagementLetterId: EL-555");
-        assertThat(aiRequest.getPlatformContext()).contains("Cliente/propietario visible: Ana Ocaña");
-        assertThat(aiRequest.getPlatformContext()).contains("Revisar documentación");
-        assertThat(aiRequest.getPlatformContext()).contains("Escrito presentado");
-        assertThat(aiRequest.getPlatformContext()).contains("Hoja de encargo");
-        assertThat(aiRequest.getRecentMessages()).containsExactly(
-                "ASSISTANT: Respuesta previa",
-                "USER: Última pregunta"
-        );
-        assertThat(aiRequest.getUserMessage()).contains("Pregunta actual del usuario:");
-        assertThat(aiRequest.getUserMessage()).contains("Qué tareas legales hay en mi caso");
-        assertThat(aiRequest.getUserMessage()).contains("encargo activo: EL-555");
-        assertThat(response.getMessage()).isEqualTo("Respuesta IA contextual");
-        assertThat(response.getUsedPlatformData()).isTrue();
     }
 
     private void authenticate(String userId, String... authorities) {

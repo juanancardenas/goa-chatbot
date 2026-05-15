@@ -1,0 +1,244 @@
+package es.upm.api.domain.services.aireply;
+
+import es.upm.api.configurations.ChatbotAiProperties;
+import es.upm.api.domain.enums.ConversationProfileType;
+import es.upm.api.domain.model.Conversation;
+import es.upm.api.domain.model.ai.ChatbotAiRequest;
+import es.upm.api.domain.model.ai.ChatbotAiResponse;
+import es.upm.api.domain.model.platform.ChatbotPlatformContext;
+import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.services.conversation.ChatbotMessageService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class ChatbotAiReplyServiceTest {
+
+    @Mock
+    private ChatbotAiClient chatbotAiClient;
+
+    @Mock
+    private ChatbotAiProperties chatbotAiProperties;
+
+    @Mock
+    private ChatbotMessageService chatbotMessageService;
+
+    private ChatbotAiReplyService chatbotAiReplyService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(this.chatbotAiProperties.getBasePrompt()).thenReturn("Prompt base de pruebas");
+        lenient().when(this.chatbotAiProperties.getModel()).thenReturn("llama3.2:3b");
+        lenient().when(this.chatbotAiProperties.getMaxOutputTokens()).thenReturn(500);
+        lenient().when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(2);
+        lenient().when(this.chatbotAiProperties.getTemperature()).thenReturn(0.2);
+        lenient().when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(true);
+
+        this.chatbotAiReplyService = new ChatbotAiReplyService(
+                this.chatbotAiClient,
+                this.chatbotAiProperties,
+                this.chatbotMessageService
+        );
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenAiIsDisabled() {
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+
+        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                this.generalConversation(),
+                ConversationProfileType.PROFESSIONAL,
+                "What can you do?",
+                "Safe base reply",
+                Optional.empty()
+        );
+
+        assertThat(response).isEqualTo("Safe base reply");
+        verify(this.chatbotAiClient, never()).generate(any(ChatbotAiRequest.class));
+        verify(this.chatbotMessageService, never()).readRecentMessagesForPrompt(any(), anyInt());
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldBuildRequestWithContextAndRecentMessages() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-ai-context")
+                .userId("customer-9")
+                .engagementLetterId("EL-555")
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-555")
+                .ownerDisplayName("Ana Ocana")
+                .procedureTitles(List.of("Civil claim"))
+                .legalTaskSummaries(List.of("Review documentation", "File pleading"))
+                .recentEventSummaries(List.of("Pleading filed", "Hearing scheduled"))
+                .sourcesSummary(List.of("Engagement letter", "Timeline"))
+                .build();
+
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-ai-context", 2))
+                .thenReturn(List.of("ASSISTANT: Previous reply", "USER: Last question"));
+        when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
+                .thenReturn(ChatbotAiResponse.builder()
+                        .content("  AI contextual reply  ")
+                        .provider("ollama")
+                        .model("llama3.2:3b")
+                        .finishReason("SUCCESS")
+                        .build());
+
+        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "Which legal tasks are pending?",
+                "Safe contextual base reply",
+                Optional.of(platformContext)
+        );
+
+        ArgumentCaptor<ChatbotAiRequest> requestCaptor = ArgumentCaptor.forClass(ChatbotAiRequest.class);
+        verify(this.chatbotAiClient).generate(requestCaptor.capture());
+
+        ChatbotAiRequest aiRequest = requestCaptor.getValue();
+        assertThat(response).isEqualTo("AI contextual reply");
+        assertThat(aiRequest.getConversationId()).isEqualTo("conversation-ai-context");
+        assertThat(aiRequest.getUserId()).isEqualTo("customer-9");
+        assertThat(aiRequest.getBasePrompt()).isEqualTo("Prompt base de pruebas");
+        assertThat(aiRequest.getRoleProfile()).isEqualTo("CLIENT");
+        assertThat(aiRequest.getConversationType()).isEqualTo("CONTEXTUAL");
+        assertThat(aiRequest.getModel()).isEqualTo("llama3.2:3b");
+        assertThat(aiRequest.getMaxOutputTokens()).isEqualTo(500);
+        assertThat(aiRequest.getTemperature()).isEqualTo(0.2);
+        assertThat(aiRequest.getDocumentsAvailable()).isTrue();
+        assertThat(aiRequest.getRecentMessages()).containsExactly(
+                "ASSISTANT: Previous reply",
+                "USER: Last question"
+        );
+        assertThat(aiRequest.getPlatformContext()).contains("EngagementLetterId: EL-555");
+        assertThat(aiRequest.getPlatformContext()).contains("Cliente/propietario visible: Ana Ocana");
+        assertThat(aiRequest.getPlatformContext()).contains("Review documentation");
+        assertThat(aiRequest.getPlatformContext()).contains("Pleading filed");
+        assertThat(aiRequest.getPlatformContext()).contains("Engagement letter");
+        assertThat(aiRequest.getUserMessage()).contains("Pregunta actual del usuario:");
+        assertThat(aiRequest.getUserMessage()).contains("Which legal tasks are pending?");
+        assertThat(aiRequest.getUserMessage()).contains("Safe contextual base reply");
+        assertThat(aiRequest.getUserMessage()).contains("encargo activo: EL-555");
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldUseConversationEngagementWhenNoPlatformContextExists() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-context-no-platform")
+                .userId("customer-1")
+                .engagementLetterId("EL-999")
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-context-no-platform", 2))
+                .thenReturn(List.of());
+        when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
+                .thenReturn(ChatbotAiResponse.builder()
+                        .content("AI reply without platform context")
+                        .finishReason("SUCCESS")
+                        .build());
+
+        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "Any update?",
+                "Safe fallback base reply",
+                Optional.empty()
+        );
+
+        ArgumentCaptor<ChatbotAiRequest> requestCaptor = ArgumentCaptor.forClass(ChatbotAiRequest.class);
+        verify(this.chatbotAiClient).generate(requestCaptor.capture());
+
+        assertThat(response).isEqualTo("AI reply without platform context");
+        assertThat(requestCaptor.getValue().getPlatformContext())
+                .isEqualTo("No hay contexto de plataforma disponible.");
+        assertThat(requestCaptor.getValue().getUserMessage()).contains("encargo activo: EL-999");
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenAiResponseIsInvalid() {
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
+                .thenReturn(List.of());
+        when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
+                .thenReturn(null)
+                .thenReturn(ChatbotAiResponse.builder().error("AI_PROVIDER_ERROR").build())
+                .thenReturn(ChatbotAiResponse.builder().content("   ").build());
+
+        Conversation conversation = this.generalConversation();
+
+        assertThat(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        )).isEqualTo("Safe base reply");
+        assertThat(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        )).isEqualTo("Safe base reply");
+        assertThat(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        )).isEqualTo("Safe base reply");
+
+        verify(this.chatbotAiClient, times(3)).generate(any(ChatbotAiRequest.class));
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenAiClientThrowsException() {
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
+                .thenReturn(List.of());
+        when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
+                .thenThrow(new RuntimeException("provider unavailable"));
+
+        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                this.generalConversation(),
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        );
+
+        assertThat(response).isEqualTo("Safe base reply");
+    }
+
+    private Conversation generalConversation() {
+        return Conversation.builder()
+                .id("conversation-general")
+                .userId("professional-1")
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+    }
+}
