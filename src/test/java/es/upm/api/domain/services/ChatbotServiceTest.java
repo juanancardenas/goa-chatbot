@@ -25,6 +25,8 @@ import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
+import es.upm.api.domain.services.conversation.ChatbotMessageService;
+import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
@@ -32,7 +34,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -83,7 +84,6 @@ class ChatbotServiceTest {
     @Mock
     private UserClient userClient;
 
-    @InjectMocks
     private ChatbotService chatbotService;
     private AuthenticatedUserContext authenticatedUser;
 
@@ -99,6 +99,21 @@ class ChatbotServiceTest {
         lenient().when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(10);
         lenient().when(this.chatbotAiProperties.getTemperature()).thenReturn(0.2);
         lenient().when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(false);
+
+        this.chatbotService = new ChatbotService(
+                new ChatbotMessageService(this.messagePersistence),
+                new ChatbotResponseSanitizer(),
+                this.chatbotDocumentContextService,
+                this.chatbotPlatformContextService,
+                this.chatbotQuestionClassifier,
+                this.chatbotScopePolicy,
+                this.chatbotAiProperties,
+                this.userClient,
+                this.chatbotAiClient,
+                this.conversationPersistence,
+                this.escalationPersistence,
+                this.messagePersistence
+        );
     }
 
     @Test
@@ -2013,7 +2028,7 @@ class ChatbotServiceTest {
     }
 
     @Test
-    void sendMessageShouldNormalizeMarkdownTableReplyGeneratedByAi() {
+    void sendMessageShouldSanitizeAiReplyBeforePersistingAssistantMessage() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
         Conversation existingConversation = Conversation.builder()
@@ -2065,7 +2080,7 @@ class ChatbotServiceTest {
     }
 
     @Test
-    void sendMessageShouldBuildAiRequestWithContextAndTrimmedRecentMessages() {
+    void sendMessageShouldBuildAiRequestWithContextAndRecentMessages() {
         this.authenticate("customer-9", "ROLE_CUSTOMER");
 
         Conversation existingConversation = Conversation.builder()
