@@ -73,7 +73,7 @@ public class ChatbotService {
     private final ConversationGateway conversationGateway;
     private final EscalationGateway escalationGateway;
 
-    // Constructores
+    // Constructors
     @Autowired
     public ChatbotService(ChatbotMessageService chatbotMessageService,
                           ChatbotResponseSanitizer chatbotResponseSanitizer,
