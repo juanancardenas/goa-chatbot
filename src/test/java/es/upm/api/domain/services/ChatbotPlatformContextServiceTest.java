@@ -353,4 +353,25 @@ class ChatbotPlatformContextServiceTest {
                 "Procedimiento sin título: Asesoramiento jurídico."
         );
     }
+
+    @Test
+    void loadContextShouldReturnEmptyWhenUnexpectedMappingErrorOccurs() {
+        List<LegalProcedureSummary> procedures = new java.util.ArrayList<>();
+        procedures.add(null);
+
+        when(this.engagementClient.readById("engagement-broken"))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        null,
+                        procedures
+                ));
+        when(this.engagementClient.readEventsByEngagementLetterId("engagement-broken", 0, 5))
+                .thenReturn(new EngagementEventPage(List.of()));
+
+        Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-broken");
+
+        assertThat(result).isEmpty();
+    }
 }
