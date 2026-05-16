@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base e IA de **2026-05-15**.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base e IA y la unificacion del resumen de usuario en `UserSummary` de **2026-05-16**.
 
 ## Niveles de regla
 
@@ -162,7 +162,6 @@ Modelos principales:
 - `Conversation`
 - `Message`
 - `Escalation`
-- `UserDto`
 
 Modelos IA:
 - `ChatbotAiRequest`
@@ -188,6 +187,9 @@ Modelos de plataforma/contexto:
 - `EngagementEventSummary`
 - `LegalProcedureSummary`
 - `UserSummary`
+
+Nota:
+- `UserSummary` es el snapshot de usuario usado por `UserClient` y los servicios de dominio que necesitan datos basicos de contacto; no debe reintroducirse un modelo redundante en `domain.model`.
 
 ## Servicios (`domain.services`)
 

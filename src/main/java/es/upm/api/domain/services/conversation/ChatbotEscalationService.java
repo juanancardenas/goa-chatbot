@@ -3,7 +3,7 @@ package es.upm.api.domain.services.conversation;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
-import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.UserClient;
@@ -42,7 +42,7 @@ public class ChatbotEscalationService {
                 userId
         );
 
-        Optional<UserDto> user = this.readUserSafely(conversation.getUserId());
+        Optional<UserSummary> user = this.readUserSafely(conversation.getUserId());
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -55,13 +55,13 @@ public class ChatbotEscalationService {
                         .conversationId(conversation.getId())
                         .userId(conversation.getUserId())
                         .createdAt(now)
-                        .phone(user.map(UserDto::getMobile).orElse(null))
-                        .email(user.map(UserDto::getEmail).orElse(null))
+                        .phone(user.map(UserSummary::getMobile).orElse(null))
+                        .email(user.map(UserSummary::getEmail).orElse(null))
                         .build()
         );
     }
 
-    private Optional<UserDto> readUserSafely(String userId) {
+    private Optional<UserSummary> readUserSafely(String userId) {
         try {
             return Optional.ofNullable(this.userClient.readById(userId));
         } catch (RuntimeException ignored) {

@@ -5,7 +5,7 @@ import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
-import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.UserClient;
@@ -54,7 +54,7 @@ class ChatbotEscalationServiceTest {
         when(this.chatbotConversationService.requireActiveOwnedConversation("conversation-escalate", "customer-1"))
                 .thenReturn(existingConversation);
         when(this.userClient.readById("customer-1")).thenReturn(
-                UserDto.builder()
+                UserSummary.builder()
                         .id(UUID.fromString("11111111-1111-1111-1111-111111111111"))
                         .mobile("+34600111222")
                         .email("customer1@example.com")

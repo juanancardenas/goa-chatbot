@@ -1,84 +1,305 @@
 https://www.plantuml.com/
 
 @startuml
-package data {
-    package entities {
-      class Conversation {
-        -String id*
-        -String userId
-        -String engagementLetterId
-        -ConversationStatus status
-        -String type
-        -LocalDateTime createdAt
-      }
-      class Message {
-        -String id*
-        -String conversationId
-        -MessageSenderType senderType
-        -MessageType messageType
-        -String content
-        -LocalDateTime timestamp
-        -Integer sequenceNumber
-        -String parentMessageId
-      }
-      class Escalation {
-        -UUID id*
-        -String conversationId
-        -String userId
-        -LocalDateTime createdAt
-        -String phone
-        -String email
-      }
-      class UserDto #FEFECE {
-        -UUID id*
-        -String mobile
-        -String firstName
-        -String familyName
-      }
+top to bottom direction
 
-      Conversation "1" --> "1..*" Message
-      Conversation "1" --> "0..1" UserDto
-      Conversation "1" --> "0..1" Escalation
+package domain {
+  package model as modelPackage {
+    class Conversation {
+      -String id*
+      -String userId
+      -String engagementLetterId
+      -ConversationStatus status
+      -String type
+      -LocalDateTime createdAt
     }
-    package enums {
-      enum ConversationStatus {
-        active
-        closed
-        archived
-      }
-      enum MessageSenderType {
-        user
-        assistant
-        system
-      }
-      enum MessageType{
-        request
-        response
-        instruction
-      }
-      enum ChatbotScopeViolationReason {
-        out_of_case_scope
-        missing_case_context
-        legal_binding_advice_requested
-        unsupported_factual_assertion
-        ambiguous_context
-      }
-      enum ConversationProfileType {
-        client
-        professional
-      }
-      enum PlatformQuestionType {
-        engagement_status
-        timeline_events
-        documents
-        general_context
-      }
-      enum chatbotAiProvider {
-        ollama
-        openai
-        gemini
-      }
+
+    class Message {
+      -String id*
+      -String conversationId
+      -MessageSenderType senderType
+      -MessageType messageType
+      -String content
+      -LocalDateTime timestamp
+      -Integer sequenceNumber
+      -String parentMessageId
+    }
+
+    class Escalation {
+      -UUID id*
+      -String conversationId
+      -String userId
+      -LocalDateTime createdAt
+      -String phone
+      -String email
     }
   }
+
+  package "model.ai" as aiPackage {
+    class ChatbotAiRequest {
+      -String conversationId
+      -String userId
+      -String userMessage
+      -String basePrompt
+      -String roleProfile
+      -String conversationType
+      -String platformContext
+      -List<String> recentMessages
+      -String model
+      -Integer maxOutputTokens
+      -Double temperature
+      -Boolean documentsAvailable
+    }
+
+    class ChatbotAiResponse {
+      -String content
+      -String provider
+      -String model
+      -String finishReason
+      -Integer usedTokens
+      -String error
+    }
+  }
+
+  package "model.configuration" as configurationPackage {
+    class AuthenticatedUserContext {
+      -String userId
+      -ConversationProfileType profile
+    }
+
+    class ChatbotConfigurationStatus {
+      -boolean enabled
+      -String provider
+      -String model
+      -int maxInputCharacters
+      -int maxOutputTokens
+      -int maxContextMessages
+      -boolean documentsAvailable
+    }
+
+    class ChatbotContextualConversationCommand {
+      -String engagementLetterId
+    }
+
+    class ChatbotContextualConversationResult {
+      -String conversationId
+      -String engagementLetterId
+      -String createdAt
+      -String error
+    }
+
+    class ChatbotConversationHistoryResult {
+      -String conversationId
+      -String engagementLetterId
+      -String type
+      -String status
+      -Integer page
+      -Integer size
+      -Boolean hasMore
+      -Long totalMessages
+      -List<ChatbotHistoryMessageResult> messages
+    }
+
+    class ChatbotConversationSummaryResult {
+      -String conversationId
+      -String type
+      -String status
+      -String engagementLetterId
+      -String createdAt
+      -String lastMessageAt
+      -String preview
+    }
+
+    class ChatbotHistoryMessageResult {
+      -String id
+      -String conversationId
+      -String senderType
+      -String messageType
+      -String content
+      -String timestamp
+      -Integer sequenceNumber
+      -String parentMessageId
+    }
+
+    class ChatbotMessageCommand {
+      -String conversationId
+      -String message
+    }
+
+    class ChatbotMessageResult {
+      -String conversationId
+      -String message
+      -String error
+      -String createdAt
+      -String responseMode
+      -Boolean usedPlatformData
+      -List<String> sourcesSummary
+    }
+
+    class "PageResult<T>" as PageResult {
+      -List<T> content
+      -int page
+      -int size
+      -boolean hasNext
+      -long totalElements
+    }
+  }
+
+  package "model.platform" as platformPackage {
+    class ChatbotDocumentContext {
+      -boolean available
+      -boolean authorizedSourceConfigured
+      -List<String> visibleDocumentTitles
+      -List<String> sourcesSummary
+    }
+
+    class ChatbotPlatformContext {
+      -String engagementLetterId
+      -String ownerDisplayName
+      -List<String> procedureTitles
+      -List<String> legalTaskSummaries
+      -List<String> recentEventSummaries
+      -List<String> sourcesSummary
+    }
+
+    class EngagementEventPage {
+      -List<EngagementEventSummary> content
+    }
+
+    class EngagementEventSummary {
+      -String type
+      -String state
+      -String title
+      -String comment
+      -LocalDate date
+      +String displayText()
+    }
+
+    class EngagementLetterSummary {
+      -UUID id
+      -LocalDate creationDate
+      -LocalDate closingDate
+      -UserSummary owner
+      -List<LegalProcedureSummary> legalProcedures
+    }
+
+    class LegalProcedureSummary {
+      -String title
+      -LocalDate startDate
+      -LocalDate closingDate
+      -List<String> legalTasks
+    }
+
+    class UserSummary {
+      -UUID id*
+      -String firstName
+      -String familyName
+      -String email
+      -String mobile
+      +String displayName()
+    }
+  }
+
+  package enums as enumsPackage {
+    enum ChatbotAiProvider {
+      OLLAMA
+      OPENAI
+      GEMINI
+    }
+
+    enum ChatbotScopeViolationReason {
+      OUT_OF_CASE_SCOPE
+      MISSING_CASE_CONTEXT
+      LEGAL_BINDING_ADVICE_REQUESTED
+      EMOTIONAL_DISTRESS
+      UNSUPPORTED_FACTUAL_ASSERTION
+      AMBIGUOUS_CONTEXT
+      OUT_OF_DOMAIN
+    }
+
+    enum ConversationProfileType {
+      CLIENT
+      PROFESSIONAL
+    }
+
+    enum ConversationStatus {
+      ACTIVE
+      CLOSED
+      ARCHIVED
+    }
+
+    enum ConversationType {
+      GENERAL
+      CONTEXTUAL
+    }
+
+    enum MessageSenderType {
+      USER
+      ASSISTANT
+      SYSTEM
+    }
+
+    enum MessageType {
+      REQUEST
+      RESPONSE
+      INSTRUCTION
+    }
+
+    enum PlatformQuestionType {
+      ENGAGEMENT_STATUS
+      LEGAL_TASKS
+      TIMELINE_EVENTS
+      DOCUMENTS
+      GENERAL_CONTEXT
+    }
+  }
+}
+
+modelPackage -[hidden]down-> aiPackage
+aiPackage -[hidden]down-> configurationPackage
+configurationPackage -[hidden]down-> platformPackage
+platformPackage -[hidden]down-> enumsPackage
+
+Conversation -[hidden]down-> Message
+Message -[hidden]down-> Escalation
+
+ChatbotAiRequest -[hidden]down-> ChatbotAiResponse
+
+AuthenticatedUserContext -[hidden]down-> ChatbotConfigurationStatus
+ChatbotConfigurationStatus -[hidden]down-> ChatbotContextualConversationCommand
+ChatbotContextualConversationCommand -[hidden]down-> ChatbotContextualConversationResult
+ChatbotContextualConversationResult -[hidden]down-> ChatbotConversationHistoryResult
+ChatbotConversationHistoryResult -[hidden]down-> ChatbotConversationSummaryResult
+ChatbotConversationSummaryResult -[hidden]down-> ChatbotHistoryMessageResult
+ChatbotHistoryMessageResult -[hidden]down-> ChatbotMessageCommand
+ChatbotMessageCommand -[hidden]down-> ChatbotMessageResult
+ChatbotMessageResult -[hidden]down-> PageResult
+
+ChatbotDocumentContext -[hidden]down-> ChatbotPlatformContext
+ChatbotPlatformContext -[hidden]down-> EngagementEventPage
+EngagementEventPage -[hidden]down-> EngagementEventSummary
+EngagementEventSummary -[hidden]down-> EngagementLetterSummary
+EngagementLetterSummary -[hidden]down-> LegalProcedureSummary
+LegalProcedureSummary -[hidden]down-> UserSummary
+
+ChatbotAiProvider -[hidden]down-> ChatbotScopeViolationReason
+ChatbotScopeViolationReason -[hidden]down-> ConversationProfileType
+ConversationProfileType -[hidden]down-> ConversationStatus
+ConversationStatus -[hidden]down-> ConversationType
+ConversationType -[hidden]down-> MessageSenderType
+MessageSenderType -[hidden]down-> MessageType
+MessageType -[hidden]down-> PlatformQuestionType
+
+Conversation "1" -down-> "0..*" Message
+Conversation "1" -down-> "0..1" Escalation
+Conversation -down-> ConversationStatus
+Conversation ..> ConversationType
+Message -down-> MessageSenderType
+Message -down-> MessageType
+AuthenticatedUserContext -down-> ConversationProfileType
+ChatbotConversationHistoryResult "1" -down-> "0..*" ChatbotHistoryMessageResult
+EngagementEventPage "1" -down-> "0..*" EngagementEventSummary
+EngagementLetterSummary "1" -down-> "0..1" UserSummary
+EngagementLetterSummary "1" -down-> "0..*" LegalProcedureSummary
 
 @enduml

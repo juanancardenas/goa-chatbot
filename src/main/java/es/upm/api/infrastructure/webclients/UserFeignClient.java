@@ -1,7 +1,7 @@
 package es.upm.api.infrastructure.webclients;
 
 import es.upm.api.configurations.FeignConfig;
-import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.platform.UserSummary;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,5 +16,5 @@ public interface UserFeignClient {
     String ID_ID = "/{id}";
 
     @GetMapping(ID_ID)
-    UserDto readById(@PathVariable String id);
+    UserSummary readById(@PathVariable String id);
 }

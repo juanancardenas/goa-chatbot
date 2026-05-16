@@ -1,6 +1,6 @@
 package es.upm.api.infrastructure.webclients;
 
-import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.ports.out.UserClient;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +14,7 @@ public class UserClientAdapter implements UserClient {
     }
 
     @Override
-    public UserDto readById(String id) {
+    public UserSummary readById(String id) {
         return this.userFeignClient.readById(id);
     }
 }
