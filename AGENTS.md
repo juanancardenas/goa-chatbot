@@ -73,6 +73,10 @@ es.upm.api/
       httperrors/
     security/
     webclients/
+      engagement/
+        dto/
+      user/
+        dto/
 ```
 
 Notas:
@@ -387,26 +391,39 @@ Adaptadores actuales:
 
 - DEBE aislar llamadas a otros microservicios en clientes Feign dentro de `infrastructure.webclients`.
 - DEBE usar `FeignConfig` para propagar `Authorization`.
-- DEBE depender de modelos de dominio/plataforma cuando sea necesario devolver snapshots internos.
+- DEBE ubicar DTOs propios de respuestas Feign en subpaquetes de infraestructura, por ejemplo `infrastructure.webclients.user.dto` y `infrastructure.webclients.engagement.dto`.
+- Los Feign clients NO DEBEN devolver modelos de dominio; DEBEN devolver DTOs de infraestructura.
+- Los adaptadores de webclients DEBEN implementar puertos de `domain.ports.out` y mapear DTOs Feign a modelos internos de dominio/plataforma.
+- Los mappers de infraestructura DEBEN mantener explicito el mapeo entre contrato externo y modelo interno.
 - NO DEBE inyectar clientes Feign concretos en `domain.services`; los servicios deben depender de puertos.
-- DEBERIA introducir adaptadores dedicados si la integracion empieza a requerir traduccion compleja, control de errores, reintentos o mapeos no triviales.
 
-Clientes actuales:
-- `EngagementWebClient`, implementa `EngagementClient`.
-- `UserWebClient`, implementa `UserClient`.
+Clientes y adaptadores actuales:
+- `engagement.EngagementFeignClient`, devuelve DTOs de `infrastructure.webclients.engagement.dto`.
+- `engagement.EngagementClientAdapter`, implementa `EngagementClient`.
+- `engagement.EngagementFeignMapper`, mapea DTOs de engagement a `domain.model.platform`.
+- `user.UserFeignClient`, devuelve DTOs de `infrastructure.webclients.user.dto`.
+- `user.UserClientAdapter`, implementa `UserClient`.
+- `user.UserFeignMapper`, mapea DTOs de user a `domain.model.platform.UserSummary`.
 
-Regla actual permitida:
-
-```text
-Feign interface en infrastructure.webclients implementa puerto de domain.ports.out
-```
-
-Regla preferida si crece la complejidad:
+Regla actual:
 
 ```text
 domain.ports.out.UserClient
-  <- infrastructure.webclients.UserClientAdapter
-      -> infrastructure.webclients.UserWebClient
+  <- infrastructure.webclients.user.UserClientAdapter
+      -> infrastructure.webclients.user.UserFeignClient
+          -> infrastructure.webclients.user.dto.UserResponseDto
+```
+
+```text
+domain.ports.out.EngagementClient
+  <- infrastructure.webclients.engagement.EngagementClientAdapter
+      -> infrastructure.webclients.engagement.EngagementFeignClient
+          -> infrastructure.webclients.engagement.dto.*
+```
+
+```text
+infrastructure.webclients.*.dto -> domain.model  PROHIBIDO
+domain.ports.out -> infrastructure.webclients.*  PROHIBIDO
 ```
 
 ## Seguridad
@@ -612,7 +629,7 @@ Reglas:
 ## Deuda tecnica priorizada
 
 1. Mantener `ChatbotService` como orquestador fino; si `sendMessage` sigue creciendo, extraer un caso de uso dedicado para flujo de envio.
-2. Valorar adaptadores dedicados para `UserClient` y `EngagementClient` si los Feign clients empiezan a requerir mapeo o control de errores no trivial.
+2. Mantener los mappers Feign localizados en infraestructura para que cambios de contratos externos no alcancen el dominio.
 3. Revisar DTOs no usados o residuales (`ChatbotConversationMessageResponseDto`, `ChatbotConversationResponseDto`) y eliminarlos si no forman parte del contrato publico.
 4. Mover tests historicos `ChatbotPlatformContextServiceTest` y `ChatbotDocumentContextServiceTest` al paquete `domain.services.basereply` si se decide alinear fisicamente ruta de test y paquete main.
 5. Revisar si `ChatbotPromptBuilder` sigue siendo necesario como servicio separado ahora que `ChatbotAiReplyService` prepara la request IA.
