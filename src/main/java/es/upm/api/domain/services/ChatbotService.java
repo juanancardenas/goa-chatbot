@@ -1,15 +1,17 @@
 package es.upm.api.domain.services;
 
-import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ChatbotResponseMode;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
-import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
-import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
-import es.upm.api.domain.services.conversation.*;
+import es.upm.api.domain.services.conversation.ChatbotConversationService;
+import es.upm.api.domain.services.conversation.ChatbotEscalationService;
+import es.upm.api.domain.services.conversation.ChatbotHistoryService;
+import es.upm.api.domain.services.conversation.ChatbotMessageService;
+import es.upm.api.domain.services.conversation.ChatbotReplyOrchestrator;
+import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotMessageResult;
@@ -19,12 +21,10 @@ import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.configuration.ChatbotConversationSummaryResult;
 import es.upm.api.domain.model.configuration.AuthenticatedUserContext;
 import es.upm.api.domain.model.configuration.ChatbotReplyDecision;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ChatbotService {
@@ -35,21 +35,16 @@ public class ChatbotService {
     private final ChatbotConversationService chatbotConversationService;
     private final ChatbotHistoryService chatbotHistoryService;
     private final ChatbotEscalationService chatbotEscalationService;
-    private final ChatbotAiReplyService chatbotAiReplyService;
     private final ChatbotReplyOrchestrator chatbotReplyOrchestrator;
-    private final ChatbotBaseReplyBuilder chatbotBaseReplyBuilder;
     private final ChatbotAiSettings chatbotAiSettings;
 
     // Constructor
-    @Autowired
     public ChatbotService(ChatbotMessageService chatbotMessageService,
                           ChatbotResponseSanitizer chatbotResponseSanitizer,
                           ChatbotConversationService chatbotConversationService,
                           ChatbotHistoryService chatbotHistoryService,
                           ChatbotEscalationService chatbotEscalationService,
-                          ChatbotAiReplyService chatbotAiReplyService,
                           ChatbotReplyOrchestrator chatbotReplyOrchestrator,
-                          ChatbotBaseReplyBuilder chatbotBaseReplyBuilder,
                           ChatbotAiSettings chatbotAiSettings
     ) {
         this.chatbotMessageService = chatbotMessageService;
@@ -57,9 +52,7 @@ public class ChatbotService {
         this.chatbotConversationService = chatbotConversationService;
         this.chatbotHistoryService = chatbotHistoryService;
         this.chatbotEscalationService = chatbotEscalationService;
-        this.chatbotAiReplyService = chatbotAiReplyService;
         this.chatbotReplyOrchestrator = chatbotReplyOrchestrator;
-        this.chatbotBaseReplyBuilder = chatbotBaseReplyBuilder;
         this.chatbotAiSettings = chatbotAiSettings;
     }
 
@@ -145,16 +138,12 @@ public class ChatbotService {
                 date
         );
 
-        ConversationProfileType profile = authenticatedUser.getProfile();
-        String baseReply = this.chatbotBaseReplyBuilder.generalStartReply(profile);
-
-        String assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveGeneralStartReply(
                 conversation,
-                profile,
-                userMessage,
-                baseReply,
-                Optional.empty()
+                authenticatedUser.getProfile(),
+                userMessage
         );
+        String assistantReply = decision.getAssistantReply();
 
         this.chatbotMessageService.saveMessage(
                 conversation.getId(),
@@ -166,15 +155,15 @@ public class ChatbotService {
                 date
         );
 
-        return ChatbotMessageResult.builder()
-                .conversationId(conversation.getId())
-                .message(assistantReply)
-                .error(null)
-                .createdAt(date.toString())
-                .responseMode(ChatbotResponseMode.GENERAL)
-                .usedPlatformData(false)
-                .sourcesSummary(List.of())
-                .build();
+        return this.buildMessageResult(
+                conversation.getId(),
+                assistantReply,
+                null,
+                date,
+                decision.getResponseMode(),
+                decision.isUsedPlatformData(),
+                decision.getSourcesSummary()
+        );
     }
 
     /**

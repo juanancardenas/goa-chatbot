@@ -77,6 +77,33 @@ class ChatbotReplyOrchestratorTest {
     }
 
     @Test
+    void resolveGeneralStartReplyShouldBuildStartReplyWithAiEnhancement() {
+        Conversation conversation = this.generalConversation();
+        when(this.chatbotBaseReplyBuilder.generalStartReply(ConversationProfileType.CLIENT))
+                .thenReturn("Base start");
+        when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "hola",
+                "Base start",
+                Optional.empty()
+        )).thenReturn("Start final");
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveGeneralStartReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "hola"
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo("Start final");
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        assertThat(decision.getSourcesSummary()).isEmpty();
+        verify(this.chatbotScopePolicy, never()).evaluate(any(), any());
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
     void resolveReplyShouldRestrictContextualConversationWhenMessageReferencesAnotherEngagement() {
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 this.contextualConversation("EL-1"),
