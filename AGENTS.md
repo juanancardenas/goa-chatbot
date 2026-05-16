@@ -232,16 +232,18 @@ Servicios actuales:
 - `conversation.ChatbotEscalationService`
 - `conversation.ChatbotHistoryService`
 - `conversation.ChatbotMessageService`
+- `conversation.ChatbotReplyOrchestrator`
 - `conversation.ChatbotResponseSanitizer`
 - `policies.ChatbotScopePolicy`
 - `prompt.ChatbotPromptBuilder`
 
 Reglas de organizacion:
-- `ChatbotService` DEBE actuar como orquestador de caso de uso HTTP/dominio; NO DEBE concentrar reglas que ya pertenezcan a servicios especializados.
+- `ChatbotService` DEBE actuar como orquestador fino de caso de uso HTTP/dominio; NO DEBE concentrar reglas que ya pertenezcan a servicios especializados.
 - `aireply` DEBE contener la preparacion de `ChatbotAiRequest`, la llamada al puerto `ChatbotAiClient`, el uso de mensajes recientes para prompt y el fallback seguro ante errores de IA.
 - `basereply` DEBE contener respuestas base seguras, contexto de plataforma/documental y composicion determinista previa a la IA.
 - `classification` DEBE contener clasificadores de intencion o tipo de pregunta.
-- `conversation` DEBE contener ciclo de vida de conversaciones, historial, mensajes, escalado y normalizacion de respuestas para frontend.
+- `conversation` DEBE contener ciclo de vida de conversaciones, historial, mensajes, escalado, orquestacion de decision de respuesta y normalizacion de respuestas para frontend.
+- `conversation.ChatbotReplyOrchestrator` DEBE decidir la respuesta asistente para un mensaje ya validado: cortesia, restricciones de scope, cambio de encargo, contexto de plataforma, fallback contextual y respuesta general. NO DEBE persistir mensajes ni modificar conversaciones.
 - `policies` DEBE contener decisiones de permisos, alcance o restricciones funcionales.
 - `prompt` DEBE contener construccion de prompts e instrucciones para la IA.
 - Los servicios especializados PUEDEN depender entre si dentro de `domain.services` cuando la responsabilidad sea clara; DEBEN seguir dependiendo de infraestructura solo mediante puertos.
@@ -269,11 +271,9 @@ ChatbotService -> conversation.ChatbotMessageService
 ChatbotService -> conversation.ChatbotHistoryService
 ChatbotService -> conversation.ChatbotEscalationService
 ChatbotService -> conversation.ChatbotResponseSanitizer
+ChatbotService -> conversation.ChatbotReplyOrchestrator
 ChatbotService -> basereply.ChatbotBaseReplyBuilder
-ChatbotService -> basereply.ChatbotPlatformContextService
 ChatbotService -> aireply.ChatbotAiReplyService
-ChatbotService -> classification.ChatbotQuestionClassifier
-ChatbotService -> policies.ChatbotScopePolicy
 
 conversation.ChatbotConversationService -> ConversationGateway
 conversation.ChatbotConversationService -> MessageGateway
@@ -283,6 +283,10 @@ conversation.ChatbotHistoryService -> ConversationGateway
 conversation.ChatbotHistoryService -> MessageGateway
 conversation.ChatbotEscalationService -> EscalationGateway
 conversation.ChatbotEscalationService -> UserClient
+conversation.ChatbotReplyOrchestrator -> basereply.ChatbotBaseReplyBuilder
+conversation.ChatbotReplyOrchestrator -> basereply.ChatbotPlatformContextService
+conversation.ChatbotReplyOrchestrator -> aireply.ChatbotAiReplyService
+conversation.ChatbotReplyOrchestrator -> policies.ChatbotScopePolicy
 
 basereply.ChatbotPlatformContextService -> EngagementClient
 aireply.ChatbotAiReplyService -> ChatbotAiClient
@@ -290,7 +294,7 @@ aireply.ChatbotAiReplyService -> conversation.ChatbotMessageService
 ```
 
 Deuda tecnica conocida:
-- Mantener `ChatbotService` como orquestador fino; si crece la coordinacion de `sendMessage`, DEBERIA extraerse un caso de uso especifico para envio de mensajes.
+- Mantener `ChatbotService` como orquestador fino; la decision de respuesta de `sendMessage` debe permanecer en `conversation.ChatbotReplyOrchestrator`.
 
 ## Adaptador IA (`infrastructure.ai`)
 
@@ -485,6 +489,7 @@ Excepciones actuales:
 - `ChatbotConversationService` DEBE centralizar creacion, ownership, cierre, borrado y reapertura de conversaciones.
 - `ChatbotHistoryService` DEBE centralizar listado de conversaciones, lectura paginada de mensajes y normalizacion de paginacion.
 - `ChatbotMessageService` DEBE centralizar persistencia de mensajes, calculo de secuencia y transformacion a historial/prompt.
+- `ChatbotReplyOrchestrator` DEBE centralizar la decision de respuesta asistente y devolver `ChatbotReplyDecision` sin persistir mensajes.
 - `ChatbotEscalationService` DEBE centralizar escalado, archivado de conversacion y persistencia de `Escalation`.
 - `ChatbotResponseSanitizer` DEBE centralizar transformaciones de salida necesarias para que el frontend renderice respuestas de forma segura.
 - DEBE impedir envio de mensajes a conversaciones no activas.
@@ -547,6 +552,7 @@ Tests actuales destacados:
 - `ChatbotEscalationServiceTest`
 - `ChatbotHistoryServiceTest`
 - `ChatbotMessageServiceTest`
+- `ChatbotReplyOrchestratorTest`
 - `ChatbotResponseSanitizerTest`
 - `ChatbotScopePolicyTest`
 - `ChatbotQuestionClassifierTest`
