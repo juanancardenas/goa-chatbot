@@ -65,20 +65,6 @@ class MessagePersistenceMongodbTest {
     }
 
     @Test
-    void nextSequenceNumberShouldReturnNextAndDefault() {
-        when(messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("conversation-1"))
-                .thenReturn(Optional.of(messageEntity("message-9", "conversation-1", 9)));
-        when(messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("conversation-empty"))
-                .thenReturn(Optional.empty());
-
-        Integer next = messagePersistenceMongodb.nextSequenceNumber("conversation-1");
-        Integer first = messagePersistenceMongodb.nextSequenceNumber("conversation-empty");
-
-        assertThat(next).isEqualTo(10);
-        assertThat(first).isEqualTo(1);
-    }
-
-    @Test
     void findLatestAndFindOrderedDescShouldMapRepositoryResults() {
         MessageEntity latest = messageEntity("message-10", "conversation-1", 10);
         when(messageRepository.findFirstByConversationIdOrderByTimestampDesc("conversation-1"))

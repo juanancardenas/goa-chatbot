@@ -103,8 +103,9 @@ class ChatbotServiceTest {
         lenient().when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(10);
         lenient().when(this.chatbotAiProperties.getTemperature()).thenReturn(0.2);
         lenient().when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(false);
+        lenient().when(this.conversationPersistence.reserveSequenceNumbers(any(), eq(2))).thenReturn(1);
 
-        ChatbotMessageService chatbotMessageService = new ChatbotMessageService(this.messagePersistence);
+        ChatbotMessageService chatbotMessageService = new ChatbotMessageService(this.messagePersistence, this.conversationPersistence);
         ChatbotConversationService chatbotConversationService = new ChatbotConversationService(
                 this.conversationPersistence,
                 this.messagePersistence
@@ -117,7 +118,6 @@ class ChatbotServiceTest {
         );
         ChatbotEscalationService chatbotEscalationService = new ChatbotEscalationService(
                 chatbotConversationService,
-                this.conversationPersistence,
                 this.escalationPersistence,
                 this.userClient
         );
@@ -556,7 +556,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(this.conversationPersistence.readById("conversation-courtesy")).thenReturn(conversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-courtesy")).thenReturn(5);
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-courtesy", 2)).thenReturn(5);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Muchas gracias por la ayuda")))
@@ -597,7 +597,7 @@ class ChatbotServiceTest {
 
         when(this.conversationPersistence.readById("conversation-contextual-unavailable"))
                 .thenReturn(conversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-contextual-unavailable"))
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-contextual-unavailable", 2))
                 .thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
@@ -645,7 +645,7 @@ class ChatbotServiceTest {
 
         when(this.conversationPersistence.readById("conversation-contextual-no-legal-tasks"))
                 .thenReturn(conversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-contextual-no-legal-tasks"))
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-contextual-no-legal-tasks", 2))
                 .thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
@@ -696,7 +696,7 @@ class ChatbotServiceTest {
 
         when(this.conversationPersistence.readById("conversation-contextual-legal-tasks"))
                 .thenReturn(conversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-contextual-legal-tasks"))
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-contextual-legal-tasks", 2))
                 .thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
@@ -736,7 +736,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame contexto del caso")))
@@ -772,7 +772,7 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
         when(conversationPersistence.readById("conversation-99")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-99")).thenReturn(5);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-99", 2)).thenReturn(5);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Quiero una estrategia legal definitiva")))
@@ -819,7 +819,7 @@ class ChatbotServiceTest {
 
         when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
         when(this.conversationPersistence.readById("conversation-ai")).thenReturn(existingConversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-ai")).thenReturn(3);
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-ai", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(this.messagePersistence.findByConversationIdOrdered("conversation-ai"))
@@ -860,7 +860,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(this.conversationPersistence.readById("conversation-restricted")).thenReturn(existingConversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-restricted")).thenReturn(3);
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-restricted", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame asesoría legal definitiva")))
@@ -945,7 +945,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
@@ -986,7 +986,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame contexto del caso")))
@@ -1037,7 +1037,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado de mi caso")))
@@ -1070,7 +1070,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos recientes tiene el caso")))
@@ -1102,7 +1102,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
@@ -1134,7 +1134,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame un resumen del caso")))
@@ -1166,7 +1166,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame contexto del caso")))
@@ -1206,7 +1206,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado del encargo")))
@@ -1250,7 +1250,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos recientes tiene el caso")))
@@ -1290,7 +1290,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el caso")))
@@ -1329,7 +1329,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado de mi caso")))
@@ -1369,7 +1369,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
@@ -1400,7 +1400,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
@@ -1435,7 +1435,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
@@ -1470,7 +1470,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(5);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(5);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
@@ -1505,7 +1505,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(7);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(7);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
@@ -1540,7 +1540,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Compáralo con EL-200")))
@@ -1570,7 +1570,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(this.conversationPersistence.readById("conversation-ctx-blank-engagement")).thenReturn(existingConversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-ctx-blank-engagement")).thenReturn(3);
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-ctx-blank-engagement", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Compara con EL-200")))
@@ -1601,7 +1601,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(this.conversationPersistence.readById("conversation-ctx-same-engagement")).thenReturn(existingConversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-ctx-same-engagement")).thenReturn(3);
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-ctx-same-engagement", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame el estado de EL-100")))
@@ -1640,7 +1640,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-general")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
@@ -1679,7 +1679,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
@@ -1718,7 +1718,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx-events")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx-events")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx-events", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("¿Qué hitos recientes tiene este caso?")))
@@ -1759,7 +1759,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx-empty-events")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx-empty-events")).thenReturn(3);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx-empty-events", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos tiene mi caso")))
@@ -1801,7 +1801,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx-docs")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx-docs")).thenReturn(7);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx-docs", 2)).thenReturn(7);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("¿Qué documentos hay en este caso?")))
@@ -1844,7 +1844,7 @@ class ChatbotServiceTest {
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx-docs-visible")).thenReturn(existingConversation);
-        when(messagePersistence.nextSequenceNumber("conversation-ctx-docs-visible")).thenReturn(9);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-ctx-docs-visible", 2)).thenReturn(9);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos veo en mi caso")))
@@ -1955,9 +1955,9 @@ class ChatbotServiceTest {
 
         this.chatbotService.escalateConversation(this.authenticatedUser, "conversation-escalate");
 
-        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
-        verify(this.conversationPersistence).update(existingConversation);
-        verify(this.escalationPersistence).create(any());
+        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        verify(this.conversationPersistence, never()).update(existingConversation);
+        verify(this.escalationPersistence).createAndArchiveConversation(eq(existingConversation), any());
     }
 
     @Test
@@ -2114,7 +2114,7 @@ class ChatbotServiceTest {
 
         when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
         when(this.conversationPersistence.readById("conversation-ai-table")).thenReturn(existingConversation);
-        when(this.messagePersistence.nextSequenceNumber("conversation-ai-table")).thenReturn(3);
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-ai-table", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
         when(this.messagePersistence.findByConversationIdOrdered("conversation-ai-table"))
@@ -2162,6 +2162,9 @@ class ChatbotServiceTest {
                 .build();
     }
 }
+
+
+
 
 
 

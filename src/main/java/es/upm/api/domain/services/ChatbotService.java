@@ -151,12 +151,14 @@ public class ChatbotService {
                 date
         );
 
+        Integer firstSequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 2);
+
         String messageId = this.chatbotMessageService.saveMessage(
                 conversation.getId(),
                 MessageSenderType.USER,
                 MessageType.REQUEST,
                 userMessage,
-                1,
+                firstSequence,
                 null,
                 date
         );
@@ -177,7 +179,7 @@ public class ChatbotService {
                 MessageSenderType.ASSISTANT,
                 MessageType.RESPONSE,
                 assistantReply,
-                2,
+                firstSequence + 1,
                 messageId,
                 date
         );
@@ -233,7 +235,7 @@ public class ChatbotService {
                 userId
         );
 
-        Integer nextSequence = this.chatbotMessageService.nextSequenceNumber(conversation.getId());
+        Integer nextSequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 2);
 
         String messageId = this.chatbotMessageService.saveMessage(
                 conversation.getId(),

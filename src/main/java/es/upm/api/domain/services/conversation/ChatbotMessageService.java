@@ -4,6 +4,7 @@ import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
+import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +16,14 @@ import java.util.UUID;
 public class ChatbotMessageService {
 
     private final MessageGateway messageGateway;
+    private final ConversationGateway conversationGateway;
 
-    public ChatbotMessageService(MessageGateway messageGateway) {
+    public ChatbotMessageService(
+            MessageGateway messageGateway,
+            ConversationGateway conversationGateway
+    ) {
         this.messageGateway = messageGateway;
+        this.conversationGateway = conversationGateway;
     }
 
     public String saveMessage(
@@ -43,8 +49,8 @@ public class ChatbotMessageService {
         );
     }
 
-    public Integer nextSequenceNumber(String conversationId) {
-        return this.messageGateway.nextSequenceNumber(conversationId);
+    public Integer reserveSequenceNumbers(String conversationId, int quantity) {
+        return this.conversationGateway.reserveSequenceNumbers(conversationId, quantity);
     }
 
     public ChatbotHistoryMessageResult toHistoryMessageResult(Message message) {

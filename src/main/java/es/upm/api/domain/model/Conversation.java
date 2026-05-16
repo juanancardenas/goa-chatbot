@@ -26,4 +26,7 @@ public class Conversation {
     private String type;
     @NotNull
     private LocalDateTime createdAt;
+    @Builder.Default
+    @NotNull
+    private Integer lastSequenceNumber = 0;
 }

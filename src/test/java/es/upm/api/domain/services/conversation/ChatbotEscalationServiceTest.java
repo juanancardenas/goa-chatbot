@@ -6,7 +6,6 @@ import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
 import es.upm.api.domain.model.platform.UserSummary;
-import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.UserClient;
 import org.junit.jupiter.api.Test;
@@ -21,6 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,9 +30,6 @@ class ChatbotEscalationServiceTest {
 
     @Mock
     private ChatbotConversationService chatbotConversationService;
-
-    @Mock
-    private ConversationGateway conversationGateway;
 
     @Mock
     private EscalationGateway escalationGateway;
@@ -65,11 +62,8 @@ class ChatbotEscalationServiceTest {
 
         this.chatbotEscalationService.escalateConversation("conversation-escalate", "customer-1");
 
-        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
-        verify(this.conversationGateway).update(existingConversation);
-
         ArgumentCaptor<Escalation> escalationCaptor = ArgumentCaptor.forClass(Escalation.class);
-        verify(this.escalationGateway).create(escalationCaptor.capture());
+        verify(this.escalationGateway).createAndArchiveConversation(eq(existingConversation), escalationCaptor.capture());
         Escalation escalation = escalationCaptor.getValue();
 
         assertThat(escalation.getId()).isNotNull();
@@ -95,12 +89,35 @@ class ChatbotEscalationServiceTest {
         this.chatbotEscalationService.escalateConversation("conversation-escalate", "customer-1");
 
         ArgumentCaptor<Escalation> escalationCaptor = ArgumentCaptor.forClass(Escalation.class);
-        verify(this.escalationGateway).create(escalationCaptor.capture());
+        verify(this.escalationGateway).createAndArchiveConversation(eq(existingConversation), escalationCaptor.capture());
         Escalation escalation = escalationCaptor.getValue();
 
-        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
+        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(escalation.getPhone()).isNull();
         assertThat(escalation.getEmail()).isNull();
+    }
+
+    @Test
+    void escalateConversationShouldKeepDomainConversationActiveWhenConsistentPersistenceFails() {
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-escalate")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .build();
+        when(this.chatbotConversationService.requireActiveOwnedConversation("conversation-escalate", "customer-1"))
+                .thenReturn(existingConversation);
+        org.mockito.Mockito.doThrow(new RuntimeException("mongo unavailable"))
+                .when(this.escalationGateway)
+                .createAndArchiveConversation(eq(existingConversation), any(Escalation.class));
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> this.chatbotEscalationService.escalateConversation("conversation-escalate", "customer-1")
+        );
+
+        assertThat(exception).hasMessageContaining("mongo unavailable");
+        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
     }
 
     @Test
@@ -114,8 +131,8 @@ class ChatbotEscalationServiceTest {
         );
 
         assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
-        verify(this.conversationGateway, never()).update(any(Conversation.class));
         verify(this.escalationGateway, never()).create(any(Escalation.class));
+        verify(this.escalationGateway, never()).createAndArchiveConversation(any(Conversation.class), any(Escalation.class));
     }
 
     @Test
@@ -129,7 +146,7 @@ class ChatbotEscalationServiceTest {
         );
 
         assertThat(exception).hasMessageContaining("La conversacion no esta activa");
-        verify(this.conversationGateway, never()).update(any(Conversation.class));
         verify(this.escalationGateway, never()).create(any(Escalation.class));
+        verify(this.escalationGateway, never()).createAndArchiveConversation(any(Conversation.class), any(Escalation.class));
     }
 }

@@ -28,6 +28,9 @@ public class ConversationEntity {
     private String type;
     @NotNull
     private LocalDateTime createdAt;
+    @Builder.Default
+    @NotNull
+    private Integer lastSequenceNumber = 0;
 
     public ConversationEntity(Conversation conversation) {
         BeanUtils.copyProperties(conversation, this);
@@ -42,12 +45,25 @@ public class ConversationEntity {
             String type,
             LocalDateTime createdAt
     ) {
+        this(id, userId, engagementLetterId, status, type, createdAt, 0);
+    }
+
+    public ConversationEntity(
+            String id,
+            String userId,
+            String engagementLetterId,
+            ConversationStatus status,
+            String type,
+            LocalDateTime createdAt,
+            Integer lastSequenceNumber
+    ) {
         this.id = id;
         this.userId = userId;
         this.engagementLetterId = engagementLetterId;
         this.status = status != null ? status : ConversationStatus.ACTIVE;
         this.type = type;
         this.createdAt = createdAt;
+        this.lastSequenceNumber = lastSequenceNumber != null ? lastSequenceNumber : 0;
     }
 
     public static ConversationEntity fromConversation(Conversation conversation) {

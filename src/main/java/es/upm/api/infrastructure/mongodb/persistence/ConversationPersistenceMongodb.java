@@ -1,12 +1,19 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.NotFoundException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
+import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,10 +22,18 @@ import java.util.Optional;
 @Repository
 public class ConversationPersistenceMongodb implements ConversationGateway {
     private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
+    private final MongoTemplate mongoTemplate;
 
     @Autowired
-    public ConversationPersistenceMongodb(ConversationRepository conversationRepository) {
+    public ConversationPersistenceMongodb(
+            ConversationRepository conversationRepository,
+            MessageRepository messageRepository,
+            MongoTemplate mongoTemplate
+    ) {
         this.conversationRepository = conversationRepository;
+        this.messageRepository = messageRepository;
+        this.mongoTemplate = mongoTemplate;
     }
 
     @Override
@@ -96,6 +111,43 @@ public class ConversationPersistenceMongodb implements ConversationGateway {
     public void update(Conversation conversation) {
         ConversationEntity entity = ConversationEntity.fromConversation(conversation);
         this.conversationRepository.save(entity);
+    }
+
+    @Override
+    public Integer reserveSequenceNumbers(String conversationId, int quantity) {
+        if (quantity <= 0) {
+            throw new BadRequestException("quantity debe ser mayor que cero");
+        }
+
+        this.initializeSequenceCounterIfNeeded(conversationId);
+
+        ConversationEntity updatedConversation = this.mongoTemplate.findAndModify(
+                Query.query(Criteria.where("_id").is(conversationId)),
+                new Update().inc("lastSequenceNumber", quantity),
+                FindAndModifyOptions.options().returnNew(true),
+                ConversationEntity.class
+        );
+
+        if (updatedConversation == null) {
+            throw new NotFoundException("conversationId no corresponde a una conversacion existente");
+        }
+
+        return updatedConversation.getLastSequenceNumber() - quantity + 1;
+    }
+
+    private void initializeSequenceCounterIfNeeded(String conversationId) {
+        this.messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc(conversationId)
+                .ifPresent(latestMessage -> this.mongoTemplate.updateFirst(
+                        Query.query(new Criteria().andOperator(
+                                Criteria.where("_id").is(conversationId),
+                                new Criteria().orOperator(
+                                        Criteria.where("lastSequenceNumber").exists(false),
+                                        Criteria.where("lastSequenceNumber").lt(latestMessage.getSequenceNumber())
+                                )
+                        )),
+                        new Update().set("lastSequenceNumber", latestMessage.getSequenceNumber()),
+                        ConversationEntity.class
+                ));
     }
 
     @Override

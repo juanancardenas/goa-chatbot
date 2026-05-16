@@ -34,6 +34,8 @@ public interface ConversationGateway {
 
     void update(Conversation conversation);
 
+    Integer reserveSequenceNumbers(String conversationId, int quantity);
+
     void delete(String conversationId);
 
 }
