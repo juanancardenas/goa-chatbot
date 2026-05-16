@@ -121,6 +121,40 @@ class ChatbotMessageServiceTest {
     }
 
     @Test
+    void readRecentMessagesForPromptShouldUseEmptyContentWhenMessageContentIsNullOrBlank() {
+        when(this.messageGateway.findByConversationIdOrdered("conversation-blank-content"))
+                .thenReturn(List.of(
+                        Message.builder()
+                                .senderType(MessageSenderType.USER)
+                                .content(null)
+                                .build(),
+                        Message.builder()
+                                .senderType(MessageSenderType.ASSISTANT)
+                                .content("   ")
+                                .build()
+                ));
+
+        List<String> recentMessages = this.chatbotMessageService.readRecentMessagesForPrompt(
+                "conversation-blank-content",
+                5
+        );
+
+        assertThat(recentMessages).containsExactly(
+                "USER: ",
+                "ASSISTANT: "
+        );
+    }
+
+    @Test
+    void readRecentMessagesForPromptShouldReturnEmptyListWhenGatewayReturnsNullOrEmptyMessages() {
+        when(this.messageGateway.findByConversationIdOrdered("conversation-null")).thenReturn(null);
+        when(this.messageGateway.findByConversationIdOrdered("conversation-empty")).thenReturn(List.of());
+
+        assertThat(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-null", 5)).isEmpty();
+        assertThat(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-empty", 5)).isEmpty();
+    }
+
+    @Test
     void readRecentMessagesForPromptShouldReturnEmptyListWhenGatewayFails() {
         when(this.messageGateway.findByConversationIdOrdered("conversation-4"))
                 .thenThrow(new RuntimeException("Mongo unavailable"));

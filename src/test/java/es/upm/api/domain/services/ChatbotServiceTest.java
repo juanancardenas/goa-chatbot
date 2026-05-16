@@ -544,6 +544,45 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldReturnCourtesyReplyWithoutCallingAiOrPlatformContext() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation conversation = Conversation.builder()
+                .id("conversation-courtesy")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-courtesy")).thenReturn(conversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-courtesy")).thenReturn(5);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Muchas gracias por la ayuda")))
+                .thenReturn(ChatbotScopeDecision.allow());
+
+        ChatbotMessageResult response = this.chatbotService.sendMessage(
+                this.authenticatedUser,
+                new ChatbotMessageCommand("conversation-courtesy", "Muchas gracias por la ayuda")
+        );
+
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_COURTESY_REPLY);
+        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getSourcesSummary()).isEmpty();
+        verify(this.chatbotAiClient, never()).generate(any());
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(this.messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
+        assertThat(messageCaptor.getAllValues().get(1).getContent())
+                .isEqualTo(ChatbotResponseMessages.CLIENT_COURTESY_REPLY);
+        assertThat(messageCaptor.getAllValues().get(1).getSequenceNumber()).isEqualTo(6);
+        assertThat(messageCaptor.getAllValues().get(1).getParentMessageId()).isEqualTo("user-message-id");
+    }
+
+    @Test
     void sendMessageShouldReplyContextUnavailableWhenLegalTasksContextCannotBeLoaded() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
@@ -1518,6 +1557,76 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldRejectReferencedEngagementWhenActiveEngagementIdIsBlank() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx-blank-engagement")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId(" ")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-ctx-blank-engagement")).thenReturn(existingConversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-ctx-blank-engagement")).thenReturn(3);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Compara con EL-200")))
+                .thenReturn(ChatbotScopeDecision.allow());
+
+        ChatbotMessageResult response = this.chatbotService.sendMessage(
+                this.authenticatedUser,
+                new ChatbotMessageCommand("conversation-ctx-blank-engagement", "Compara con EL-200")
+        );
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY);
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
+    void sendMessageShouldAllowReferenceToActiveEngagementIdInContextualConversation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-ctx-same-engagement")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("CONTEXTUAL")
+                .engagementLetterId("EL-100")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-ctx-same-engagement")).thenReturn(existingConversation);
+        when(this.messagePersistence.nextSequenceNumber("conversation-ctx-same-engagement")).thenReturn(3);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame el estado de EL-100")))
+                .thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotQuestionClassifier.classify("Dame el estado de EL-100"))
+                .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
+        when(this.chatbotPlatformContextService.loadContext("EL-100"))
+                .thenReturn(Optional.of(ChatbotPlatformContext.builder()
+                        .engagementLetterId("EL-100")
+                        .ownerDisplayName("Ana")
+                        .sourcesSummary(List.of("Hoja de encargo EL-100"))
+                        .build()));
+
+        ChatbotMessageResult response = this.chatbotService.sendMessage(
+                this.authenticatedUser,
+                new ChatbotMessageCommand("conversation-ctx-same-engagement", "Dame el estado de EL-100")
+        );
+
+        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getUsedPlatformData()).isTrue();
+        assertThat(response.getMessage()).contains("EL-100");
+        verify(this.chatbotPlatformContextService).loadContext("EL-100");
+    }
+
+    @Test
     void sendMessageShouldReturnMissingCaseContextWhenCustomerAsksForOwnEngagementStatusInGeneralConversation() {
         this.authenticate("customer-1", "ROLE_CUSTOMER");
         String userMessage = "¿Cuál es el estado de mi encargo?";
@@ -1829,6 +1938,26 @@ class ChatbotServiceTest {
 
         assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         verify(conversationPersistence, never()).update(any(Conversation.class));
+    }
+
+    @Test
+    void escalateConversationShouldArchiveConversationAndCreateEscalation() {
+        this.authenticate("customer-1", "ROLE_CUSTOMER");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-escalate")
+                .userId("customer-1")
+                .status(ConversationStatus.ACTIVE)
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .build();
+        when(this.conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
+
+        this.chatbotService.escalateConversation(this.authenticatedUser, "conversation-escalate");
+
+        assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
+        verify(this.conversationPersistence).update(existingConversation);
+        verify(this.escalationPersistence).create(any());
     }
 
     @Test

@@ -62,4 +62,35 @@ class ChatbotResponseSanitizerTest {
                         "Texto final"
                 ));
     }
+
+    @Test
+    void normalizeReplyForFrontendShouldJoinRowsWithMoreThanTwoCellsUsingSemicolons() {
+        String reply = """
+                | Tarea | Estado | Responsable |
+                | Revisar contrato | Pendiente | Maria |
+                """;
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
+                .isEqualTo(String.join(
+                        System.lineSeparator(),
+                        "- Tarea: Estado; Responsable",
+                        "- Revisar contrato: Pendiente; Maria"
+                ));
+    }
+
+    @Test
+    void normalizeReplyForFrontendShouldSkipPipeRowsWithoutUsefulCells() {
+        String reply = "Antes" + System.lineSeparator()
+                + "| \t | \t |" + System.lineSeparator()
+                + "| Valor |" + System.lineSeparator()
+                + "Despues";
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
+                .isEqualTo(String.join(
+                        System.lineSeparator(),
+                        "Antes",
+                        "- Valor",
+                        "Despues"
+                ));
+    }
 }

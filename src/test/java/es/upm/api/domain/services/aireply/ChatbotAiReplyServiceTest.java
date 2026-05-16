@@ -178,6 +178,89 @@ class ChatbotAiReplyServiceTest {
     }
 
     @Test
+    void generateConfiguredAssistantReplyShouldUseUnavailableFallbacksWhenPromptValuesAreMissing() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-context-missing-values")
+                .userId("customer-2")
+                .engagementLetterId(" ")
+                .type("CONTEXTUAL")
+                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .build();
+
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-context-missing-values", 2))
+                .thenReturn(List.of());
+        when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
+                .thenReturn(ChatbotAiResponse.builder()
+                        .content("AI reply with unavailable fallbacks")
+                        .finishReason("SUCCESS")
+                        .build());
+
+        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                null,
+                " ",
+                Optional.empty()
+        );
+
+        ArgumentCaptor<ChatbotAiRequest> requestCaptor = ArgumentCaptor.forClass(ChatbotAiRequest.class);
+        verify(this.chatbotAiClient).generate(requestCaptor.capture());
+
+        assertThat(response).isEqualTo("AI reply with unavailable fallbacks");
+        assertThat(requestCaptor.getValue().getPlatformContext())
+                .isEqualTo("No hay contexto de plataforma disponible.");
+        assertThat(requestCaptor.getValue().getUserMessage())
+                .contains("encargo activo: No disponible")
+                .contains("Pregunta actual del usuario:")
+                .contains("Respuesta base segura generada por GOA:")
+                .contains("No disponible");
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldBuildUnavailablePlatformContextWhenContextFieldsAreMissing() {
+        Conversation conversation = this.generalConversation();
+        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
+                .engagementLetterId(" ")
+                .ownerDisplayName(null)
+                .procedureTitles(null)
+                .legalTaskSummaries(List.of())
+                .recentEventSummaries(null)
+                .sourcesSummary(List.of())
+                .build();
+
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
+                .thenReturn(List.of());
+        when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
+                .thenReturn(ChatbotAiResponse.builder()
+                        .content("AI reply with platform fallbacks")
+                        .finishReason("SUCCESS")
+                        .build());
+
+        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.of(platformContext)
+        );
+
+        ArgumentCaptor<ChatbotAiRequest> requestCaptor = ArgumentCaptor.forClass(ChatbotAiRequest.class);
+        verify(this.chatbotAiClient).generate(requestCaptor.capture());
+
+        assertThat(response).isEqualTo("AI reply with platform fallbacks");
+        assertThat(requestCaptor.getValue().getPlatformContext())
+                .contains("EngagementLetterId: No disponible")
+                .contains("Cliente/propietario visible: No disponible")
+                .contains("Procedimientos: No disponible")
+                .contains("Tareas legales:")
+                .contains("Eventos recientes:")
+                .contains("Fuentes internas disponibles:")
+                .contains("No disponible");
+    }
+
+    @Test
     void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenAiResponseIsInvalid() {
         when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
         when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
@@ -185,6 +268,7 @@ class ChatbotAiReplyServiceTest {
         when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
                 .thenReturn(null)
                 .thenReturn(ChatbotAiResponse.builder().error("AI_PROVIDER_ERROR").build())
+                .thenReturn(ChatbotAiResponse.builder().content(null).build())
                 .thenReturn(ChatbotAiResponse.builder().content("   ").build());
 
         Conversation conversation = this.generalConversation();
@@ -210,8 +294,15 @@ class ChatbotAiReplyServiceTest {
                 "Safe base reply",
                 Optional.empty()
         )).isEqualTo("Safe base reply");
+        assertThat(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        )).isEqualTo("Safe base reply");
 
-        verify(this.chatbotAiClient, times(3)).generate(any(ChatbotAiRequest.class));
+        verify(this.chatbotAiClient, times(4)).generate(any(ChatbotAiRequest.class));
     }
 
     @Test
@@ -231,6 +322,24 @@ class ChatbotAiReplyServiceTest {
         );
 
         assertThat(response).isEqualTo("Safe base reply");
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenRecentMessagesCannotBeRead() {
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
+                .thenThrow(new RuntimeException("history unavailable"));
+
+        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                this.generalConversation(),
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        );
+
+        assertThat(response).isEqualTo("Safe base reply");
+        verify(this.chatbotAiClient, never()).generate(any(ChatbotAiRequest.class));
     }
 
     private Conversation generalConversation() {
