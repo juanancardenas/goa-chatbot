@@ -14,8 +14,6 @@ public interface MessageGateway {
 
     List<Message> findByConversationId(String conversationId);
 
-    Integer nextSequenceNumber(String conversationId);
-
     Optional<Message> findLatestByConversationId(String conversationId);
 
     List<Message> findByConversationIdOrdered(String conversationId);

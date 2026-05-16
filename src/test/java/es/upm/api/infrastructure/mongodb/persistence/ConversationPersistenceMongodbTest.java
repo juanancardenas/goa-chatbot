@@ -4,13 +4,19 @@ import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.NotFoundException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
+import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
+import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +24,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,6 +35,12 @@ class ConversationPersistenceMongodbTest {
 
     @Mock
     private ConversationRepository conversationRepository;
+
+    @Mock
+    private MessageRepository messageRepository;
+
+    @Mock
+    private MongoTemplate mongoTemplate;
 
     @InjectMocks
     private ConversationPersistenceMongodb conversationPersistenceMongodb;
@@ -123,6 +137,68 @@ class ConversationPersistenceMongodbTest {
         verify(conversationRepository).deleteById("conversation-11");
     }
 
+    @Test
+    void reserveSequenceNumbersShouldIncrementConversationCounterAtomically() {
+        ConversationEntity updated = conversationEntity("conversation-12", "user-12", null, "GENERAL");
+        updated.setLastSequenceNumber(12);
+        when(this.messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("conversation-12"))
+                .thenReturn(Optional.empty());
+        when(this.mongoTemplate.findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        )).thenReturn(updated);
+
+        Integer firstReservedSequence = this.conversationPersistenceMongodb.reserveSequenceNumbers("conversation-12", 2);
+
+        assertThat(firstReservedSequence).isEqualTo(11);
+        verify(this.mongoTemplate).findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        );
+    }
+
+    @Test
+    void reserveSequenceNumbersShouldInitializeCounterFromExistingMessagesBeforeIncrement() {
+        ConversationEntity updated = conversationEntity("conversation-13", "user-13", null, "GENERAL");
+        updated.setLastSequenceNumber(7);
+        when(this.messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("conversation-13"))
+                .thenReturn(Optional.of(MessageEntity.builder().sequenceNumber(5).build()));
+        when(this.mongoTemplate.findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        )).thenReturn(updated);
+
+        Integer firstReservedSequence = this.conversationPersistenceMongodb.reserveSequenceNumbers("conversation-13", 2);
+
+        assertThat(firstReservedSequence).isEqualTo(6);
+        verify(this.mongoTemplate).updateFirst(any(Query.class), any(Update.class), eq(ConversationEntity.class));
+    }
+
+    @Test
+    void reserveSequenceNumbersShouldThrowWhenConversationDoesNotExist() {
+        when(this.messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("missing-conversation"))
+                .thenReturn(Optional.empty());
+        when(this.mongoTemplate.findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        )).thenReturn(null);
+
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> this.conversationPersistenceMongodb.reserveSequenceNumbers("missing-conversation", 2)
+        );
+
+        assertThat(exception.getMessage()).contains("conversacion existente");
+    }
+
     private ConversationEntity conversationEntity(String id, String userId, String engagementLetterId, String type) {
         return new ConversationEntity(
                 id,
@@ -130,7 +206,8 @@ class ConversationPersistenceMongodbTest {
                 engagementLetterId,
                 ConversationStatus.ACTIVE,
                 type,
-                LocalDateTime.of(2026, 4, 30, 10, 0)
+                LocalDateTime.of(2026, 4, 30, 10, 0),
+                0
         );
     }
 }

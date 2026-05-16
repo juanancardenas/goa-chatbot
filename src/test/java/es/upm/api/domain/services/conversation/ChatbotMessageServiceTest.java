@@ -4,6 +4,7 @@ import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
+import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,9 @@ class ChatbotMessageServiceTest {
 
     @Mock
     private MessageGateway messageGateway;
+
+    @Mock
+    private ConversationGateway conversationGateway;
 
     @InjectMocks
     private ChatbotMessageService chatbotMessageService;
@@ -60,13 +64,13 @@ class ChatbotMessageServiceTest {
     }
 
     @Test
-    void nextSequenceNumberShouldDelegateToGateway() {
-        when(this.messageGateway.nextSequenceNumber("conversation-2")).thenReturn(8);
+    void reserveSequenceNumbersShouldDelegateToConversationGateway() {
+        when(this.conversationGateway.reserveSequenceNumbers("conversation-2", 2)).thenReturn(8);
 
-        Integer nextSequenceNumber = this.chatbotMessageService.nextSequenceNumber("conversation-2");
+        Integer firstReservedSequenceNumber = this.chatbotMessageService.reserveSequenceNumbers("conversation-2", 2);
 
-        assertThat(nextSequenceNumber).isEqualTo(8);
-        verify(this.messageGateway).nextSequenceNumber("conversation-2");
+        assertThat(firstReservedSequenceNumber).isEqualTo(8);
+        verify(this.conversationGateway).reserveSequenceNumbers("conversation-2", 2);
     }
 
     @Test

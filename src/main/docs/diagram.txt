@@ -12,6 +12,7 @@ package domain {
       -ConversationStatus status
       -String type
       -LocalDateTime createdAt
+      -Integer lastSequenceNumber
     }
 
     class Message {

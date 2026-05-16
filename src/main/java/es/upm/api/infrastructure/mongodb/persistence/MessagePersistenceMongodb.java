@@ -42,14 +42,6 @@ public class MessagePersistenceMongodb implements MessageGateway {
     }
 
     @Override
-    public Integer nextSequenceNumber(String conversationId) {
-        return this.messageRepository
-                .findFirstByConversationIdOrderBySequenceNumberDesc(conversationId)
-                .map(message -> message.getSequenceNumber() + 1)
-                .orElse(1);
-    }
-
-    @Override
     public Optional<Message> findLatestByConversationId(String conversationId) {
         return this.messageRepository.findFirstByConversationIdOrderByTimestampDesc(conversationId)
                 .map(MessageEntity::toMessage);

@@ -35,6 +35,7 @@ class ConversationEntityTest {
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         assertThat(entity.getType()).isEqualTo("CHATBOT");
         assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
+        assertThat(entity.getLastSequenceNumber()).isEqualTo(4);
     }
 
     @Test
@@ -49,6 +50,7 @@ class ConversationEntityTest {
         );
 
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+        assertThat(entity.getLastSequenceNumber()).isZero();
     }
 
     @Test
@@ -63,6 +65,7 @@ class ConversationEntityTest {
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         assertThat(entity.getType()).isEqualTo("CHATBOT");
         assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
+        assertThat(entity.getLastSequenceNumber()).isEqualTo(4);
     }
 
     @Test
@@ -74,6 +77,7 @@ class ConversationEntityTest {
                 .status(ConversationStatus.ACTIVE)
                 .type("FOLLOW_UP")
                 .createdAt(LocalDateTime.of(2026, 5, 5, 8, 15))
+                .lastSequenceNumber(9)
                 .build();
 
         Conversation conversation = entity.toConversation();
@@ -84,6 +88,7 @@ class ConversationEntityTest {
         assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(conversation.getType()).isEqualTo("FOLLOW_UP");
         assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 5, 8, 15));
+        assertThat(conversation.getLastSequenceNumber()).isEqualTo(9);
     }
 
     private Conversation conversation() {
@@ -94,6 +99,7 @@ class ConversationEntityTest {
                 .status(ConversationStatus.CLOSED)
                 .type("CHATBOT")
                 .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .lastSequenceNumber(4)
                 .build();
     }
 }

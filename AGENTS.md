@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base e IA, la unificacion del resumen de usuario en `UserSummary` y la tipificacion de modos de respuesta con `ChatbotResponseMode` de **2026-05-16**.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base e IA, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode` y el refuerzo de consistencia conversacional de **2026-05-16**.
 
 ## Niveles de regla
 
@@ -216,6 +216,7 @@ Nota:
 - DEBE mantener separadas conversaciones `GENERAL` y `CONTEXTUAL`.
 - DEBE persistir tanto mensajes de usuario como respuestas del asistente.
 - DEBE mantener `sequenceNumber` y `parentMessageId` para trazabilidad de mensajes.
+- DEBE reservar `sequenceNumber` mediante el contador atomico `Conversation.lastSequenceNumber`; NO DEBE calcular el siguiente valor leyendo el ultimo mensaje.
 - DEBE usar respuestas seguras y restringidas cuando el usuario pregunte fuera del scope del encargo.
 - DEBE representar los modos de respuesta internos con `ChatbotResponseMode`, no con literales `String`.
 - DEBE evitar inventar informacion de plataforma cuando no hay contexto disponible.
@@ -277,9 +278,9 @@ ChatbotService -> policies.ChatbotScopePolicy
 conversation.ChatbotConversationService -> ConversationGateway
 conversation.ChatbotConversationService -> MessageGateway
 conversation.ChatbotMessageService -> MessageGateway
+conversation.ChatbotMessageService -> ConversationGateway
 conversation.ChatbotHistoryService -> ConversationGateway
 conversation.ChatbotHistoryService -> MessageGateway
-conversation.ChatbotEscalationService -> ConversationGateway
 conversation.ChatbotEscalationService -> EscalationGateway
 conversation.ChatbotEscalationService -> UserClient
 
@@ -490,11 +491,14 @@ Excepciones actuales:
 - DEBE impedir reapertura de conversaciones archivadas.
 - DEBE borrar mensajes asociados al borrar una conversacion.
 - DEBE archivar conversacion cuando se escala.
+- DEBE crear la traza de `Escalation` antes de archivar la conversacion; si falla la traza, la conversacion no debe archivarse.
+- DEBE tolerar reintentos de escalado tras fallo parcial usando una traza unica por `conversationId`; si la traza existe pero el archivado falla, debe quedar registro del intento y registrarse log de error.
 - DEBE persistir escalado en `Escalation` con datos de contacto disponibles.
 - DEBE usar `MessageSenderType` para distinguir `USER` y `ASSISTANT`.
 - DEBE usar `MessageType` para distinguir `REQUEST` y `RESPONSE`.
 - DEBE usar `ChatbotResponseMode` para distinguir respuestas `GENERAL`, `CONTEXTUAL_PLATFORM_DATA` y `CONTEXTUAL_RESTRICTED`.
 - DEBE conservar orden conversacional con `sequenceNumber`.
+- DEBE impedir duplicados de mensajes mediante indice unico por `conversationId` y `sequenceNumber`.
 - DEBE enlazar respuesta con peticion mediante `parentMessageId` cuando aplique.
 
 ## Contexto de plataforma
