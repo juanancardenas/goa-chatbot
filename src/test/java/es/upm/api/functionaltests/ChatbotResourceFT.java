@@ -27,7 +27,6 @@ import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
-import es.upm.api.domain.model.UserDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,7 +95,7 @@ class ChatbotResourceFT {
         this.conversationRepository.deleteAll();
         when(this.userClient.readById(anyString())).thenAnswer(invocation -> {
             String userId = invocation.getArgument(0, String.class);
-            return UserDto.builder()
+            return UserSummary.builder()
                     .id(UUID.nameUUIDFromBytes(userId.getBytes()))
                     .mobile("+34600111222")
                     .email(userId + "@example.com")

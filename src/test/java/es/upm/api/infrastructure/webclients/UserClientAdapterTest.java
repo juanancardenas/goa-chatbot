@@ -1,6 +1,6 @@
 package es.upm.api.infrastructure.webclients;
 
-import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.platform.UserSummary;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -17,7 +17,7 @@ class UserClientAdapterTest {
         UserFeignClient userFeignClient = mock(UserFeignClient.class);
         UserClientAdapter adapter = new UserClientAdapter(userFeignClient);
         String userId = "user-123";
-        UserDto expected = UserDto.builder()
+        UserSummary expected = UserSummary.builder()
                 .id(UUID.fromString("33333333-3333-3333-3333-333333333333"))
                 .mobile("600000001")
                 .email("user@goa.test")
@@ -26,7 +26,7 @@ class UserClientAdapterTest {
                 .build();
         when(userFeignClient.readById(userId)).thenReturn(expected);
 
-        UserDto result = adapter.readById(userId);
+        UserSummary result = adapter.readById(userId);
 
         assertThat(result).isSameAs(expected);
         verify(userFeignClient).readById(userId);

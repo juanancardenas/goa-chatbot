@@ -1,8 +1,8 @@
 package es.upm.api.domain.ports.out;
 
-import es.upm.api.domain.model.UserDto;
+import es.upm.api.domain.model.platform.UserSummary;
 
 public interface UserClient {
 
-    UserDto readById(String id);
+    UserSummary readById(String id);
 }
