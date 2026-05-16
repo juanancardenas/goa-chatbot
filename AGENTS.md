@@ -178,6 +178,7 @@ Modelos internos de comando/resultado actuales:
 - `ChatbotConversationHistoryResult`
 - `ChatbotConversationSummaryResult`
 - `ChatbotHistoryMessageResult`
+- `ChatbotReplyDecision`
 - `PageResult`
 
 Enumerados de dominio actuales:
@@ -257,6 +258,7 @@ Reglas de organizacion:
 
 Puertos actuales:
 - `ChatbotAiClient`
+- `ChatbotAiSettings`
 - `ConversationGateway`
 - `MessageGateway`
 - `EscalationGateway`
@@ -272,8 +274,7 @@ ChatbotService -> conversation.ChatbotHistoryService
 ChatbotService -> conversation.ChatbotEscalationService
 ChatbotService -> conversation.ChatbotResponseSanitizer
 ChatbotService -> conversation.ChatbotReplyOrchestrator
-ChatbotService -> basereply.ChatbotBaseReplyBuilder
-ChatbotService -> aireply.ChatbotAiReplyService
+ChatbotService -> ChatbotAiSettings
 
 conversation.ChatbotConversationService -> ConversationGateway
 conversation.ChatbotConversationService -> MessageGateway
@@ -290,7 +291,9 @@ conversation.ChatbotReplyOrchestrator -> policies.ChatbotScopePolicy
 
 basereply.ChatbotPlatformContextService -> EngagementClient
 aireply.ChatbotAiReplyService -> ChatbotAiClient
+aireply.ChatbotAiReplyService -> ChatbotAiSettings
 aireply.ChatbotAiReplyService -> conversation.ChatbotMessageService
+prompt.ChatbotPromptBuilder -> ChatbotAiSettings
 ```
 
 Deuda tecnica conocida:
@@ -300,14 +303,17 @@ Deuda tecnica conocida:
 
 - DEBE ubicar integraciones reales con Spring AI, OpenAI, Ollama, Gemini u otros proveedores en `infrastructure.ai`.
 - DEBE implementar el puerto `ChatbotAiClient`.
+- `ChatbotAiSettingsAdapter` DEBE implementar el puerto `ChatbotAiSettings`.
 - DEBE usar modelos internos `ChatbotAiRequest` y `ChatbotAiResponse`.
 - DEBE aislar errores del proveedor y devolver una respuesta segura si la IA no esta disponible.
-- DEBE usar `ChatbotAiProperties` para configuracion de proveedor, modelo, limites y activacion.
+- DEBE usar `ChatbotAiProperties` solo en infraestructura para configuracion de proveedor, modelo, limites y activacion.
+- `domain.services` DEBE depender de `ChatbotAiSettings`, no de `ChatbotAiProperties`.
 - DEBE recibir ya preparadas las instrucciones, contexto permitido y mensajes recientes desde `domain.services.aireply.ChatbotAiReplyService`.
 - NO DEBE filtrar excepciones tecnicas del proveedor hacia los resources.
 - NO DEBE meter reglas de negocio del chatbot en el adaptador, salvo las necesarias para traducir errores tecnicos.
 
-Adaptador actual:
+Adaptadores actuales:
+- `ChatbotAiSettingsAdapter`
 - `SpringAiChatbotClient`
 
 Regla de direccion:
@@ -315,6 +321,10 @@ Regla de direccion:
 ```text
 domain.ports.out.ChatbotAiClient
   <- infrastructure.ai.SpringAiChatbotClient
+
+domain.ports.out.ChatbotAiSettings
+  <- infrastructure.ai.ChatbotAiSettingsAdapter
+      -> configurations.ChatbotAiProperties
 ```
 
 ## Prompt engineering (`domain.services.prompt`)
