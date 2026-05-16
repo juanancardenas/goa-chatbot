@@ -50,7 +50,7 @@ public class ChatbotAiReplyService {
                     .userMessage(this.buildAiUserMessage(conversation, userMessage, baseReply, platformContext))
                     .basePrompt(this.chatbotAiProperties.getBasePrompt())
                     .roleProfile(profile.name())
-                    .conversationType(conversation.getType())
+                    .conversationType(conversation.getType().name())
                     .platformContext(this.buildPlatformContextForPrompt(platformContext))
                     .recentMessages(
                             this.chatbotMessageService.readRecentMessagesForPrompt(
@@ -88,7 +88,7 @@ public class ChatbotAiReplyService {
     ) {
         String contextualRules = "";
 
-        if (ConversationType.CONTEXTUAL.name().equals(conversation.getType())) {
+        if (ConversationType.CONTEXTUAL == conversation.getType()) {
             String activeEngagementId = platformContext
                     .map(ChatbotPlatformContext::getEngagementLetterId)
                     .orElse(this.safeText(conversation.getEngagementLetterId(), TEXT_NOT_AVAILABLE));

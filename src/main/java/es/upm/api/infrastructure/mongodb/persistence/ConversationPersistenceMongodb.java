@@ -1,6 +1,7 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.NotFoundException;
 import es.upm.api.domain.model.Conversation;
@@ -54,10 +55,10 @@ public class ConversationPersistenceMongodb implements ConversationGateway {
     public Optional<Conversation> findContextualConversation(
             String userId,
             String engagementLetterId,
-            String type
+            ConversationType type
     ) {
         return this.conversationRepository
-                .findByUserIdAndEngagementLetterIdAndType(userId, engagementLetterId, type)
+                .findByUserIdAndEngagementLetterIdAndType(userId, engagementLetterId, type.name())
                 .map(ConversationEntity::toConversation);
     }
 
@@ -65,13 +66,13 @@ public class ConversationPersistenceMongodb implements ConversationGateway {
     public Optional<Conversation> findActiveContextualConversation(
             String userId,
             String engagementLetterId,
-            String type
+            ConversationType type
     ) {
         return this.conversationRepository
                 .findByUserIdAndEngagementLetterIdAndTypeAndStatus(
                         userId,
                         engagementLetterId,
-                        type,
+                        type.name(),
                         ConversationStatus.ACTIVE
                 )
                 .map(ConversationEntity::toConversation);
@@ -80,9 +81,9 @@ public class ConversationPersistenceMongodb implements ConversationGateway {
     @Override
     public List<Conversation> findByUserIdAndTypeOrderByCreatedAtDesc(
             String userId,
-            String type
+            ConversationType type
     ) {
-        return this.conversationRepository.findByUserIdAndTypeOrderByCreatedAtDesc(userId, type)
+        return this.conversationRepository.findByUserIdAndTypeOrderByCreatedAtDesc(userId, type.name())
                 .stream()
                 .map(ConversationEntity::toConversation)
                 .toList();
@@ -92,10 +93,14 @@ public class ConversationPersistenceMongodb implements ConversationGateway {
     public List<Conversation> findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
             String userId,
             String engagementLetterId,
-            String type
+            ConversationType type
     ) {
         return this.conversationRepository
-                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(userId, engagementLetterId, type)
+                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+                        userId,
+                        engagementLetterId,
+                        type.name()
+                )
                 .stream()
                 .map(ConversationEntity::toConversation)
                 .toList();

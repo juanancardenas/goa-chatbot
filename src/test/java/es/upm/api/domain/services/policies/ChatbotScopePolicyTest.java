@@ -1,6 +1,7 @@
 package es.upm.api.domain.services.policies;
 
 import es.upm.api.domain.enums.ChatbotScopeViolationReason;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -193,7 +194,7 @@ class ChatbotScopePolicyTest {
                 .id("conversation-id")
                 .userId("user-id")
                 .engagementLetterId("engagement-letter-id")
-                .type(type)
+                .type(ConversationType.valueOf(type))
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
     }

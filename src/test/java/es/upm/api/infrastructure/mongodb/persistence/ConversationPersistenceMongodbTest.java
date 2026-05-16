@@ -1,5 +1,7 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.NotFoundException;
 import es.upm.api.domain.model.Conversation;
@@ -55,7 +57,7 @@ class ConversationPersistenceMongodbTest {
         assertThat(result.getId()).isEqualTo("conversation-1");
         assertThat(result.getUserId()).isEqualTo("user-1");
         assertThat(result.getEngagementLetterId()).isEqualTo("EL-1");
-        assertThat(result.getType()).isEqualTo("CONTEXTUAL");
+        assertThat(result.getType()).isEqualTo(ConversationType.CONTEXTUAL);
     }
 
     @Test
@@ -82,7 +84,7 @@ class ConversationPersistenceMongodbTest {
         when(conversationRepository.findByUserIdAndEngagementLetterIdAndTypeAndStatus(
                 "user-1", "EL-2", "CONTEXTUAL", ConversationStatus.ACTIVE))
                 .thenReturn(Optional.of(latest));
-        when(conversationRepository.findByUserIdAndTypeOrderByCreatedAtDesc("user-1", "GENERAL"))
+        when(conversationRepository.findByUserIdAndTypeOrderByCreatedAtDesc("user-1", ConversationType.GENERAL.name()))
                 .thenReturn(List.of(older));
         when(conversationRepository.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
                 "user-1", "EL-2", "CONTEXTUAL"))
@@ -90,13 +92,13 @@ class ConversationPersistenceMongodbTest {
 
         List<Conversation> byUser = conversationPersistenceMongodb.findByUserId("user-1");
         Optional<Conversation> contextual = conversationPersistenceMongodb
-                .findContextualConversation("user-1", "EL-2", "CONTEXTUAL");
+                .findContextualConversation("user-1", "EL-2", ConversationType.CONTEXTUAL);
         Optional<Conversation> activeContextual = conversationPersistenceMongodb
-                .findActiveContextualConversation("user-1", "EL-2", "CONTEXTUAL");
+                .findActiveContextualConversation("user-1", "EL-2", ConversationType.CONTEXTUAL);
         List<Conversation> byType = conversationPersistenceMongodb
-                .findByUserIdAndTypeOrderByCreatedAtDesc("user-1", "GENERAL");
+                .findByUserIdAndTypeOrderByCreatedAtDesc("user-1", ConversationType.GENERAL);
         List<Conversation> byEngagement = conversationPersistenceMongodb
-                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc("user-1", "EL-2", "CONTEXTUAL");
+                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc("user-1", "EL-2", ConversationType.CONTEXTUAL);
 
         assertThat(byUser).hasSize(2);
         assertThat(contextual).isPresent();
@@ -113,7 +115,7 @@ class ConversationPersistenceMongodbTest {
                 .userId("user-10")
                 .engagementLetterId("EL-10")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
                 .build();
 

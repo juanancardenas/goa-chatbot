@@ -1,6 +1,7 @@
 package es.upm.api.domain.model;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,7 +24,7 @@ public class Conversation {
     @NotNull
     private ConversationStatus status = ConversationStatus.ACTIVE;
     @NotNull
-    private String type;
+    private ConversationType type;
     @NotNull
     private LocalDateTime createdAt;
     @Builder.Default

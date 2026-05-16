@@ -1,5 +1,7 @@
 package es.upm.api.domain.services.conversation;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
@@ -53,18 +55,18 @@ class ChatbotHistoryServiceTest {
                 .id("conversation-1")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 9, 0))
                 .build();
         Conversation olderConversation = Conversation.builder()
                 .id("conversation-2")
                 .userId("professional-1")
                 .status(ConversationStatus.CLOSED)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 14, 9, 0))
                 .build();
 
-        when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL"))
+        when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
                 .thenReturn(List.of(latestConversation, olderConversation));
         when(this.messageGateway.findLatestByConversationId("conversation-1"))
                 .thenReturn(Optional.of(
@@ -97,11 +99,11 @@ class ChatbotHistoryServiceTest {
                 .id("conversation-1")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 9, 0))
                 .build();
 
-        when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL"))
+        when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
                 .thenReturn(List.of(conversation));
         when(this.messageGateway.findLatestByConversationId("conversation-1")).thenReturn(Optional.empty());
 
@@ -113,7 +115,7 @@ class ChatbotHistoryServiceTest {
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-1");
-        verify(this.conversationGateway).findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL");
+        verify(this.conversationGateway).findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL);
     }
 
     @Test
@@ -123,11 +125,11 @@ class ChatbotHistoryServiceTest {
                 .userId("customer-1")
                 .engagementLetterId("EL-9")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 12, 0))
                 .build();
 
-        when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", "CONTEXTUAL"))
+        when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", ConversationType.CONTEXTUAL))
                 .thenReturn(List.of(conversation));
         when(this.messageGateway.findLatestByConversationId("conversation-ctx")).thenReturn(Optional.empty());
 
@@ -139,7 +141,7 @@ class ChatbotHistoryServiceTest {
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-ctx");
-        verify(this.conversationGateway).findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", "CONTEXTUAL");
+        verify(this.conversationGateway).findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", ConversationType.CONTEXTUAL);
         verify(this.conversationGateway, never())
                 .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(any(), any(), any());
     }
@@ -151,14 +153,14 @@ class ChatbotHistoryServiceTest {
                 .userId("customer-1")
                 .engagementLetterId("EL-9")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 12, 0))
                 .build();
 
         when(this.conversationGateway.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
                 "customer-1",
                 "EL-9",
-                "CONTEXTUAL"
+                ConversationType.CONTEXTUAL
         )).thenReturn(List.of(conversation));
         when(this.messageGateway.findLatestByConversationId("conversation-ctx")).thenReturn(Optional.empty());
 
@@ -170,7 +172,7 @@ class ChatbotHistoryServiceTest {
 
         assertThat(response).hasSize(1);
         verify(this.conversationGateway)
-                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc("customer-1", "EL-9", "CONTEXTUAL");
+                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc("customer-1", "EL-9", ConversationType.CONTEXTUAL);
     }
 
     @Test
@@ -190,7 +192,7 @@ class ChatbotHistoryServiceTest {
                 .userId("customer-1")
                 .engagementLetterId("EL-10")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 8, 0))
                 .build();
 
@@ -261,7 +263,7 @@ class ChatbotHistoryServiceTest {
                 .id("conversation-history")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 8, 0))
                 .build();
 
@@ -294,7 +296,7 @@ class ChatbotHistoryServiceTest {
                 .id("conversation-history")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 8, 0))
                 .build();
 
@@ -327,7 +329,7 @@ class ChatbotHistoryServiceTest {
                 .id("conversation-history")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 8, 0))
                 .build();
 
@@ -360,11 +362,11 @@ class ChatbotHistoryServiceTest {
                 .id("conversation-1")
                 .userId("professional-1")
                 .status(null)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 9, 0))
                 .build();
 
-        when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL"))
+        when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
                 .thenReturn(List.of(conversation));
         when(this.messageGateway.findLatestByConversationId("conversation-1")).thenReturn(Optional.empty());
 

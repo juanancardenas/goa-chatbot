@@ -137,7 +137,7 @@ public class ChatbotScopePolicy {
             );
         }
 
-        if (ConversationType.GENERAL.name().equals(conversation.getType())
+        if (ConversationType.GENERAL == conversation.getType()
                 && this.containsAny(normalizedMessage, CONTEXT_REQUIRED_PATTERNS)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.MISSING_CASE_CONTEXT,
@@ -146,7 +146,7 @@ public class ChatbotScopePolicy {
             );
         }
 
-        if (ConversationType.CONTEXTUAL.name().equals(conversation.getType())
+        if (ConversationType.CONTEXTUAL == conversation.getType()
                 && this.containsAny(normalizedMessage, OTHER_CASE_PATTERNS)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.OUT_OF_CASE_SCOPE,
@@ -155,7 +155,7 @@ public class ChatbotScopePolicy {
             );
         }
 
-        if (ConversationType.CONTEXTUAL.name().equals(conversation.getType())
+        if (ConversationType.CONTEXTUAL == conversation.getType()
                 && this.looksLikeUnsupportedFactualAssertion(normalizedMessage)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.UNSUPPORTED_FACTUAL_ASSERTION,
@@ -164,7 +164,7 @@ public class ChatbotScopePolicy {
             );
         }
 
-        if (ConversationType.GENERAL.name().equals(conversation.getType())
+        if (ConversationType.GENERAL == conversation.getType()
                 && this.looksAmbiguous(normalizedMessage)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.AMBIGUOUS_CONTEXT,

@@ -1,5 +1,7 @@
 package es.upm.api.integrationtests;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.model.Conversation;
@@ -135,7 +137,7 @@ class EscalationConsistencyIT {
                 .id(conversationId)
                 .userId("user-escalation")
                 .status(status)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL.name())
                 .createdAt(LocalDateTime.of(2026, 5, 16, 17, 0))
                 .build());
     }
@@ -151,7 +153,7 @@ class EscalationConsistencyIT {
                 .id(conversationId)
                 .userId("user-escalation")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 16, 17, 0))
                 .build();
     }

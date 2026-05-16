@@ -1,5 +1,7 @@
 package es.upm.api.domain.services.conversation;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
@@ -47,7 +49,7 @@ class ChatbotConversationServiceTest {
 
         assertThat(conversation.getId()).isNotBlank();
         assertThat(conversation.getUserId()).isEqualTo("user-1");
-        assertThat(conversation.getType()).isEqualTo("GENERAL");
+        assertThat(conversation.getType()).isEqualTo(ConversationType.GENERAL);
         assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(conversation.getCreatedAt()).isEqualTo(createdAt);
         assertThat(savedConversation).usingRecursiveComparison().isEqualTo(conversation);
@@ -59,11 +61,11 @@ class ChatbotConversationServiceTest {
                 .id("conversation-1")
                 .userId("user-1")
                 .engagementLetterId("EL-7")
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .status(ConversationStatus.ACTIVE)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 10, 0))
                 .build();
-        when(this.conversationGateway.findActiveContextualConversation("user-1", "EL-7", "CONTEXTUAL"))
+        when(this.conversationGateway.findActiveContextualConversation("user-1", "EL-7", ConversationType.CONTEXTUAL))
                 .thenReturn(Optional.of(existingConversation));
 
         Conversation conversation = this.chatbotConversationService.findOrCreateContextualConversation("user-1", "EL-7");
@@ -74,7 +76,7 @@ class ChatbotConversationServiceTest {
 
     @Test
     void findOrCreateContextualConversationShouldCreateConversationWhenNoneExists() {
-        when(this.conversationGateway.findActiveContextualConversation("user-1", "EL-8", "CONTEXTUAL"))
+        when(this.conversationGateway.findActiveContextualConversation("user-1", "EL-8", ConversationType.CONTEXTUAL))
                 .thenReturn(Optional.empty());
 
         Conversation conversation = this.chatbotConversationService.findOrCreateContextualConversation("user-1", "EL-8");
@@ -86,7 +88,7 @@ class ChatbotConversationServiceTest {
         assertThat(conversation.getId()).isNotBlank();
         assertThat(conversation.getUserId()).isEqualTo("user-1");
         assertThat(conversation.getEngagementLetterId()).isEqualTo("EL-8");
-        assertThat(conversation.getType()).isEqualTo("CONTEXTUAL");
+        assertThat(conversation.getType()).isEqualTo(ConversationType.CONTEXTUAL);
         assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(conversation.getCreatedAt()).isNotNull();
         assertThat(savedConversation).usingRecursiveComparison().isEqualTo(conversation);

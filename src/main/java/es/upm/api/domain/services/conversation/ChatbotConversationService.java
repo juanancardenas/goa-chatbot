@@ -34,7 +34,7 @@ public class ChatbotConversationService {
                 .id(UUID.randomUUID().toString())
                 .userId(userId)
                 .status(ConversationStatus.ACTIVE)
-                .type(ConversationType.GENERAL.name())
+                .type(ConversationType.GENERAL)
                 .createdAt(createdAt)
                 .build();
 
@@ -48,14 +48,14 @@ public class ChatbotConversationService {
             String engagementLetterId
     ) {
         return this.conversationGateway
-                .findActiveContextualConversation(userId, engagementLetterId, ConversationType.CONTEXTUAL.name())
+                .findActiveContextualConversation(userId, engagementLetterId, ConversationType.CONTEXTUAL)
                 .orElseGet(() -> {
                     Conversation conversation = Conversation.builder()
                             .id(UUID.randomUUID().toString())
                             .userId(userId)
                             .engagementLetterId(engagementLetterId)
                             .status(ConversationStatus.ACTIVE)
-                            .type(ConversationType.CONTEXTUAL.name())
+                            .type(ConversationType.CONTEXTUAL)
                             .createdAt(LocalDateTime.now())
                             .build();
 
