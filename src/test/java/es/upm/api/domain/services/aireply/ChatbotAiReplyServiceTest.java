@@ -2,13 +2,13 @@ package es.upm.api.domain.services.aireply;
 
 import es.upm.api.domain.enums.ConversationType;
 
-import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +37,7 @@ class ChatbotAiReplyServiceTest {
     private ChatbotAiClient chatbotAiClient;
 
     @Mock
-    private ChatbotAiProperties chatbotAiProperties;
+    private ChatbotAiSettings chatbotAiSettings;
 
     @Mock
     private ChatbotMessageService chatbotMessageService;
@@ -46,23 +46,23 @@ class ChatbotAiReplyServiceTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(this.chatbotAiProperties.getBasePrompt()).thenReturn("Prompt base de pruebas");
-        lenient().when(this.chatbotAiProperties.getModel()).thenReturn("llama3.2:3b");
-        lenient().when(this.chatbotAiProperties.getMaxOutputTokens()).thenReturn(500);
-        lenient().when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(2);
-        lenient().when(this.chatbotAiProperties.getTemperature()).thenReturn(0.2);
-        lenient().when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(true);
+        lenient().when(this.chatbotAiSettings.basePrompt()).thenReturn("Prompt base de pruebas");
+        lenient().when(this.chatbotAiSettings.model()).thenReturn("llama3.2:3b");
+        lenient().when(this.chatbotAiSettings.maxOutputTokens()).thenReturn(500);
+        lenient().when(this.chatbotAiSettings.maxContextMessages()).thenReturn(2);
+        lenient().when(this.chatbotAiSettings.temperature()).thenReturn(0.2);
+        lenient().when(this.chatbotAiSettings.documentsAvailable()).thenReturn(true);
 
         this.chatbotAiReplyService = new ChatbotAiReplyService(
                 this.chatbotAiClient,
-                this.chatbotAiProperties,
+                this.chatbotAiSettings,
                 this.chatbotMessageService
         );
     }
 
     @Test
     void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenAiIsDisabled() {
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(false);
 
         String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 this.generalConversation(),
@@ -95,7 +95,7 @@ class ChatbotAiReplyServiceTest {
                 .sourcesSummary(List.of("Engagement letter", "Timeline"))
                 .build();
 
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-ai-context", 2))
                 .thenReturn(List.of("ASSISTANT: Previous reply", "USER: Last question"));
         when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
@@ -153,7 +153,7 @@ class ChatbotAiReplyServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-context-no-platform", 2))
                 .thenReturn(List.of());
         when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
@@ -189,7 +189,7 @@ class ChatbotAiReplyServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-context-missing-values", 2))
                 .thenReturn(List.of());
         when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
@@ -231,7 +231,7 @@ class ChatbotAiReplyServiceTest {
                 .sourcesSummary(List.of())
                 .build();
 
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
                 .thenReturn(List.of());
         when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
@@ -264,7 +264,7 @@ class ChatbotAiReplyServiceTest {
 
     @Test
     void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenAiResponseIsInvalid() {
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
                 .thenReturn(List.of());
         when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
@@ -309,7 +309,7 @@ class ChatbotAiReplyServiceTest {
 
     @Test
     void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenAiClientThrowsException() {
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
                 .thenReturn(List.of());
         when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
@@ -328,7 +328,7 @@ class ChatbotAiReplyServiceTest {
 
     @Test
     void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenRecentMessagesCannotBeRead() {
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
                 .thenThrow(new RuntimeException("history unavailable"));
 

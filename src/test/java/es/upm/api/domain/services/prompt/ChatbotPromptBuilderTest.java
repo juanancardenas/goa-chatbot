@@ -1,7 +1,7 @@
 package es.upm.api.domain.services.prompt;
 
-import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
+import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -10,16 +10,11 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ChatbotPromptBuilderTest {
-    private ChatbotAiProperties chatbotAiProperties;
     private ChatbotPromptBuilder chatbotPromptBuilder;
 
     @BeforeEach
     void setUp() {
-        this.chatbotAiProperties = new ChatbotAiProperties();
-        this.chatbotAiProperties.setBasePrompt("Prompt base de pruebas para GOA.");
-        this.chatbotAiProperties.setMaxContextMessages(2);
-        this.chatbotAiProperties.setDocumentsAvailable(false);
-        this.chatbotPromptBuilder = new ChatbotPromptBuilder(this.chatbotAiProperties);
+        this.chatbotPromptBuilder = new ChatbotPromptBuilder(new TestChatbotAiSettings());
     }
 
     @Test
@@ -178,5 +173,53 @@ class ChatbotPromptBuilderTest {
         assertThat(prompt).contains("[CONTEXTO DE PLATAFORMA]");
         assertThat(prompt).contains("No disponible");
         assertThat(prompt).contains("no inventes datos de plataforma");
+    }
+
+    private static class TestChatbotAiSettings implements ChatbotAiSettings {
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
+
+        @Override
+        public String provider() {
+            return "ollama";
+        }
+
+        @Override
+        public String model() {
+            return "llama3.2:3b";
+        }
+
+        @Override
+        public int maxInputCharacters() {
+            return 1000;
+        }
+
+        @Override
+        public int maxOutputTokens() {
+            return 500;
+        }
+
+        @Override
+        public int maxContextMessages() {
+            return 2;
+        }
+
+        @Override
+        public boolean documentsAvailable() {
+            return false;
+        }
+
+        @Override
+        public String basePrompt() {
+            return "Prompt base de pruebas para GOA.";
+        }
+
+        @Override
+        public double temperature() {
+            return 0.2;
+        }
     }
 }

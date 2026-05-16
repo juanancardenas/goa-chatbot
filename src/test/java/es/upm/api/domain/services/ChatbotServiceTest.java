@@ -2,7 +2,6 @@ package es.upm.api.domain.services;
 
 import es.upm.api.domain.enums.ConversationType;
 
-import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.*;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
@@ -22,6 +21,7 @@ import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
 import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
@@ -76,7 +76,7 @@ class ChatbotServiceTest {
     private ChatbotAiClient chatbotAiClient;
 
     @Mock
-    private ChatbotAiProperties chatbotAiProperties;
+    private ChatbotAiSettings chatbotAiSettings;
 
     @Mock
     private ChatbotDocumentContextService chatbotDocumentContextService;
@@ -94,17 +94,16 @@ class ChatbotServiceTest {
     private AuthenticatedUserContext authenticatedUser;
 
     @BeforeEach
-    void configureChatbotAiProperties() {
-        lenient().when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
-        lenient().when(this.chatbotAiProperties.normalizedProvider()).thenReturn("ollama");
-        lenient().when(this.chatbotAiProperties.getProvider()).thenReturn("ollama");
-        lenient().when(this.chatbotAiProperties.getModel()).thenReturn("llama3.2:3b");
-        lenient().when(this.chatbotAiProperties.getBasePrompt()).thenReturn("Prompt base de pruebas");
-        lenient().when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(1000);
-        lenient().when(this.chatbotAiProperties.getMaxOutputTokens()).thenReturn(500);
-        lenient().when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(10);
-        lenient().when(this.chatbotAiProperties.getTemperature()).thenReturn(0.2);
-        lenient().when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(false);
+    void configureChatbotAiSettings() {
+        lenient().when(this.chatbotAiSettings.isEnabled()).thenReturn(false);
+        lenient().when(this.chatbotAiSettings.provider()).thenReturn("ollama");
+        lenient().when(this.chatbotAiSettings.model()).thenReturn("llama3.2:3b");
+        lenient().when(this.chatbotAiSettings.basePrompt()).thenReturn("Prompt base de pruebas");
+        lenient().when(this.chatbotAiSettings.maxInputCharacters()).thenReturn(1000);
+        lenient().when(this.chatbotAiSettings.maxOutputTokens()).thenReturn(500);
+        lenient().when(this.chatbotAiSettings.maxContextMessages()).thenReturn(10);
+        lenient().when(this.chatbotAiSettings.temperature()).thenReturn(0.2);
+        lenient().when(this.chatbotAiSettings.documentsAvailable()).thenReturn(false);
         lenient().when(this.conversationPersistence.reserveSequenceNumbers(any(), eq(2))).thenReturn(1);
 
         ChatbotMessageService chatbotMessageService = new ChatbotMessageService(this.messagePersistence, this.conversationPersistence);
@@ -129,7 +128,7 @@ class ChatbotServiceTest {
         );
         ChatbotAiReplyService chatbotAiReplyService = new ChatbotAiReplyService(
                 this.chatbotAiClient,
-                this.chatbotAiProperties,
+                this.chatbotAiSettings,
                 chatbotMessageService
         );
 
@@ -144,7 +143,7 @@ class ChatbotServiceTest {
                 this.chatbotPlatformContextService,
                 this.chatbotQuestionClassifier,
                 this.chatbotScopePolicy,
-                this.chatbotAiProperties
+                this.chatbotAiSettings
         );
     }
 
@@ -612,7 +611,7 @@ class ChatbotServiceTest {
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
         when(this.chatbotPlatformContextService.loadContext("engagement-001"))
                 .thenReturn(Optional.empty());
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(false);
 
         ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-contextual-unavailable",
@@ -660,7 +659,7 @@ class ChatbotServiceTest {
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
         when(this.chatbotPlatformContextService.loadContext("engagement-001"))
                 .thenReturn(Optional.of(platformContext));
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(false);
 
         ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-contextual-no-legal-tasks",
@@ -711,7 +710,7 @@ class ChatbotServiceTest {
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
         when(this.chatbotPlatformContextService.loadContext("engagement-001"))
                 .thenReturn(Optional.of(platformContext));
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(false);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(false);
 
         ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-contextual-legal-tasks",
@@ -822,7 +821,7 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.conversationPersistence.readById("conversation-ai")).thenReturn(existingConversation);
         when(this.conversationPersistence.reserveSequenceNumbers("conversation-ai", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
@@ -890,7 +889,7 @@ class ChatbotServiceTest {
     void sendMessageShouldRejectMessageLongerThanConfiguredLimit() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
-        when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(5);
+        when(this.chatbotAiSettings.maxInputCharacters()).thenReturn(5);
 
         ChatbotMessageCommand request = new ChatbotMessageCommand(
                 "conversation-long-message",
@@ -911,7 +910,7 @@ class ChatbotServiceTest {
     void startGeneralConversationShouldRejectMessageLongerThanConfiguredLimit() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
-        when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(5);
+        when(this.chatbotAiSettings.maxInputCharacters()).thenReturn(5);
 
         ChatbotMessageCommand request = new ChatbotMessageCommand(
                 null,
@@ -2086,13 +2085,13 @@ class ChatbotServiceTest {
 
     @Test
     void readConfigurationStatusShouldExposeConfiguredAiSettings() {
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
-        when(this.chatbotAiProperties.normalizedProvider()).thenReturn("openai");
-        when(this.chatbotAiProperties.getModel()).thenReturn("gpt-4.1-mini");
-        when(this.chatbotAiProperties.getMaxInputCharacters()).thenReturn(2048);
-        when(this.chatbotAiProperties.getMaxOutputTokens()).thenReturn(800);
-        when(this.chatbotAiProperties.getMaxContextMessages()).thenReturn(6);
-        when(this.chatbotAiProperties.isDocumentsAvailable()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.provider()).thenReturn("openai");
+        when(this.chatbotAiSettings.model()).thenReturn("gpt-4.1-mini");
+        when(this.chatbotAiSettings.maxInputCharacters()).thenReturn(2048);
+        when(this.chatbotAiSettings.maxOutputTokens()).thenReturn(800);
+        when(this.chatbotAiSettings.maxContextMessages()).thenReturn(6);
+        when(this.chatbotAiSettings.documentsAvailable()).thenReturn(true);
 
         ChatbotConfigurationStatus response = this.chatbotService.readConfigurationStatus();
 
@@ -2117,7 +2116,7 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 
-        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.conversationPersistence.readById("conversation-ai-table")).thenReturn(existingConversation);
         when(this.conversationPersistence.reserveSequenceNumbers("conversation-ai-table", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))

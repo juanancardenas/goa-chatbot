@@ -1,6 +1,5 @@
 package es.upm.api.domain.services;
 
-import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.ChatbotResponseMode;
@@ -10,6 +9,7 @@ import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
+import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
 import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
 import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
@@ -52,7 +52,7 @@ public class ChatbotService {
     private final ChatbotPlatformContextService chatbotPlatformContextService;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ChatbotScopePolicy chatbotScopePolicy;
-    private final ChatbotAiProperties chatbotAiProperties;
+    private final ChatbotAiSettings chatbotAiSettings;
 
     // Constructors
     @Autowired
@@ -66,7 +66,7 @@ public class ChatbotService {
                           ChatbotPlatformContextService chatbotPlatformContextService,
                           ChatbotQuestionClassifier chatbotQuestionClassifier,
                           ChatbotScopePolicy chatbotScopePolicy,
-                          ChatbotAiProperties chatbotAiProperties
+                          ChatbotAiSettings chatbotAiSettings
     ) {
         this.chatbotMessageService = chatbotMessageService;
         this.chatbotResponseSanitizer = chatbotResponseSanitizer;
@@ -78,7 +78,7 @@ public class ChatbotService {
         this.chatbotPlatformContextService = chatbotPlatformContextService;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
         this.chatbotScopePolicy = chatbotScopePolicy;
-        this.chatbotAiProperties = chatbotAiProperties;
+        this.chatbotAiSettings = chatbotAiSettings;
     }
 
     /**
@@ -427,13 +427,13 @@ public class ChatbotService {
 
     public ChatbotConfigurationStatus readConfigurationStatus() {
         return ChatbotConfigurationStatus.builder()
-                .enabled(this.chatbotAiProperties.isEnabled())
-                .provider(this.chatbotAiProperties.normalizedProvider())
-                .model(this.chatbotAiProperties.getModel())
-                .maxInputCharacters(this.chatbotAiProperties.getMaxInputCharacters())
-                .maxOutputTokens(this.chatbotAiProperties.getMaxOutputTokens())
-                .maxContextMessages(this.chatbotAiProperties.getMaxContextMessages())
-                .documentsAvailable(this.chatbotAiProperties.isDocumentsAvailable())
+                .enabled(this.chatbotAiSettings.isEnabled())
+                .provider(this.chatbotAiSettings.provider())
+                .model(this.chatbotAiSettings.model())
+                .maxInputCharacters(this.chatbotAiSettings.maxInputCharacters())
+                .maxOutputTokens(this.chatbotAiSettings.maxOutputTokens())
+                .maxContextMessages(this.chatbotAiSettings.maxContextMessages())
+                .documentsAvailable(this.chatbotAiSettings.documentsAvailable())
                 .build();
     }
 
@@ -514,7 +514,7 @@ public class ChatbotService {
     }
 
     private void validateUserMessageLength(String message) {
-        int maxInputCharacters = this.chatbotAiProperties.getMaxInputCharacters();
+        int maxInputCharacters = this.chatbotAiSettings.maxInputCharacters();
 
         if (maxInputCharacters > 0 && message != null && message.length() > maxInputCharacters) {
             throw new BadRequestException("message supera el limite maximo de caracteres configurado");
