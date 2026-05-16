@@ -33,6 +33,7 @@ import es.upm.api.domain.services.conversation.ChatbotEscalationService;
 import es.upm.api.domain.services.conversation.ChatbotHistoryService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
+import es.upm.api.domain.services.conversation.ChatbotReplyOrchestrator;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
@@ -105,6 +106,8 @@ class ChatbotServiceTest {
         lenient().when(this.chatbotAiSettings.temperature()).thenReturn(0.2);
         lenient().when(this.chatbotAiSettings.documentsAvailable()).thenReturn(false);
         lenient().when(this.conversationPersistence.reserveSequenceNumbers(any(), eq(2))).thenReturn(1);
+        lenient().when(this.chatbotScopePolicy.evaluate(any(Conversation.class), any()))
+                .thenReturn(ChatbotScopeDecision.allow());
 
         ChatbotMessageService chatbotMessageService = new ChatbotMessageService(this.messagePersistence, this.conversationPersistence);
         ChatbotConversationService chatbotConversationService = new ChatbotConversationService(
@@ -131,6 +134,12 @@ class ChatbotServiceTest {
                 this.chatbotAiSettings,
                 chatbotMessageService
         );
+        ChatbotReplyOrchestrator chatbotReplyOrchestrator = new ChatbotReplyOrchestrator(
+                chatbotBaseReplyBuilder,
+                chatbotAiReplyService,
+                this.chatbotPlatformContextService,
+                this.chatbotScopePolicy
+        );
 
         this.chatbotService = new ChatbotService(
                 chatbotMessageService,
@@ -138,11 +147,9 @@ class ChatbotServiceTest {
                 chatbotConversationService,
                 chatbotHistoryService,
                 chatbotEscalationService,
-                chatbotBaseReplyBuilder,
                 chatbotAiReplyService,
-                this.chatbotPlatformContextService,
-                this.chatbotQuestionClassifier,
-                this.chatbotScopePolicy,
+                chatbotReplyOrchestrator,
+                chatbotBaseReplyBuilder,
                 this.chatbotAiSettings
         );
     }
@@ -563,8 +570,6 @@ class ChatbotServiceTest {
         when(this.conversationPersistence.reserveSequenceNumbers("conversation-courtesy", 2)).thenReturn(5);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Muchas gracias por la ayuda")))
-                .thenReturn(ChatbotScopeDecision.allow());
 
         ChatbotMessageResult response = this.chatbotService.sendMessage(
                 this.authenticatedUser,
@@ -605,8 +610,6 @@ class ChatbotServiceTest {
                 .thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son las tareas legales de este encargo?")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotQuestionClassifier.classify("Cuáles son las tareas legales de este encargo?"))
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
         when(this.chatbotPlatformContextService.loadContext("engagement-001"))
@@ -653,8 +656,6 @@ class ChatbotServiceTest {
                 .thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son las tareas legales?")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotQuestionClassifier.classify("Cuáles son las tareas legales?"))
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
         when(this.chatbotPlatformContextService.loadContext("engagement-001"))
@@ -704,8 +705,6 @@ class ChatbotServiceTest {
                 .thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(conversation), eq("Cuáles son las tareas legales de este encargo?")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotQuestionClassifier.classify("Cuáles son las tareas legales de este encargo?"))
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
         when(this.chatbotPlatformContextService.loadContext("engagement-001"))
@@ -743,8 +742,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame contexto del caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100"))
                 .thenReturn(Optional.of(
                         ChatbotPlatformContext.builder()
@@ -828,8 +825,6 @@ class ChatbotServiceTest {
                 .thenReturn("user-message-id", "assistant-message-id");
         when(this.messagePersistence.findByConversationIdOrdered("conversation-ai"))
                 .thenReturn(List.of());
-        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Explícame qué puedes hacer")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotQuestionClassifier.classify("Explícame qué puedes hacer"))
                 .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
         when(this.chatbotAiClient.generate(any()))
@@ -952,8 +947,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
         when(chatbotQuestionClassifier.classify("Que documentos hay en el expediente"))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
@@ -993,8 +986,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame contexto del caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100"))
                 .thenReturn(Optional.of(
                         ChatbotPlatformContext.builder()
@@ -1044,8 +1035,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado de mi caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.empty());
         when(chatbotQuestionClassifier.classify("Cual es el estado de mi caso"))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
@@ -1077,8 +1066,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos recientes tiene el caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.empty());
         when(chatbotQuestionClassifier.classify("Que hitos recientes tiene el caso"))
                 .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
@@ -1109,8 +1096,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.empty());
         when(chatbotQuestionClassifier.classify("Que documentos hay en el expediente"))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
@@ -1141,8 +1126,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame un resumen del caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.empty());
         when(chatbotQuestionClassifier.classify("Dame un resumen del caso"))
                 .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
@@ -1173,8 +1156,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame contexto del caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100"))
                 .thenReturn(Optional.empty());
 
@@ -1213,8 +1194,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado del encargo")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
         when(chatbotQuestionClassifier.classify("Cual es el estado del encargo"))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
@@ -1257,8 +1236,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos recientes tiene el caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
         when(chatbotQuestionClassifier.classify("Que hitos recientes tiene el caso"))
                 .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
@@ -1297,8 +1274,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
         when(chatbotQuestionClassifier.classify("Que documentos hay en el caso"))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
@@ -1336,8 +1311,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Cual es el estado de mi caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
         when(chatbotQuestionClassifier.classify("Cual es el estado de mi caso"))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
@@ -1376,8 +1349,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos hay en el expediente")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-100")).thenReturn(Optional.of(context));
         when(chatbotQuestionClassifier.classify("Que documentos hay en el expediente"))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
@@ -1407,8 +1378,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotQuestionClassifier.classify(userMessage))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
 
@@ -1442,8 +1411,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotQuestionClassifier.classify(userMessage))
                 .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
 
@@ -1477,8 +1444,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(5);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotQuestionClassifier.classify(userMessage))
                 .thenReturn(PlatformQuestionType.DOCUMENTS);
 
@@ -1512,8 +1477,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(7);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq(userMessage)))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotQuestionClassifier.classify(userMessage))
                 .thenReturn(null);
 
@@ -1547,8 +1510,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Compáralo con EL-200")))
-                .thenReturn(ChatbotScopeDecision.allow());
 
         ChatbotMessageCommand request = new ChatbotMessageCommand("conversation-ctx", "Compáralo con EL-200");
 
@@ -1577,8 +1538,6 @@ class ChatbotServiceTest {
         when(this.conversationPersistence.reserveSequenceNumbers("conversation-ctx-blank-engagement", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Compara con EL-200")))
-                .thenReturn(ChatbotScopeDecision.allow());
 
         ChatbotMessageResult response = this.chatbotService.sendMessage(
                 this.authenticatedUser,
@@ -1608,8 +1567,6 @@ class ChatbotServiceTest {
         when(this.conversationPersistence.reserveSequenceNumbers("conversation-ctx-same-engagement", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame el estado de EL-100")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotQuestionClassifier.classify("Dame el estado de EL-100"))
                 .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
         when(this.chatbotPlatformContextService.loadContext("EL-100"))
@@ -1725,8 +1682,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx-events", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("¿Qué hitos recientes tiene este caso?")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-200"))
                 .thenReturn(Optional.of(
                         ChatbotPlatformContext.builder()
@@ -1766,8 +1721,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx-empty-events", 2)).thenReturn(3);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que hitos tiene mi caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-201"))
                 .thenReturn(Optional.of(
                         ChatbotPlatformContext.builder()
@@ -1808,8 +1761,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx-docs", 2)).thenReturn(7);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("¿Qué documentos hay en este caso?")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-300"))
                 .thenReturn(Optional.of(
                         ChatbotPlatformContext.builder()
@@ -1851,8 +1802,6 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-ctx-docs-visible", 2)).thenReturn(9);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Que documentos veo en mi caso")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(chatbotPlatformContextService.loadContext("EL-301"))
                 .thenReturn(Optional.of(
                         ChatbotPlatformContext.builder()
@@ -2123,8 +2072,6 @@ class ChatbotServiceTest {
                 .thenReturn("user-message-id", "assistant-message-id");
         when(this.messagePersistence.findByConversationIdOrdered("conversation-ai-table"))
                 .thenReturn(List.of());
-        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Muéstramelo en tabla")))
-                .thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotQuestionClassifier.classify("Muéstramelo en tabla"))
                 .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
         when(this.chatbotAiClient.generate(any()))
