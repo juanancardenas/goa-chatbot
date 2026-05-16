@@ -200,7 +200,7 @@ class ChatbotServiceTest {
         List<Message> savedMessages = messageCaptor.getAllValues();
 
         assertThat(savedMessages.get(1).getContent()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY);
-        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY);
     }
@@ -568,7 +568,7 @@ class ChatbotServiceTest {
         );
 
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_COURTESY_REPLY);
-        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getSourcesSummary()).isEmpty();
         verify(this.chatbotAiClient, never()).generate(any());
@@ -756,7 +756,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getMessage()).contains("No se han encontrado hitos recientes visibles");
     }
@@ -967,7 +967,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getMessage()).contains("integración documental real aún no está disponible");
         assertThat(response.getMessage()).contains("Reclamación civil");
     }
@@ -1013,7 +1013,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getSourcesSummary()).contains("Hoja de encargo");
         assertThat(response.getMessage()).contains("EL-100");
@@ -1050,7 +1050,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getSourcesSummary()).isEmpty();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_STATUS_REPLY);
@@ -1083,7 +1083,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_EVENTS_REPLY);
     }
@@ -1115,7 +1115,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_DOCUMENTS_STUB_REPLY);
     }
@@ -1147,7 +1147,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXT_UNAVAILABLE_GENERAL_REPLY);
     }
@@ -1178,7 +1178,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getSourcesSummary()).isEmpty();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY);
@@ -1219,7 +1219,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getMessage()).contains("EL-100");
         assertThat(response.getMessage()).contains("Ana Ocaña");
         assertThat(response.getMessage()).contains("Reclamación civil");
@@ -1263,7 +1263,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getMessage()).contains("Se registró escrito");
         assertThat(response.getMessage()).contains("Vista programada");
     }
@@ -1303,7 +1303,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getMessage()).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
     }
 
@@ -1342,7 +1342,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getMessage()).contains("puedo explicarte el caso");
         assertThat(response.getMessage()).contains("procedimientos visibles relacionados");
     }
@@ -1382,7 +1382,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getMessage()).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
     }
 
@@ -1416,7 +1416,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
-        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_GENERAL_STATUS_REPLY);
     }
@@ -1451,7 +1451,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
-        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_EXAMPLE_REPLY);
     }
@@ -1486,7 +1486,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
-        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY);
     }
@@ -1521,7 +1521,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
-        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_CONTEXT_REPLY);
     }
@@ -1550,7 +1550,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY);
         verify(chatbotPlatformContextService, never()).loadContext(any());
@@ -1581,7 +1581,7 @@ class ChatbotServiceTest {
                 new ChatbotMessageCommand("conversation-ctx-blank-engagement", "Compara con EL-200")
         );
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY);
         verify(this.chatbotPlatformContextService, never()).loadContext(any());
@@ -1620,7 +1620,7 @@ class ChatbotServiceTest {
                 new ChatbotMessageCommand("conversation-ctx-same-engagement", "Dame el estado de EL-100")
         );
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getMessage()).contains("EL-100");
         verify(this.chatbotPlatformContextService).loadContext("EL-100");
@@ -1658,7 +1658,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-general");
-        assertThat(response.getResponseMode()).isEqualTo("GENERAL");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY);
         verify(chatbotQuestionClassifier, never()).classify(any());
@@ -1697,7 +1697,7 @@ class ChatbotServiceTest {
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
         assertThat(response.getConversationId()).isEqualTo("conversation-ctx");
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(response.getUsedPlatformData()).isFalse();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.EMOTIONAL_DISTRESS_REPLY);
         verify(chatbotQuestionClassifier, never()).classify(any());
@@ -1739,7 +1739,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getMessage()).contains("Presentación de escrito");
         assertThat(response.getMessage()).contains("Reclamación civil");
@@ -1782,7 +1782,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY);
     }
@@ -1824,7 +1824,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getMessage()).contains("documentación del caso");
         assertThat(response.getMessage()).contains("Procedimiento laboral");
@@ -1874,7 +1874,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.sendMessage(this.authenticatedUser, request);
 
-        assertThat(response.getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getMessage()).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
         assertThat(response.getMessage()).contains("Documentos visibles preparados");
@@ -2162,6 +2162,7 @@ class ChatbotServiceTest {
                 .build();
     }
 }
+
 
 
 

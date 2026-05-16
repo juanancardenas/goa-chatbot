@@ -131,7 +131,7 @@ package domain {
       -String message
       -String error
       -String createdAt
-      -String responseMode
+      -ChatbotResponseMode responseMode
       -Boolean usedPlatformData
       -List<String> sourcesSummary
     }
@@ -217,6 +217,12 @@ package domain {
       OUT_OF_DOMAIN
     }
 
+    enum ChatbotResponseMode {
+      GENERAL
+      CONTEXTUAL_PLATFORM_DATA
+      CONTEXTUAL_RESTRICTED
+    }
+
     enum ConversationProfileType {
       CLIENT
       PROFESSIONAL
@@ -283,7 +289,8 @@ EngagementLetterSummary -[hidden]down-> LegalProcedureSummary
 LegalProcedureSummary -[hidden]down-> UserSummary
 
 ChatbotAiProvider -[hidden]down-> ChatbotScopeViolationReason
-ChatbotScopeViolationReason -[hidden]down-> ConversationProfileType
+ChatbotScopeViolationReason -[hidden]down-> ChatbotResponseMode
+ChatbotResponseMode -[hidden]down-> ConversationProfileType
 ConversationProfileType -[hidden]down-> ConversationStatus
 ConversationStatus -[hidden]down-> ConversationType
 ConversationType -[hidden]down-> MessageSenderType
@@ -297,6 +304,7 @@ Conversation ..> ConversationType
 Message -down-> MessageSenderType
 Message -down-> MessageType
 AuthenticatedUserContext -down-> ConversationProfileType
+ChatbotMessageResult -down-> ChatbotResponseMode
 ChatbotConversationHistoryResult "1" -down-> "0..*" ChatbotHistoryMessageResult
 EngagementEventPage "1" -down-> "0..*" EngagementEventSummary
 EngagementLetterSummary "1" -down-> "0..1" UserSummary
