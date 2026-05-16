@@ -3,6 +3,7 @@ package es.upm.api.domain.services;
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationType;
+import es.upm.api.domain.enums.ChatbotResponseMode;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.enums.PlatformQuestionType;
@@ -38,9 +39,6 @@ import java.util.regex.Pattern;
 public class ChatbotService {
 
     // Constants
-    private static final String RESPONSE_MODE_GENERAL = "GENERAL";
-    private static final String RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA = "CONTEXTUAL_PLATFORM_DATA";
-    private static final String RESPONSE_MODE_CONTEXTUAL_RESTRICTED = "CONTEXTUAL_RESTRICTED";
     private static final Pattern ENGAGEMENT_ID_PATTERN = Pattern.compile("\\bEL-\\d+\\b", Pattern.CASE_INSENSITIVE);
 
     // Attributes
@@ -189,7 +187,7 @@ public class ChatbotService {
                 .message(assistantReply)
                 .error(null)
                 .createdAt(date.toString())
-                .responseMode(RESPONSE_MODE_GENERAL)
+                .responseMode(ChatbotResponseMode.GENERAL)
                 .usedPlatformData(false)
                 .sourcesSummary(List.of())
                 .build();
@@ -200,7 +198,7 @@ public class ChatbotService {
             String message,
             String error,
             LocalDateTime createdAt,
-            String responseMode,
+            ChatbotResponseMode responseMode,
             boolean usedPlatformData,
             List<String> sourcesSummary
     ) {
@@ -253,14 +251,14 @@ public class ChatbotService {
         );
 
         String assistantReply;
-        String responseMode;
+        ChatbotResponseMode responseMode;
         boolean usedPlatformData;
         List<String> sourcesSummary;
         ConversationProfileType profile = authenticatedUser.getProfile();
 
         if (this.chatbotBaseReplyBuilder.isCourtesyMessage(userMessage)) {
             assistantReply = this.chatbotBaseReplyBuilder.courtesyReply(profile);
-            responseMode = RESPONSE_MODE_GENERAL;
+            responseMode = ChatbotResponseMode.GENERAL;
             usedPlatformData = false;
             sourcesSummary = List.of();
 
@@ -287,7 +285,7 @@ public class ChatbotService {
 
         if (this.referencesAnotherEngagement(conversation, userMessage)) {
             assistantReply = ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY;
-            responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
+            responseMode = ChatbotResponseMode.CONTEXTUAL_RESTRICTED;
             usedPlatformData = false;
             sourcesSummary = List.of();
 
@@ -336,7 +334,7 @@ public class ChatbotService {
                                 platformContext
                         );
 
-                        responseMode = RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA;
+                        responseMode = ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA;
                         usedPlatformData = true;
                         sourcesSummary = platformContext.get().getSourcesSummary();
                     } else {
@@ -353,7 +351,7 @@ public class ChatbotService {
                                 Optional.empty()
                         );
 
-                        responseMode = RESPONSE_MODE_CONTEXTUAL_RESTRICTED;
+                        responseMode = ChatbotResponseMode.CONTEXTUAL_RESTRICTED;
                         usedPlatformData = false;
                         sourcesSummary = List.of();
                     }
@@ -371,7 +369,7 @@ public class ChatbotService {
                             Optional.empty()
                     );
 
-                    responseMode = RESPONSE_MODE_GENERAL;
+                    responseMode = ChatbotResponseMode.GENERAL;
                     usedPlatformData = false;
                     sourcesSummary = List.of();
                 }
@@ -389,15 +387,15 @@ public class ChatbotService {
                         Optional.empty()
                 );
 
-                responseMode = RESPONSE_MODE_GENERAL;
+                responseMode = ChatbotResponseMode.GENERAL;
                 usedPlatformData = false;
                 sourcesSummary = List.of();
             }
         } else {
             assistantReply = scopeDecision.getSafeMessage();
             responseMode = ConversationType.CONTEXTUAL.name().equals(conversation.getType())
-                    ? RESPONSE_MODE_CONTEXTUAL_RESTRICTED
-                    : RESPONSE_MODE_GENERAL;
+                    ? ChatbotResponseMode.CONTEXTUAL_RESTRICTED
+                    : ChatbotResponseMode.GENERAL;
             usedPlatformData = false;
             sourcesSummary = List.of();
         }

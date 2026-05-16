@@ -1,5 +1,6 @@
 package es.upm.api.domain.model.configuration;
 
+import es.upm.api.domain.enums.ChatbotResponseMode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,7 +18,7 @@ public class ChatbotMessageResult {
     private String message;
     private String error;
     private String createdAt;
-    private String responseMode;
+    private ChatbotResponseMode responseMode;
     private Boolean usedPlatformData;
     private List<String> sourcesSummary;
 }

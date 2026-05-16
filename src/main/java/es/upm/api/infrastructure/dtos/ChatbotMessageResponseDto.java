@@ -28,7 +28,7 @@ public class ChatbotMessageResponseDto {
                 .message(result.getMessage())
                 .error(result.getError())
                 .createdAt(result.getCreatedAt())
-                .responseMode(result.getResponseMode())
+                .responseMode(result.getResponseMode() == null ? null : result.getResponseMode().name())
                 .usedPlatformData(result.getUsedPlatformData())
                 .sourcesSummary(result.getSourcesSummary())
                 .build();

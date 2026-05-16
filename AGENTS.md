@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base e IA y la unificacion del resumen de usuario en `UserSummary` de **2026-05-16**.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base e IA, la unificacion del resumen de usuario en `UserSummary` y la tipificacion de modos de respuesta con `ChatbotResponseMode` de **2026-05-16**.
 
 ## Niveles de regla
 
@@ -125,6 +125,7 @@ public ChatbotMessageResponseDto sendMessage(
 - DEBE convertir modelos internos a DTOs mediante metodos `fromDomain(...)`.
 - NO DEBE introducir logica de negocio en DTOs.
 - PUEDE contener normalizaciones simples de entrada, por ejemplo convertir strings blank a `null`, si esa normalizacion es propia del contrato HTTP.
+- DEBE mantener `ChatbotMessageResponseDto.responseMode` como `String` por compatibilidad del contrato REST, mapeado desde `ChatbotResponseMode.name()`.
 - NO DEBE devolver entidades Mongo ni modelos internos directamente desde resources si el endpoint tiene un contrato publico propio.
 
 DTOs HTTP actuales:
@@ -179,6 +180,17 @@ Modelos internos de comando/resultado actuales:
 - `ChatbotHistoryMessageResult`
 - `PageResult`
 
+Enumerados de dominio actuales:
+- `ChatbotAiProvider`
+- `ChatbotResponseMode`
+- `ChatbotScopeViolationReason`
+- `ConversationProfileType`
+- `ConversationStatus`
+- `ConversationType`
+- `MessageSenderType`
+- `MessageType`
+- `PlatformQuestionType`
+
 Modelos de plataforma/contexto:
 - `ChatbotPlatformContext`
 - `ChatbotDocumentContext`
@@ -205,6 +217,7 @@ Nota:
 - DEBE persistir tanto mensajes de usuario como respuestas del asistente.
 - DEBE mantener `sequenceNumber` y `parentMessageId` para trazabilidad de mensajes.
 - DEBE usar respuestas seguras y restringidas cuando el usuario pregunte fuera del scope del encargo.
+- DEBE representar los modos de respuesta internos con `ChatbotResponseMode`, no con literales `String`.
 - DEBE evitar inventar informacion de plataforma cuando no hay contexto disponible.
 
 Servicios actuales:
@@ -480,6 +493,7 @@ Excepciones actuales:
 - DEBE persistir escalado en `Escalation` con datos de contacto disponibles.
 - DEBE usar `MessageSenderType` para distinguir `USER` y `ASSISTANT`.
 - DEBE usar `MessageType` para distinguir `REQUEST` y `RESPONSE`.
+- DEBE usar `ChatbotResponseMode` para distinguir respuestas `GENERAL`, `CONTEXTUAL_PLATFORM_DATA` y `CONTEXTUAL_RESTRICTED`.
 - DEBE conservar orden conversacional con `sequenceNumber`.
 - DEBE enlazar respuesta con peticion mediante `parentMessageId` cuando aplique.
 
