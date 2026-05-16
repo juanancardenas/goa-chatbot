@@ -91,6 +91,21 @@ class ConversationEntityTest {
         assertThat(conversation.getLastSequenceNumber()).isEqualTo(9);
     }
 
+    @Test
+    void allArgsConstructorShouldDefaultLastSequenceNumberToZeroWhenNull() {
+        ConversationEntity entity = new ConversationEntity(
+                "conversation-4",
+                "user-4",
+                null,
+                ConversationStatus.ACTIVE,
+                "GENERAL",
+                LocalDateTime.of(2026, 5, 6, 11, 45),
+                null
+        );
+
+        assertThat(entity.getLastSequenceNumber()).isZero();
+    }
+
     private Conversation conversation() {
         return Conversation.builder()
                 .id("conversation-1")
