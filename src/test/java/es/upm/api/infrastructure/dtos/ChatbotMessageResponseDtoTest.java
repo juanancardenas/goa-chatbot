@@ -1,7 +1,7 @@
 package es.upm.api.infrastructure.dtos;
 
 import es.upm.api.domain.enums.ChatbotResponseMode;
-import es.upm.api.domain.model.configuration.ChatbotMessageResult;
+import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

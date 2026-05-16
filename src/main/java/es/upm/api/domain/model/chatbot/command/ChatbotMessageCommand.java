@@ -1,4 +1,4 @@
-package es.upm.api.domain.model.configuration;
+package es.upm.api.domain.model.chatbot.command;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,10 +9,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatbotContextualConversationResult {
+public class ChatbotMessageCommand {
 
     private String conversationId;
-    private String engagementLetterId;
-    private String createdAt;
-    private String error;
+    private String message;
 }

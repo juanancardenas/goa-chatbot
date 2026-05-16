@@ -1,6 +1,6 @@
 package es.upm.api.infrastructure.dtos;
 
-import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
+import es.upm.api.domain.model.chatbot.command.ChatbotMessageCommand;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

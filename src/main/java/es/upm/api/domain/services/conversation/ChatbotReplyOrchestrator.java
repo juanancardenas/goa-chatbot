@@ -5,7 +5,7 @@ import es.upm.api.domain.enums.ChatbotResponseMode;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
-import es.upm.api.domain.model.configuration.ChatbotReplyDecision;
+import es.upm.api.domain.model.chatbot.reply.ChatbotReplyDecision;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
 import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;

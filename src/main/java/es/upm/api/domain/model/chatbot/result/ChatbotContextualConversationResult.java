@@ -1,4 +1,4 @@
-package es.upm.api.domain.model.configuration;
+package es.upm.api.domain.model.chatbot.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,13 +9,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatbotConversationSummaryResult {
+public class ChatbotContextualConversationResult {
 
     private String conversationId;
-    private String type;
-    private String status;
     private String engagementLetterId;
     private String createdAt;
-    private String lastMessageAt;
-    private String preview;
+    private String error;
 }

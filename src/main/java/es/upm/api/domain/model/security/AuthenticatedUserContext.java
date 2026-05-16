@@ -1,4 +1,4 @@
-package es.upm.api.domain.model.configuration;
+package es.upm.api.domain.model.security;
 
 import es.upm.api.domain.enums.ConversationProfileType;
 import lombok.AllArgsConstructor;

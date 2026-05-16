@@ -1,6 +1,6 @@
 package es.upm.api.infrastructure.dtos;
 
-import es.upm.api.domain.model.configuration.ChatbotMessageResult;
+import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
