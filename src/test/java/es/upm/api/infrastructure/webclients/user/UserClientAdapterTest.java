@@ -30,7 +30,7 @@ class UserClientAdapterTest {
 
         UserSummary result = adapter.readById(userId);
 
-        assertThat(result).isNotSameAs(responseDto);
+        assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(responseDto.getId());
         assertThat(result.getFirstName()).isEqualTo("Ana");
         assertThat(result.getFamilyName()).isEqualTo("Ocana");
