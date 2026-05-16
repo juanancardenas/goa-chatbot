@@ -3,6 +3,7 @@ package es.upm.api.domain.services.policies;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ChatbotScopeViolationReason;
+import es.upm.api.domain.enums.ConversationType;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,8 +11,6 @@ import java.util.Locale;
 
 @Service
 public class ChatbotScopePolicy {
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
-    private static final String TYPE_GENERAL = "GENERAL";
 
     private static final List<String> LEGAL_BINDING_PATTERNS = List.of(
             "legal vinculante",
@@ -138,7 +137,7 @@ public class ChatbotScopePolicy {
             );
         }
 
-        if (TYPE_GENERAL.equals(conversation.getType())
+        if (ConversationType.GENERAL.name().equals(conversation.getType())
                 && this.containsAny(normalizedMessage, CONTEXT_REQUIRED_PATTERNS)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.MISSING_CASE_CONTEXT,
@@ -147,7 +146,7 @@ public class ChatbotScopePolicy {
             );
         }
 
-        if (TYPE_CONTEXTUAL.equals(conversation.getType())
+        if (ConversationType.CONTEXTUAL.name().equals(conversation.getType())
                 && this.containsAny(normalizedMessage, OTHER_CASE_PATTERNS)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.OUT_OF_CASE_SCOPE,
@@ -156,7 +155,7 @@ public class ChatbotScopePolicy {
             );
         }
 
-        if (TYPE_CONTEXTUAL.equals(conversation.getType())
+        if (ConversationType.CONTEXTUAL.name().equals(conversation.getType())
                 && this.looksLikeUnsupportedFactualAssertion(normalizedMessage)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.UNSUPPORTED_FACTUAL_ASSERTION,
@@ -165,7 +164,7 @@ public class ChatbotScopePolicy {
             );
         }
 
-        if (TYPE_GENERAL.equals(conversation.getType())
+        if (ConversationType.GENERAL.name().equals(conversation.getType())
                 && this.looksAmbiguous(normalizedMessage)) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.AMBIGUOUS_CONTEXT,

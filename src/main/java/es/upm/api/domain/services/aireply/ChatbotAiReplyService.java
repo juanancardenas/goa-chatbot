@@ -2,6 +2,7 @@ package es.upm.api.domain.services.aireply;
 
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationProfileType;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
@@ -15,7 +16,7 @@ import java.util.Optional;
 @Service
 public class ChatbotAiReplyService {
 
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
+    private static final String TEXT_NOT_AVAILABLE = "No disponible";
 
     private final ChatbotAiClient chatbotAiClient;
     private final ChatbotAiProperties chatbotAiProperties;
@@ -87,10 +88,10 @@ public class ChatbotAiReplyService {
     ) {
         String contextualRules = "";
 
-        if (TYPE_CONTEXTUAL.equals(conversation.getType())) {
+        if (ConversationType.CONTEXTUAL.name().equals(conversation.getType())) {
             String activeEngagementId = platformContext
                     .map(ChatbotPlatformContext::getEngagementLetterId)
-                    .orElse(this.safeText(conversation.getEngagementLetterId(), "No disponible"));
+                    .orElse(this.safeText(conversation.getEngagementLetterId(), TEXT_NOT_AVAILABLE));
 
             contextualRules = """
                 Reglas adicionales para chat contextual:
@@ -132,8 +133,8 @@ public class ChatbotAiReplyService {
             No escribas títulos como "Respuesta mejorada", "Respuesta final" o similares.
             %s
             """.formatted(
-                this.safeText(userMessage, "No disponible"),
-                this.safeText(baseReply, "No disponible"),
+                this.safeText(userMessage, TEXT_NOT_AVAILABLE),
+                this.safeText(baseReply, TEXT_NOT_AVAILABLE),
                 contextualRules
         );
     }
@@ -146,19 +147,19 @@ public class ChatbotAiReplyService {
         ChatbotPlatformContext context = platformContext.get();
 
         String procedures = context.getProcedureTitles() == null || context.getProcedureTitles().isEmpty()
-                ? "No disponible"
+                ? TEXT_NOT_AVAILABLE
                 : String.join(", ", context.getProcedureTitles());
 
         String legalTasks = context.getLegalTaskSummaries() == null || context.getLegalTaskSummaries().isEmpty()
-                ? "No disponible"
+                ? TEXT_NOT_AVAILABLE
                 : String.join(System.lineSeparator(), context.getLegalTaskSummaries());
 
         String events = context.getRecentEventSummaries() == null || context.getRecentEventSummaries().isEmpty()
-                ? "No disponible"
+                ? TEXT_NOT_AVAILABLE
                 : String.join(System.lineSeparator(), context.getRecentEventSummaries());
 
         String sources = context.getSourcesSummary() == null || context.getSourcesSummary().isEmpty()
-                ? "No disponible"
+                ? TEXT_NOT_AVAILABLE
                 : String.join(System.lineSeparator(), context.getSourcesSummary());
 
         return """
@@ -175,8 +176,8 @@ public class ChatbotAiReplyService {
             Fuentes internas disponibles:
             %s
             """.formatted(
-                this.safeText(context.getEngagementLetterId(), "No disponible"),
-                this.safeText(context.getOwnerDisplayName(), "No disponible"),
+                this.safeText(context.getEngagementLetterId(), TEXT_NOT_AVAILABLE),
+                this.safeText(context.getOwnerDisplayName(), TEXT_NOT_AVAILABLE),
                 procedures,
                 legalTasks,
                 events,

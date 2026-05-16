@@ -1,6 +1,7 @@
 package es.upm.api.infrastructure.mongodb.daos;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
@@ -18,8 +19,6 @@ import java.util.UUID;
 @Service
 @Profile({"dev", "test"})
 public class DatabaseSeederDev {
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
-    private static final String TYPE_GENERAL = "GENERAL";
 
     private static final Logger log = LogManager.getLogger(DatabaseSeederDev.class);
 
@@ -60,7 +59,7 @@ public class DatabaseSeederDev {
                 "customer-dev-001",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 baseTime
         );
         ConversationEntity conversation2 = new ConversationEntity(
@@ -68,7 +67,7 @@ public class DatabaseSeederDev {
                 "customer-dev-002",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 baseTime.plusMinutes(10)
         );
 
@@ -77,7 +76,7 @@ public class DatabaseSeederDev {
                 "customer-dev-003",
                 null,
                 ConversationStatus.ARCHIVED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 baseTime.plusMinutes(20)
         );
 
@@ -86,7 +85,7 @@ public class DatabaseSeederDev {
                 "6",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 baseTime.plusMinutes(30)
         );
         ConversationEntity conversation5 = new ConversationEntity(
@@ -94,7 +93,7 @@ public class DatabaseSeederDev {
                 "6",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 baseTime.plusMinutes(40)
         );
         ConversationEntity conversation6 = new ConversationEntity(
@@ -102,7 +101,7 @@ public class DatabaseSeederDev {
                 "6",
                 null,
                 ConversationStatus.ARCHIVED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 baseTime.plusMinutes(50)
         );
         ConversationEntity conversation7 = new ConversationEntity(
@@ -110,7 +109,7 @@ public class DatabaseSeederDev {
                 "6",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 baseTime.plusMinutes(60)
         );
         ConversationEntity conversation8 = new ConversationEntity(
@@ -118,7 +117,7 @@ public class DatabaseSeederDev {
                 "6",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 baseTime.plusMinutes(70)
         );
         ConversationEntity conversation9 = new ConversationEntity(
@@ -126,7 +125,7 @@ public class DatabaseSeederDev {
                 "6",
                 "aaaaaaaa-bbbb-cccc-dddd-eeeeffff0001",
                 ConversationStatus.ACTIVE,
-                TYPE_CONTEXTUAL,
+                ConversationType.CONTEXTUAL.name(),
                 baseTime.plusMinutes(80)
         );
 

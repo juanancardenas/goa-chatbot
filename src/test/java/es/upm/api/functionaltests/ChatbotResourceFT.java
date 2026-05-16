@@ -8,6 +8,7 @@ import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
 import es.upm.api.infrastructure.mongodb.entities.EscalationEntity;
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.model.platform.EngagementEventPage;
@@ -60,8 +61,6 @@ import static org.springframework.http.HttpStatus.OK;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class ChatbotResourceFT {
-    private static final String TYPE_GENERAL = "GENERAL";
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -135,7 +134,7 @@ class ChatbotResourceFT {
         assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
         assertThat(conversations.getFirst().getEngagementLetterId()).isEqualTo("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
         assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo(TYPE_CONTEXTUAL);
+        assertThat(conversations.getFirst().getType()).isEqualTo(ConversationType.CONTEXTUAL.name());
     }
 
     @Test
@@ -310,7 +309,7 @@ class ChatbotResourceFT {
                 userId,
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now().minusHours(5)
         );
         ConversationEntity generalActive = new ConversationEntity(
@@ -318,7 +317,7 @@ class ChatbotResourceFT {
                 userId,
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now().minusHours(1)
         );
         ConversationEntity contextual = new ConversationEntity(
@@ -326,7 +325,7 @@ class ChatbotResourceFT {
                 userId,
                 "eng-001",
                 ConversationStatus.ACTIVE,
-                TYPE_CONTEXTUAL,
+                ConversationType.CONTEXTUAL.name(),
                 LocalDateTime.now().minusMinutes(30)
         );
         ConversationEntity anotherUserGeneral = new ConversationEntity(
@@ -334,7 +333,7 @@ class ChatbotResourceFT {
                 "customer-2",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now().minusMinutes(10)
         );
 
@@ -393,7 +392,7 @@ class ChatbotResourceFT {
 
         assertThat(response.getBody())
                 .extracting(ChatbotConversationSummaryDto::getType)
-                .containsOnly(TYPE_GENERAL);
+                .containsOnly(ConversationType.GENERAL.name());
     }
 
     @Test
@@ -452,7 +451,7 @@ class ChatbotResourceFT {
                 userId,
                 "eng-001",
                 ConversationStatus.ACTIVE,
-                TYPE_CONTEXTUAL,
+                ConversationType.CONTEXTUAL.name(),
                 LocalDateTime.now().minusHours(3)
         );
         ConversationEntity contextualB = new ConversationEntity(
@@ -460,7 +459,7 @@ class ChatbotResourceFT {
                 userId,
                 "eng-001",
                 ConversationStatus.CLOSED,
-                TYPE_CONTEXTUAL,
+                ConversationType.CONTEXTUAL.name(),
                 LocalDateTime.now().minusHours(1)
         );
         ConversationEntity contextualOtherEngagement = new ConversationEntity(
@@ -468,7 +467,7 @@ class ChatbotResourceFT {
                 userId,
                 "eng-002",
                 ConversationStatus.ACTIVE,
-                TYPE_CONTEXTUAL,
+                ConversationType.CONTEXTUAL.name(),
                 LocalDateTime.now().minusMinutes(20)
         );
         ConversationEntity general = new ConversationEntity(
@@ -476,7 +475,7 @@ class ChatbotResourceFT {
                 userId,
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now().minusMinutes(10)
         );
 
@@ -527,7 +526,7 @@ class ChatbotResourceFT {
 
         assertThat(response.getBody())
                 .extracting(ChatbotConversationSummaryDto::getType)
-                .containsOnly(TYPE_CONTEXTUAL);
+                .containsOnly(ConversationType.CONTEXTUAL.name());
     }
 
     @Test
@@ -540,7 +539,7 @@ class ChatbotResourceFT {
                 userId,
                 "eng-001",
                 ConversationStatus.CLOSED,
-                TYPE_CONTEXTUAL,
+                ConversationType.CONTEXTUAL.name(),
                 LocalDateTime.now().minusHours(1)
         ));
 
@@ -579,7 +578,7 @@ class ChatbotResourceFT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getConversationId()).isEqualTo(conversationId);
-        assertThat(response.getBody().getType()).isEqualTo(TYPE_CONTEXTUAL);
+        assertThat(response.getBody().getType()).isEqualTo(ConversationType.CONTEXTUAL.name());
         assertThat(response.getBody().getStatus()).isEqualTo(ConversationStatus.CLOSED.name());
         assertThat(response.getBody().getPage()).isEqualTo(0);
         assertThat(response.getBody().getSize()).isEqualTo(20);
@@ -632,7 +631,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -659,7 +658,7 @@ class ChatbotResourceFT {
                 "customer-2",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -683,7 +682,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -708,7 +707,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.ARCHIVED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -755,7 +754,7 @@ class ChatbotResourceFT {
         assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
         assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
         assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo(TYPE_GENERAL);
+        assertThat(conversations.getFirst().getType()).isEqualTo(ConversationType.GENERAL.name());
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(conversations.getFirst().getId());
@@ -804,7 +803,7 @@ class ChatbotResourceFT {
         assertThat(conversations.getFirst().getUserId()).isEqualTo("admin-1");
         assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
         assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo(TYPE_GENERAL);
+        assertThat(conversations.getFirst().getType()).isEqualTo(ConversationType.GENERAL.name());
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(conversations.getFirst().getId());
@@ -999,7 +998,7 @@ class ChatbotResourceFT {
                 "customer-2",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1025,7 +1024,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1051,7 +1050,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1078,7 +1077,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1105,7 +1104,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1139,7 +1138,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.CLOSED,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
         this.messageRepository.saveAll(List.of(
@@ -1186,7 +1185,7 @@ class ChatbotResourceFT {
                 "customer-2",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1213,7 +1212,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1240,7 +1239,7 @@ class ChatbotResourceFT {
                 "customer-2",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1266,7 +1265,7 @@ class ChatbotResourceFT {
                 "customer-2",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1293,7 +1292,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1319,7 +1318,7 @@ class ChatbotResourceFT {
                 "customer-1",
                 null,
                 ConversationStatus.ACTIVE,
-                TYPE_GENERAL,
+                ConversationType.GENERAL.name(),
                 LocalDateTime.now()
         )).getId();
 
@@ -1719,3 +1718,4 @@ class ChatbotResourceFT {
         return headers;
     }
 }
+

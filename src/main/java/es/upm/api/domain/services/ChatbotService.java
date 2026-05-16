@@ -2,6 +2,7 @@ package es.upm.api.domain.services;
 
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationProfileType;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.enums.PlatformQuestionType;
@@ -37,8 +38,6 @@ import java.util.regex.Pattern;
 public class ChatbotService {
 
     // Constants
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
-
     private static final String RESPONSE_MODE_GENERAL = "GENERAL";
     private static final String RESPONSE_MODE_CONTEXTUAL_PLATFORM_DATA = "CONTEXTUAL_PLATFORM_DATA";
     private static final String RESPONSE_MODE_CONTEXTUAL_RESTRICTED = "CONTEXTUAL_RESTRICTED";
@@ -314,7 +313,7 @@ public class ChatbotService {
         }
 
         if (scopeDecision.isAllowed()) {
-            if (TYPE_CONTEXTUAL.equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
+            if (ConversationType.CONTEXTUAL.name().equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
                 PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
 
                 if (this.requiresPlatformContext(questionType)) {
@@ -396,7 +395,7 @@ public class ChatbotService {
             }
         } else {
             assistantReply = scopeDecision.getSafeMessage();
-            responseMode = TYPE_CONTEXTUAL.equals(conversation.getType())
+            responseMode = ConversationType.CONTEXTUAL.name().equals(conversation.getType())
                     ? RESPONSE_MODE_CONTEXTUAL_RESTRICTED
                     : RESPONSE_MODE_GENERAL;
             usedPlatformData = false;
@@ -523,7 +522,7 @@ public class ChatbotService {
     }
 
     private boolean referencesAnotherEngagement(Conversation conversation, String message) {
-        if (!TYPE_CONTEXTUAL.equals(conversation.getType()) || message == null || message.isBlank()) {
+        if (!ConversationType.CONTEXTUAL.name().equals(conversation.getType()) || message == null || message.isBlank()) {
             return false;
         }
 
