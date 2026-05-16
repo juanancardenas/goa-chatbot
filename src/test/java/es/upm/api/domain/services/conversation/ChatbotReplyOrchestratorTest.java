@@ -118,6 +118,22 @@ class ChatbotReplyOrchestratorTest {
     }
 
     @Test
+    void resolveReplyShouldRestrictReferencedEngagementWhenActiveEngagementIdIsBlank() {
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                this.contextualConversation(" "),
+                ConversationProfileType.PROFESSIONAL,
+                "Compara con EL-200"
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo(ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY);
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        assertThat(decision.getSourcesSummary()).isEmpty();
+        verify(this.chatbotScopePolicy, never()).evaluate(any(), any());
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
     void resolveReplyShouldReturnSafeScopeMessageWhenScopeRejectsQuestion() {
         when(this.chatbotBaseReplyBuilder.isCourtesyMessage("mi caso")).thenReturn(false);
         when(this.chatbotScopePolicy.evaluate(this.contextualConversation("EL-1"), "mi caso"))
@@ -136,6 +152,57 @@ class ChatbotReplyOrchestratorTest {
         assertThat(decision.getAssistantReply()).isEqualTo("No puedo responder fuera del encargo");
         assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(decision.isUsedPlatformData()).isFalse();
+    }
+
+    @Test
+    void resolveReplyShouldReturnMissingCaseContextMessageForGeneralConversation() {
+        Conversation conversation = this.generalConversation();
+        String userMessage = "Cual es el estado de mi encargo?";
+        when(this.chatbotBaseReplyBuilder.isCourtesyMessage(userMessage)).thenReturn(false);
+        when(this.chatbotScopePolicy.evaluate(conversation, userMessage))
+                .thenReturn(ChatbotScopeDecision.reject(
+                        ChatbotScopeViolationReason.MISSING_CASE_CONTEXT,
+                        ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY,
+                        false
+                ));
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                userMessage
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo(ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY);
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        assertThat(decision.getSourcesSummary()).isEmpty();
+        verify(this.chatbotAiReplyService, never()).generateConfiguredAssistantReply(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void resolveReplyShouldReturnEmotionalDistressMessageForContextualConversation() {
+        Conversation conversation = this.contextualConversation("EL-300");
+        String userMessage = "No puedo mas con esto";
+        when(this.chatbotBaseReplyBuilder.isCourtesyMessage(userMessage)).thenReturn(false);
+        when(this.chatbotScopePolicy.evaluate(conversation, userMessage))
+                .thenReturn(ChatbotScopeDecision.reject(
+                        ChatbotScopeViolationReason.EMOTIONAL_DISTRESS,
+                        ChatbotResponseMessages.EMOTIONAL_DISTRESS_REPLY,
+                        false
+                ));
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                userMessage
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo(ChatbotResponseMessages.EMOTIONAL_DISTRESS_REPLY);
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        assertThat(decision.getSourcesSummary()).isEmpty();
+        verify(this.chatbotAiReplyService, never()).generateConfiguredAssistantReply(any(), any(), any(), any(), any());
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
     }
 
     @Test
@@ -197,6 +264,42 @@ class ChatbotReplyOrchestratorTest {
         assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(decision.isUsedPlatformData()).isTrue();
         assertThat(decision.getSourcesSummary()).containsExactly("Hoja de encargo EL-1");
+    }
+
+    @Test
+    void resolveReplyShouldUseEmptySourcesSummaryWhenPlatformContextSourcesSummaryIsNull() {
+        Conversation conversation = this.contextualConversation("EL-1");
+        ChatbotPlatformContext context = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-1")
+                .sourcesSummary(null)
+                .build();
+        when(this.chatbotBaseReplyBuilder.isCourtesyMessage("estado")).thenReturn(false);
+        when(this.chatbotScopePolicy.evaluate(conversation, "estado")).thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotPlatformContextService.loadContext("EL-1")).thenReturn(Optional.of(context));
+        when(this.chatbotBaseReplyBuilder.contextualPlatformReply(
+                ConversationProfileType.CLIENT,
+                "estado",
+                conversation,
+                context
+        )).thenReturn("Base contextual");
+        when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "estado",
+                "Base contextual",
+                Optional.of(context)
+        )).thenReturn("Respuesta contextual");
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "estado"
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo("Respuesta contextual");
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
+        assertThat(decision.isUsedPlatformData()).isTrue();
+        assertThat(decision.getSourcesSummary()).isEmpty();
     }
 
     @Test

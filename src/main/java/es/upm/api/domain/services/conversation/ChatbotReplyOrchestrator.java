@@ -206,8 +206,16 @@ public class ChatbotReplyOrchestrator {
                 .assistantReply(assistantReply)
                 .responseMode(responseMode)
                 .usedPlatformData(usedPlatformData)
-                .sourcesSummary(sourcesSummary)
+                .sourcesSummary(this.safeSourcesSummary(sourcesSummary))
                 .build();
+    }
+
+    private List<String> safeSourcesSummary(List<String> sourcesSummary) {
+        if (sourcesSummary == null) {
+            return List.of();
+        }
+
+        return sourcesSummary;
     }
 
     private ChatbotResponseMode restrictedResponseMode(Conversation conversation) {
