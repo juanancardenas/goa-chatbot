@@ -1,6 +1,5 @@
 package es.upm.api.domain.services.aireply;
 
-import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
@@ -8,6 +7,7 @@ import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import org.springframework.stereotype.Service;
 
@@ -19,16 +19,16 @@ public class ChatbotAiReplyService {
     private static final String TEXT_NOT_AVAILABLE = "No disponible";
 
     private final ChatbotAiClient chatbotAiClient;
-    private final ChatbotAiProperties chatbotAiProperties;
+    private final ChatbotAiSettings chatbotAiSettings;
     private final ChatbotMessageService chatbotMessageService;
 
     public ChatbotAiReplyService(
             ChatbotAiClient chatbotAiClient,
-            ChatbotAiProperties chatbotAiProperties,
+            ChatbotAiSettings chatbotAiSettings,
             ChatbotMessageService chatbotMessageService
     ) {
         this.chatbotAiClient = chatbotAiClient;
-        this.chatbotAiProperties = chatbotAiProperties;
+        this.chatbotAiSettings = chatbotAiSettings;
         this.chatbotMessageService = chatbotMessageService;
     }
 
@@ -39,7 +39,7 @@ public class ChatbotAiReplyService {
             String baseReply,
             Optional<ChatbotPlatformContext> platformContext
     ) {
-        if (!this.chatbotAiProperties.isEnabled()) {
+        if (!this.chatbotAiSettings.isEnabled()) {
             return baseReply;
         }
 
@@ -48,20 +48,20 @@ public class ChatbotAiReplyService {
                     .conversationId(conversation.getId())
                     .userId(conversation.getUserId())
                     .userMessage(this.buildAiUserMessage(conversation, userMessage, baseReply, platformContext))
-                    .basePrompt(this.chatbotAiProperties.getBasePrompt())
+                    .basePrompt(this.chatbotAiSettings.basePrompt())
                     .roleProfile(profile.name())
                     .conversationType(conversation.getType().name())
                     .platformContext(this.buildPlatformContextForPrompt(platformContext))
                     .recentMessages(
                             this.chatbotMessageService.readRecentMessagesForPrompt(
                                     conversation.getId(),
-                                    this.chatbotAiProperties.getMaxContextMessages()
+                                    this.chatbotAiSettings.maxContextMessages()
                             )
                     )
-                    .model(this.chatbotAiProperties.getModel())
-                    .maxOutputTokens(this.chatbotAiProperties.getMaxOutputTokens())
-                    .temperature(this.chatbotAiProperties.getTemperature())
-                    .documentsAvailable(this.chatbotAiProperties.isDocumentsAvailable())
+                    .model(this.chatbotAiSettings.model())
+                    .maxOutputTokens(this.chatbotAiSettings.maxOutputTokens())
+                    .temperature(this.chatbotAiSettings.temperature())
+                    .documentsAvailable(this.chatbotAiSettings.documentsAvailable())
                     .build();
 
             ChatbotAiResponse aiResponse = this.chatbotAiClient.generate(aiRequest);

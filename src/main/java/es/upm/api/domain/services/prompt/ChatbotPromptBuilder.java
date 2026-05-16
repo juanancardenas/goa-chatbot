@@ -1,8 +1,8 @@
 package es.upm.api.domain.services.prompt;
 
-import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
+import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,16 +19,16 @@ public class ChatbotPromptBuilder {
             No inventes información.
             """;
 
-    private final ChatbotAiProperties chatbotAiProperties;
+    private final ChatbotAiSettings chatbotAiSettings;
 
-    public ChatbotPromptBuilder(ChatbotAiProperties chatbotAiProperties) {
-        this.chatbotAiProperties = chatbotAiProperties;
+    public ChatbotPromptBuilder(ChatbotAiSettings chatbotAiSettings) {
+        this.chatbotAiSettings = chatbotAiSettings;
     }
 
     public String buildSystemPrompt(ChatbotAiRequest request) {
         StringJoiner prompt = new StringJoiner(System.lineSeparator() + System.lineSeparator());
 
-        prompt.add(this.safeText(request.getBasePrompt(), this.chatbotAiProperties.getBasePrompt()));
+        prompt.add(this.safeText(request.getBasePrompt(), this.chatbotAiSettings.basePrompt()));
         prompt.add(this.buildConversationTypeSection(request));
         prompt.add(this.buildRoleSection(request));
         prompt.add(SCOPE_SECTION);
@@ -127,7 +127,7 @@ public class ChatbotPromptBuilder {
 
         int maxMessages = Math.min(
                 recentMessages.size(),
-                this.chatbotAiProperties.getMaxContextMessages()
+                this.chatbotAiSettings.maxContextMessages()
         );
 
         String history = String.join(
