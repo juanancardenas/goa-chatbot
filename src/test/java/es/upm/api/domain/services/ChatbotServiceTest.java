@@ -9,12 +9,12 @@ import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
-import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
-import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
-import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
-import es.upm.api.domain.model.configuration.ChatbotMessageResult;
-import es.upm.api.domain.model.configuration.AuthenticatedUserContext;
-import es.upm.api.domain.model.configuration.PageResult;
+import es.upm.api.domain.model.chatbot.command.ChatbotContextualConversationCommand;
+import es.upm.api.domain.model.chatbot.command.ChatbotMessageCommand;
+import es.upm.api.domain.model.chatbot.result.ChatbotConfigurationResult;
+import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
+import es.upm.api.domain.model.security.AuthenticatedUserContext;
+import es.upm.api.domain.model.pagination.PageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ConversationGateway;
@@ -1868,7 +1868,7 @@ class ChatbotServiceTest {
         when(this.chatbotAiSettings.maxContextMessages()).thenReturn(6);
         when(this.chatbotAiSettings.documentsAvailable()).thenReturn(true);
 
-        ChatbotConfigurationStatus response = this.chatbotService.readConfigurationStatus();
+        ChatbotConfigurationResult response = this.chatbotService.readConfigurationStatus();
 
         assertThat(response.isEnabled()).isTrue();
         assertThat(response.getProvider()).isEqualTo("openai");

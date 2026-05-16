@@ -1,7 +1,7 @@
 package es.upm.api.domain.ports.out;
 
 import es.upm.api.domain.model.Message;
-import es.upm.api.domain.model.configuration.PageResult;
+import es.upm.api.domain.model.pagination.PageResult;
 
 import java.util.List;
 import java.util.Optional;

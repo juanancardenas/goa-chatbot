@@ -3,7 +3,7 @@ package es.upm.api.domain.services.conversation;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.model.Message;
-import es.upm.api.domain.model.configuration.ChatbotHistoryMessageResult;
+import es.upm.api.domain.model.chatbot.result.ChatbotHistoryMessageResult;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import org.junit.jupiter.api.Test;

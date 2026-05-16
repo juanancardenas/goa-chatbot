@@ -1,4 +1,4 @@
-package es.upm.api.domain.model.configuration;
+package es.upm.api.domain.model.chatbot.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

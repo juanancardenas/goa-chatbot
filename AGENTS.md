@@ -52,8 +52,13 @@ es.upm.api/
     exceptions/
     model/
       ai/
-      configuration/
+      chatbot/
+        command/
+        reply/
+        result/
+      pagination/
       platform/
+      security/
     ports/out/
     services/
       aireply/
@@ -84,7 +89,9 @@ Notas:
 - `infrastructure` contiene adaptadores HTTP, MongoDB, IA, Feign y DTOs de entrada/salida.
 - Los DTOs HTTP estan actualmente en `infrastructure.dtos`.
 - La resolucion del usuario autenticado vive en `infrastructure.security` y entrega `AuthenticatedUserContext` al dominio.
-- Los comandos/resultados internos usados para desacoplar DTOs viven actualmente en `domain.model.configuration`.
+- Los comandos/resultados internos usados para desacoplar DTOs viven actualmente en `domain.model.chatbot.command`, `domain.model.chatbot.reply` y `domain.model.chatbot.result`.
+- El contexto de usuario autenticado vive en `domain.model.security`.
+- Los modelos auxiliares de paginacion viven en `domain.model.pagination`.
 
 ## Resources HTTP (`infrastructure.resources`)
 
@@ -147,15 +154,19 @@ DTOs HTTP actuales:
 Regla de direccion de dependencias:
 
 ```text
-infrastructure.dtos -> domain.model.configuration  OK
-domain.services -> infrastructure.dtos             PROHIBIDO
+infrastructure.dtos -> domain.model.chatbot.command/result  OK
+domain.services -> infrastructure.dtos                      PROHIBIDO
 ```
 
 ## Dominio (`domain`)
 
 - DEBE ubicar el modelo de negocio en `domain.model`.
 - DEBE ubicar modelos de IA en `domain.model.ai`.
-- DEBE ubicar comandos/resultados internos en `domain.model.configuration` mientras se mantenga la convencion actual del proyecto.
+- DEBE ubicar comandos internos de chatbot en `domain.model.chatbot.command`.
+- DEBE ubicar decisiones internas de respuesta en `domain.model.chatbot.reply`.
+- DEBE ubicar resultados internos de chatbot en `domain.model.chatbot.result`.
+- DEBE ubicar modelos auxiliares de paginacion en `domain.model.pagination`.
+- DEBE ubicar contexto de usuario autenticado en `domain.model.security`.
 - DEBE ubicar snapshots/contexto de otros microservicios en `domain.model.platform`.
 - DEBE ubicar enumerados de negocio en `domain.enums`.
 - DEBE ubicar mensajes constantes reutilizables en `domain.common`.
@@ -172,18 +183,24 @@ Modelos IA:
 - `ChatbotAiRequest`
 - `ChatbotAiResponse`
 
-Modelos internos de comando/resultado actuales:
-- `AuthenticatedUserContext`
+Modelos internos de comando actuales:
 - `ChatbotMessageCommand`
-- `ChatbotMessageResult`
 - `ChatbotContextualConversationCommand`
+
+Modelos internos de decision actuales:
+- `ChatbotReplyDecision`
+
+Modelos internos de resultado actuales:
+- `ChatbotMessageResult`
 - `ChatbotContextualConversationResult`
-- `ChatbotConfigurationStatus`
+- `ChatbotConfigurationResult`
 - `ChatbotConversationHistoryResult`
 - `ChatbotConversationSummaryResult`
 - `ChatbotHistoryMessageResult`
-- `ChatbotReplyDecision`
+
+Modelos auxiliares internos actuales:
 - `PageResult`
+- `AuthenticatedUserContext`
 
 Enumerados de dominio actuales:
 - `ChatbotAiProvider`

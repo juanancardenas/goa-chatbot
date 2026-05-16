@@ -1,4 +1,4 @@
-package es.upm.api.domain.model.configuration;
+package es.upm.api.domain.model.chatbot.result;
 
 import es.upm.api.domain.enums.ChatbotResponseMode;
 import lombok.AllArgsConstructor;

@@ -2,7 +2,7 @@ package es.upm.api.infrastructure.security;
 
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.exceptions.ForbiddenException;
-import es.upm.api.domain.model.configuration.AuthenticatedUserContext;
+import es.upm.api.domain.model.security.AuthenticatedUserContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;

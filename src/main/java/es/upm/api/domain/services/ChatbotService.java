@@ -12,15 +12,15 @@ import es.upm.api.domain.services.conversation.ChatbotHistoryService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotReplyOrchestrator;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
-import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
-import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
-import es.upm.api.domain.model.configuration.ChatbotMessageResult;
-import es.upm.api.domain.model.configuration.ChatbotContextualConversationCommand;
-import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult;
-import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
-import es.upm.api.domain.model.configuration.ChatbotConversationSummaryResult;
-import es.upm.api.domain.model.configuration.AuthenticatedUserContext;
-import es.upm.api.domain.model.configuration.ChatbotReplyDecision;
+import es.upm.api.domain.model.chatbot.result.ChatbotConfigurationResult;
+import es.upm.api.domain.model.chatbot.command.ChatbotMessageCommand;
+import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
+import es.upm.api.domain.model.chatbot.command.ChatbotContextualConversationCommand;
+import es.upm.api.domain.model.chatbot.result.ChatbotContextualConversationResult;
+import es.upm.api.domain.model.chatbot.result.ChatbotConversationHistoryResult;
+import es.upm.api.domain.model.chatbot.result.ChatbotConversationSummaryResult;
+import es.upm.api.domain.model.security.AuthenticatedUserContext;
+import es.upm.api.domain.model.chatbot.reply.ChatbotReplyDecision;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -313,8 +313,8 @@ public class ChatbotService {
     /**
      * Reads the AI configuration set in the model
      */
-    public ChatbotConfigurationStatus readConfigurationStatus() {
-        return ChatbotConfigurationStatus.builder()
+    public ChatbotConfigurationResult readConfigurationStatus() {
+        return ChatbotConfigurationResult.builder()
                 .enabled(this.chatbotAiSettings.isEnabled())
                 .provider(this.chatbotAiSettings.provider())
                 .model(this.chatbotAiSettings.model())

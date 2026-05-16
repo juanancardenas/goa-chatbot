@@ -1,6 +1,6 @@
 package es.upm.api.infrastructure.dtos;
 
-import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
+import es.upm.api.domain.model.chatbot.result.ChatbotConfigurationResult;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +20,7 @@ public class ChatbotConfigurationStatusDto {
     private boolean documentsAvailable;
 
     // Mapper para convertir de dominio (modelo) a DTO
-    public static ChatbotConfigurationStatusDto fromDomain(ChatbotConfigurationStatus status) {
+    public static ChatbotConfigurationStatusDto fromDomain(ChatbotConfigurationResult status) {
         return ChatbotConfigurationStatusDto.builder()
                 .enabled(status.isEnabled())
                 .provider(status.getProvider())

@@ -1,22 +1,59 @@
 https://www.plantuml.com/
 
 @startuml
+title GOA Chatbot - Domain Model
+
 top to bottom direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam defaultFontName Arial
+skinparam nodesep 35
+skinparam ranksep 45
+
+skinparam package {
+  BackgroundColor #F8FAFC
+  BorderColor #CBD5E1
+  FontColor #0F172A
+}
+
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #64748B
+  FontColor #0F172A
+  HeaderBackgroundColor #E2E8F0
+  HeaderFontColor #0F172A
+}
+
+skinparam enum {
+  BackgroundColor #FFF7ED
+  BorderColor #FB923C
+  FontColor #0F172A
+}
+
+skinparam class<<external>> {
+  BackgroundColor #F0FDF4
+  BorderColor #22C55E
+  FontColor #14532D
+  HeaderBackgroundColor #DCFCE7
+}
 
 package domain {
-  package model as modelPackage {
+
+  package "model" as corePackage {
     class Conversation {
-      -String id*
+      -String id
       -String userId
       -String engagementLetterId
       -ConversationStatus status
-      -String type
+      -ConversationType type
       -LocalDateTime createdAt
       -Integer lastSequenceNumber
     }
 
     class Message {
-      -String id*
+      -String id
       -String conversationId
       -MessageSenderType senderType
       -MessageType messageType
@@ -27,12 +64,97 @@ package domain {
     }
 
     class Escalation {
-      -UUID id*
+      -UUID id
       -String conversationId
       -String userId
       -LocalDateTime createdAt
       -String phone
       -String email
+    }
+  }
+
+  package "model.chatbot" as chatbotPackage {
+
+    package "command" as commandPackage {
+      class ChatbotMessageCommand {
+        -String conversationId
+        -String message
+      }
+
+      class ChatbotContextualConversationCommand {
+        -String engagementLetterId
+      }
+    }
+
+    package "reply" as replyPackage {
+      class ChatbotReplyDecision {
+        -String assistantReply
+        -ChatbotResponseMode responseMode
+        -boolean usedPlatformData
+        -List<String> sourcesSummary
+      }
+    }
+
+    package "result" as resultPackage {
+      class ChatbotConfigurationResult {
+        -boolean enabled
+        -String provider
+        -String model
+        -int maxInputCharacters
+        -int maxOutputTokens
+        -int maxContextMessages
+        -boolean documentsAvailable
+      }
+
+      class ChatbotContextualConversationResult {
+        -String conversationId
+        -String engagementLetterId
+        -String createdAt
+        -String error
+      }
+
+      class ChatbotMessageResult {
+        -String conversationId
+        -String message
+        -String error
+        -String createdAt
+        -ChatbotResponseMode responseMode
+        -Boolean usedPlatformData
+        -List<String> sourcesSummary
+      }
+
+      class ChatbotConversationHistoryResult {
+        -String conversationId
+        -String engagementLetterId
+        -String type
+        -String status
+        -Integer page
+        -Integer size
+        -Boolean hasMore
+        -Long totalMessages
+        -List<ChatbotHistoryMessageResult> messages
+      }
+
+      class ChatbotHistoryMessageResult {
+        -String id
+        -String conversationId
+        -String senderType
+        -String messageType
+        -String content
+        -String timestamp
+        -Integer sequenceNumber
+        -String parentMessageId
+      }
+
+      class ChatbotConversationSummaryResult {
+        -String conversationId
+        -String type
+        -String status
+        -String engagementLetterId
+        -String createdAt
+        -String lastMessageAt
+        -String preview
+      }
     }
   }
 
@@ -62,81 +184,14 @@ package domain {
     }
   }
 
-  package "model.configuration" as configurationPackage {
+  package "model.security" as securityPackage {
     class AuthenticatedUserContext {
       -String userId
       -ConversationProfileType profile
     }
+  }
 
-    class ChatbotConfigurationStatus {
-      -boolean enabled
-      -String provider
-      -String model
-      -int maxInputCharacters
-      -int maxOutputTokens
-      -int maxContextMessages
-      -boolean documentsAvailable
-    }
-
-    class ChatbotContextualConversationCommand {
-      -String engagementLetterId
-    }
-
-    class ChatbotContextualConversationResult {
-      -String conversationId
-      -String engagementLetterId
-      -String createdAt
-      -String error
-    }
-
-    class ChatbotConversationHistoryResult {
-      -String conversationId
-      -String engagementLetterId
-      -String type
-      -String status
-      -Integer page
-      -Integer size
-      -Boolean hasMore
-      -Long totalMessages
-      -List<ChatbotHistoryMessageResult> messages
-    }
-
-    class ChatbotConversationSummaryResult {
-      -String conversationId
-      -String type
-      -String status
-      -String engagementLetterId
-      -String createdAt
-      -String lastMessageAt
-      -String preview
-    }
-
-    class ChatbotHistoryMessageResult {
-      -String id
-      -String conversationId
-      -String senderType
-      -String messageType
-      -String content
-      -String timestamp
-      -Integer sequenceNumber
-      -String parentMessageId
-    }
-
-    class ChatbotMessageCommand {
-      -String conversationId
-      -String message
-    }
-
-    class ChatbotMessageResult {
-      -String conversationId
-      -String message
-      -String error
-      -String createdAt
-      -ChatbotResponseMode responseMode
-      -Boolean usedPlatformData
-      -List<String> sourcesSummary
-    }
-
+  package "model.pagination" as paginationPackage {
     class "PageResult<T>" as PageResult {
       -List<T> content
       -int page
@@ -163,19 +218,6 @@ package domain {
       -List<String> sourcesSummary
     }
 
-    class EngagementEventPage {
-      -List<EngagementEventSummary> content
-    }
-
-    class EngagementEventSummary {
-      -String type
-      -String state
-      -String title
-      -String comment
-      -LocalDate date
-      +String displayText()
-    }
-
     class EngagementLetterSummary {
       -UUID id
       -LocalDate creationDate
@@ -191,8 +233,21 @@ package domain {
       -List<String> legalTasks
     }
 
+    class EngagementEventPage {
+      -List<EngagementEventSummary> content
+    }
+
+    class EngagementEventSummary {
+      -String type
+      -String state
+      -String title
+      -String comment
+      -LocalDate date
+      +String displayText()
+    }
+
     class UserSummary {
-      -UUID id*
+      -UUID id
       -String firstName
       -String familyName
       -String email
@@ -201,43 +256,16 @@ package domain {
     }
   }
 
-  package enums as enumsPackage {
-    enum ChatbotAiProvider {
-      OLLAMA
-      OPENAI
-      GEMINI
-    }
-
-    enum ChatbotScopeViolationReason {
-      OUT_OF_CASE_SCOPE
-      MISSING_CASE_CONTEXT
-      LEGAL_BINDING_ADVICE_REQUESTED
-      EMOTIONAL_DISTRESS
-      UNSUPPORTED_FACTUAL_ASSERTION
-      AMBIGUOUS_CONTEXT
-      OUT_OF_DOMAIN
-    }
-
-    enum ChatbotResponseMode {
+  package "enums" as enumsPackage {
+    enum ConversationType {
       GENERAL
-      CONTEXTUAL_PLATFORM_DATA
-      CONTEXTUAL_RESTRICTED
-    }
-
-    enum ConversationProfileType {
-      CLIENT
-      PROFESSIONAL
+      CONTEXTUAL
     }
 
     enum ConversationStatus {
       ACTIVE
       CLOSED
       ARCHIVED
-    }
-
-    enum ConversationType {
-      GENERAL
-      CONTEXTUAL
     }
 
     enum MessageSenderType {
@@ -252,6 +280,34 @@ package domain {
       INSTRUCTION
     }
 
+    enum ConversationProfileType {
+      CLIENT
+      PROFESSIONAL
+    }
+
+    enum ChatbotResponseMode {
+      GENERAL
+      CONTEXTUAL_PLATFORM_DATA
+      CONTEXTUAL_RESTRICTED
+    }
+
+    enum ChatbotAiProvider {
+      OLLAMA
+      OPENAI
+      GEMINI
+      +isSupported(value: String): boolean
+    }
+
+    enum ChatbotScopeViolationReason {
+      OUT_OF_CASE_SCOPE
+      MISSING_CASE_CONTEXT
+      LEGAL_BINDING_ADVICE_REQUESTED
+      EMOTIONAL_DISTRESS
+      UNSUPPORTED_FACTUAL_ASSERTION
+      AMBIGUOUS_CONTEXT
+      OUT_OF_DOMAIN
+    }
+
     enum PlatformQuestionType {
       ENGAGEMENT_STATUS
       LEGAL_TASKS
@@ -262,53 +318,77 @@ package domain {
   }
 }
 
-modelPackage -[hidden]down-> aiPackage
-aiPackage -[hidden]down-> configurationPackage
-configurationPackage -[hidden]down-> platformPackage
+package "external microservices" as externalPackage {
+  class "goa-user\nUser" as ExternalUser <<external>> {
+    +UUID id
+  }
+
+  class "goa-engagement\nEngagementLetter" as ExternalEngagementLetter <<external>> {
+    +UUID id
+  }
+}
+
+' Layout: keep packages readable and avoid a wide three-column render.
+corePackage -[hidden]down-> chatbotPackage
+chatbotPackage -[hidden]down-> aiPackage
+aiPackage -[hidden]down-> securityPackage
+securityPackage -[hidden]right-> paginationPackage
+securityPackage -[hidden]down-> platformPackage
 platformPackage -[hidden]down-> enumsPackage
+enumsPackage -[hidden]down-> externalPackage
+
+commandPackage -[hidden]down-> replyPackage
+replyPackage -[hidden]down-> resultPackage
 
 Conversation -[hidden]down-> Message
 Message -[hidden]down-> Escalation
 
+ChatbotMessageCommand -[hidden]down-> ChatbotContextualConversationCommand
+ChatbotContextualConversationCommand -[hidden]down-> ChatbotReplyDecision
+ChatbotReplyDecision -[hidden]down-> ChatbotConfigurationResult
+ChatbotConfigurationResult -[hidden]down-> ChatbotContextualConversationResult
+ChatbotContextualConversationResult -[hidden]down-> ChatbotMessageResult
+ChatbotMessageResult -[hidden]down-> ChatbotConversationHistoryResult
+ChatbotConversationHistoryResult -[hidden]down-> ChatbotHistoryMessageResult
+ChatbotHistoryMessageResult -[hidden]down-> ChatbotConversationSummaryResult
+
 ChatbotAiRequest -[hidden]down-> ChatbotAiResponse
 
-AuthenticatedUserContext -[hidden]down-> ChatbotConfigurationStatus
-ChatbotConfigurationStatus -[hidden]down-> ChatbotContextualConversationCommand
-ChatbotContextualConversationCommand -[hidden]down-> ChatbotContextualConversationResult
-ChatbotContextualConversationResult -[hidden]down-> ChatbotConversationHistoryResult
-ChatbotConversationHistoryResult -[hidden]down-> ChatbotConversationSummaryResult
-ChatbotConversationSummaryResult -[hidden]down-> ChatbotHistoryMessageResult
-ChatbotHistoryMessageResult -[hidden]down-> ChatbotMessageCommand
-ChatbotMessageCommand -[hidden]down-> ChatbotMessageResult
-ChatbotMessageResult -[hidden]down-> PageResult
-
 ChatbotDocumentContext -[hidden]down-> ChatbotPlatformContext
-ChatbotPlatformContext -[hidden]down-> EngagementEventPage
-EngagementEventPage -[hidden]down-> EngagementEventSummary
-EngagementEventSummary -[hidden]down-> EngagementLetterSummary
+ChatbotPlatformContext -[hidden]down-> EngagementLetterSummary
 EngagementLetterSummary -[hidden]down-> LegalProcedureSummary
-LegalProcedureSummary -[hidden]down-> UserSummary
+LegalProcedureSummary -[hidden]down-> EngagementEventPage
+EngagementEventPage -[hidden]down-> EngagementEventSummary
+EngagementEventSummary -[hidden]down-> UserSummary
 
+ConversationType -[hidden]right-> ConversationStatus
+ConversationStatus -[hidden]right-> MessageSenderType
+MessageSenderType -[hidden]right-> MessageType
+MessageType -[hidden]down-> ConversationProfileType
+ConversationProfileType -[hidden]right-> ChatbotResponseMode
+ChatbotResponseMode -[hidden]right-> ChatbotAiProvider
 ChatbotAiProvider -[hidden]down-> ChatbotScopeViolationReason
-ChatbotScopeViolationReason -[hidden]down-> ChatbotResponseMode
-ChatbotResponseMode -[hidden]down-> ConversationProfileType
-ConversationProfileType -[hidden]down-> ConversationStatus
-ConversationStatus -[hidden]down-> ConversationType
-ConversationType -[hidden]down-> MessageSenderType
-MessageSenderType -[hidden]down-> MessageType
-MessageType -[hidden]down-> PlatformQuestionType
+ChatbotScopeViolationReason -[hidden]right-> PlatformQuestionType
 
+' Domain relationships.
 Conversation "1" -down-> "0..*" Message
 Conversation "1" -down-> "0..1" Escalation
+Conversation "0..*" ..down..> "1" ExternalUser : userId
+Conversation "0..*" ..down..> "0..1" ExternalEngagementLetter : engagementLetterId
+Conversation -down-> ConversationType
 Conversation -down-> ConversationStatus
-Conversation ..> ConversationType
 Message -down-> MessageSenderType
 Message -down-> MessageType
+
 AuthenticatedUserContext -down-> ConversationProfileType
+ChatbotReplyDecision -down-> ChatbotResponseMode
 ChatbotMessageResult -down-> ChatbotResponseMode
+
 ChatbotConversationHistoryResult "1" -down-> "0..*" ChatbotHistoryMessageResult
 EngagementEventPage "1" -down-> "0..*" EngagementEventSummary
 EngagementLetterSummary "1" -down-> "0..1" UserSummary
 EngagementLetterSummary "1" -down-> "0..*" LegalProcedureSummary
+EngagementLetterSummary ..down..> ExternalEngagementLetter : snapshot
+UserSummary ..down..> ExternalUser : snapshot
 
 @enduml

@@ -1,7 +1,7 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
 import es.upm.api.domain.model.Message;
-import es.upm.api.domain.model.configuration.PageResult;
+import es.upm.api.domain.model.pagination.PageResult;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
 import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
