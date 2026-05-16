@@ -1,23 +1,16 @@
 package es.upm.api.domain.services;
 
 import es.upm.api.domain.enums.ConversationProfileType;
-import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.ChatbotResponseMode;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
-import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.model.Conversation;
-import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
 import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
-import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
-import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.conversation.*;
-import es.upm.api.domain.services.policies.ChatbotScopeDecision;
-import es.upm.api.domain.services.policies.ChatbotScopePolicy;
-import es.upm.api.domain.common.ChatbotResponseMessages;
+import es.upm.api.domain.services.reply.ChatbotReplyOrchestrator;
 import es.upm.api.domain.model.configuration.ChatbotConfigurationStatus;
 import es.upm.api.domain.model.configuration.ChatbotMessageCommand;
 import es.upm.api.domain.model.configuration.ChatbotMessageResult;
@@ -26,20 +19,16 @@ import es.upm.api.domain.model.configuration.ChatbotContextualConversationResult
 import es.upm.api.domain.model.configuration.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.configuration.ChatbotConversationSummaryResult;
 import es.upm.api.domain.model.configuration.AuthenticatedUserContext;
+import es.upm.api.domain.model.configuration.ChatbotReplyDecision;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class ChatbotService {
-
-    // Constants
-    private static final Pattern ENGAGEMENT_ID_PATTERN = Pattern.compile("\\bEL-\\d+\\b", Pattern.CASE_INSENSITIVE);
 
     // Attributes
     private final ChatbotMessageService chatbotMessageService;
@@ -47,25 +36,21 @@ public class ChatbotService {
     private final ChatbotConversationService chatbotConversationService;
     private final ChatbotHistoryService chatbotHistoryService;
     private final ChatbotEscalationService chatbotEscalationService;
-    private final ChatbotBaseReplyBuilder chatbotBaseReplyBuilder;
     private final ChatbotAiReplyService chatbotAiReplyService;
-    private final ChatbotPlatformContextService chatbotPlatformContextService;
-    private final ChatbotQuestionClassifier chatbotQuestionClassifier;
-    private final ChatbotScopePolicy chatbotScopePolicy;
+    private final ChatbotReplyOrchestrator chatbotReplyOrchestrator;
+    private final ChatbotBaseReplyBuilder chatbotBaseReplyBuilder;
     private final ChatbotAiSettings chatbotAiSettings;
 
-    // Constructors
+    // Constructor
     @Autowired
     public ChatbotService(ChatbotMessageService chatbotMessageService,
                           ChatbotResponseSanitizer chatbotResponseSanitizer,
                           ChatbotConversationService chatbotConversationService,
                           ChatbotHistoryService chatbotHistoryService,
                           ChatbotEscalationService chatbotEscalationService,
-                          ChatbotBaseReplyBuilder chatbotBaseReplyBuilder,
                           ChatbotAiReplyService chatbotAiReplyService,
-                          ChatbotPlatformContextService chatbotPlatformContextService,
-                          ChatbotQuestionClassifier chatbotQuestionClassifier,
-                          ChatbotScopePolicy chatbotScopePolicy,
+                          ChatbotReplyOrchestrator chatbotReplyOrchestrator,
+                          ChatbotBaseReplyBuilder chatbotBaseReplyBuilder,
                           ChatbotAiSettings chatbotAiSettings
     ) {
         this.chatbotMessageService = chatbotMessageService;
@@ -73,32 +58,10 @@ public class ChatbotService {
         this.chatbotConversationService = chatbotConversationService;
         this.chatbotHistoryService = chatbotHistoryService;
         this.chatbotEscalationService = chatbotEscalationService;
-        this.chatbotBaseReplyBuilder = chatbotBaseReplyBuilder;
         this.chatbotAiReplyService = chatbotAiReplyService;
-        this.chatbotPlatformContextService = chatbotPlatformContextService;
-        this.chatbotQuestionClassifier = chatbotQuestionClassifier;
-        this.chatbotScopePolicy = chatbotScopePolicy;
+        this.chatbotReplyOrchestrator = chatbotReplyOrchestrator;
+        this.chatbotBaseReplyBuilder = chatbotBaseReplyBuilder;
         this.chatbotAiSettings = chatbotAiSettings;
-    }
-
-    /**
-     * Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
-     */
-    public ChatbotContextualConversationResult startContextualConversation(
-            AuthenticatedUserContext authenticatedUser,
-            ChatbotContextualConversationCommand command
-    ) {
-        Conversation conversation = this.chatbotConversationService.findOrCreateContextualConversation(
-                authenticatedUser.getUserId(),
-                command.getEngagementLetterId()
-        );
-
-        return ChatbotContextualConversationResult.builder()
-                .conversationId(conversation.getId())
-                .engagementLetterId(conversation.getEngagementLetterId())
-                .createdAt(conversation.getCreatedAt().toString())
-                .error(null)
-                .build();
     }
 
     /**
@@ -131,6 +94,26 @@ public class ChatbotService {
                 page,
                 size
         );
+    }
+
+    /**
+     * Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
+     */
+    public ChatbotContextualConversationResult startContextualConversation(
+            AuthenticatedUserContext authenticatedUser,
+            ChatbotContextualConversationCommand command
+    ) {
+        Conversation conversation = this.chatbotConversationService.findOrCreateContextualConversation(
+                authenticatedUser.getUserId(),
+                command.getEngagementLetterId()
+        );
+
+        return ChatbotContextualConversationResult.builder()
+                .conversationId(conversation.getId())
+                .engagementLetterId(conversation.getEngagementLetterId())
+                .createdAt(conversation.getCreatedAt().toString())
+                .error(null)
+                .build();
     }
 
     /**
@@ -195,27 +178,10 @@ public class ChatbotService {
                 .build();
     }
 
-    private ChatbotMessageResult buildMessageResult(
-            String conversationId,
-            String message,
-            String error,
-            LocalDateTime createdAt,
-            ChatbotResponseMode responseMode,
-            boolean usedPlatformData,
-            List<String> sourcesSummary
-    ) {
-        return ChatbotMessageResult.builder()
-                .conversationId(conversationId)
-                .message(message)
-                .error(error)
-                .createdAt(createdAt.toString())
-                .responseMode(responseMode)
-                .usedPlatformData(usedPlatformData)
-                .sourcesSummary(sourcesSummary)
-                .build();
-    }
-
-    // Send Message: method called each time that user clicks on Sent button in the front-end
+    /**
+     * Send Message
+     * Method called each time that user clicks on Sent button in the front-end
+     */
     public ChatbotMessageResult sendMessage(
             AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
@@ -247,162 +213,15 @@ public class ChatbotService {
                 date
         );
 
-        ChatbotScopeDecision scopeDecision = this.chatbotScopePolicy.evaluate(
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 conversation,
+                authenticatedUser.getProfile(),
                 userMessage
         );
 
-        String assistantReply;
-        ChatbotResponseMode responseMode;
-        boolean usedPlatformData;
-        List<String> sourcesSummary;
-        ConversationProfileType profile = authenticatedUser.getProfile();
-
-        if (this.chatbotBaseReplyBuilder.isCourtesyMessage(userMessage)) {
-            assistantReply = this.chatbotBaseReplyBuilder.courtesyReply(profile);
-            responseMode = ChatbotResponseMode.GENERAL;
-            usedPlatformData = false;
-            sourcesSummary = List.of();
-
-            this.chatbotMessageService.saveMessage(
-                    conversation.getId(),
-                    MessageSenderType.ASSISTANT,
-                    MessageType.RESPONSE,
-                    assistantReply,
-                    nextSequence + 1,
-                    messageId,
-                    date
-            );
-
-            return this.buildMessageResult(
-                    conversation.getId(),
-                    assistantReply,
-                    null,
-                    date,
-                    responseMode,
-                    usedPlatformData,
-                    sourcesSummary
-            );
-        }
-
-        if (this.referencesAnotherEngagement(conversation, userMessage)) {
-            assistantReply = ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY;
-            responseMode = ChatbotResponseMode.CONTEXTUAL_RESTRICTED;
-            usedPlatformData = false;
-            sourcesSummary = List.of();
-
-            this.chatbotMessageService.saveMessage(
-                    conversation.getId(),
-                    MessageSenderType.ASSISTANT,
-                    MessageType.RESPONSE,
-                    assistantReply,
-                    nextSequence + 1,
-                    messageId,
-                    date
-            );
-
-            return this.buildMessageResult(
-                    conversation.getId(),
-                    assistantReply,
-                    null,
-                    date,
-                    responseMode,
-                    usedPlatformData,
-                    sourcesSummary
-            );
-        }
-
-        if (scopeDecision.isAllowed()) {
-            if (ConversationType.CONTEXTUAL == conversation.getType() && conversation.getEngagementLetterId() != null) {
-                PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
-
-                if (this.requiresPlatformContext(questionType)) {
-                    Optional<ChatbotPlatformContext> platformContext = this.chatbotPlatformContextService
-                            .loadContext(conversation.getEngagementLetterId());
-
-                    if (platformContext.isPresent()) {
-                        String baseReply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                                profile,
-                                userMessage,
-                                conversation,
-                                platformContext.get()
-                        );
-
-                        assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
-                                conversation,
-                                profile,
-                                userMessage,
-                                baseReply,
-                                platformContext
-                        );
-
-                        responseMode = ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA;
-                        usedPlatformData = true;
-                        sourcesSummary = platformContext.get().getSourcesSummary();
-                    } else {
-                        String baseReply = this.chatbotBaseReplyBuilder.contextualFallbackReply(
-                                profile,
-                                userMessage
-                        );
-
-                        assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
-                                conversation,
-                                profile,
-                                userMessage,
-                                baseReply,
-                                Optional.empty()
-                        );
-
-                        responseMode = ChatbotResponseMode.CONTEXTUAL_RESTRICTED;
-                        usedPlatformData = false;
-                        sourcesSummary = List.of();
-                    }
-                } else {
-                    String baseReply = this.chatbotBaseReplyBuilder.generalFaqReply(
-                            profile,
-                            userMessage
-                    );
-
-                    assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
-                            conversation,
-                            profile,
-                            userMessage,
-                            baseReply,
-                            Optional.empty()
-                    );
-
-                    responseMode = ChatbotResponseMode.GENERAL;
-                    usedPlatformData = false;
-                    sourcesSummary = List.of();
-                }
-            } else {
-                String baseReply = this.chatbotBaseReplyBuilder.generalFaqReply(
-                        profile,
-                        userMessage
-                );
-
-                assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
-                        conversation,
-                        profile,
-                        userMessage,
-                        baseReply,
-                        Optional.empty()
-                );
-
-                responseMode = ChatbotResponseMode.GENERAL;
-                usedPlatformData = false;
-                sourcesSummary = List.of();
-            }
-        } else {
-            assistantReply = scopeDecision.getSafeMessage();
-            responseMode = ConversationType.CONTEXTUAL == conversation.getType()
-                    ? ChatbotResponseMode.CONTEXTUAL_RESTRICTED
-                    : ChatbotResponseMode.GENERAL;
-            usedPlatformData = false;
-            sourcesSummary = List.of();
-        }
-
-        assistantReply = this.chatbotResponseSanitizer.normalizeReplyForFrontend(assistantReply);
+        String assistantReply = this.chatbotResponseSanitizer.normalizeReplyForFrontend(
+                decision.getAssistantReply()
+        );
 
         this.chatbotMessageService.saveMessage(
                 conversation.getId(),
@@ -419,21 +238,29 @@ public class ChatbotService {
                 assistantReply,
                 null,
                 date,
-                responseMode,
-                usedPlatformData,
-                sourcesSummary
+                decision.getResponseMode(),
+                decision.isUsedPlatformData(),
+                decision.getSourcesSummary()
         );
     }
 
-    public ChatbotConfigurationStatus readConfigurationStatus() {
-        return ChatbotConfigurationStatus.builder()
-                .enabled(this.chatbotAiSettings.isEnabled())
-                .provider(this.chatbotAiSettings.provider())
-                .model(this.chatbotAiSettings.model())
-                .maxInputCharacters(this.chatbotAiSettings.maxInputCharacters())
-                .maxOutputTokens(this.chatbotAiSettings.maxOutputTokens())
-                .maxContextMessages(this.chatbotAiSettings.maxContextMessages())
-                .documentsAvailable(this.chatbotAiSettings.documentsAvailable())
+    private ChatbotMessageResult buildMessageResult(
+            String conversationId,
+            String message,
+            String error,
+            LocalDateTime createdAt,
+            ChatbotResponseMode responseMode,
+            boolean usedPlatformData,
+            List<String> sourcesSummary
+    ) {
+        return ChatbotMessageResult.builder()
+                .conversationId(conversationId)
+                .message(message)
+                .error(error)
+                .createdAt(createdAt.toString())
+                .responseMode(responseMode)
+                .usedPlatformData(usedPlatformData)
+                .sourcesSummary(sourcesSummary)
                 .build();
     }
 
@@ -495,47 +322,29 @@ public class ChatbotService {
         );
     }
 
-    private boolean requiresPlatformContext(PlatformQuestionType questionType) {
-        if (questionType == null) {
-            return true;
-        }
-
-        return switch (questionType) {
-            case ENGAGEMENT_STATUS, LEGAL_TASKS, TIMELINE_EVENTS, DOCUMENTS, GENERAL_CONTEXT -> true;
-        };
+    /**
+     * Reads the AI configuration set in the model
+     */
+    public ChatbotConfigurationStatus readConfigurationStatus() {
+        return ChatbotConfigurationStatus.builder()
+                .enabled(this.chatbotAiSettings.isEnabled())
+                .provider(this.chatbotAiSettings.provider())
+                .model(this.chatbotAiSettings.model())
+                .maxInputCharacters(this.chatbotAiSettings.maxInputCharacters())
+                .maxOutputTokens(this.chatbotAiSettings.maxOutputTokens())
+                .maxContextMessages(this.chatbotAiSettings.maxContextMessages())
+                .documentsAvailable(this.chatbotAiSettings.documentsAvailable())
+                .build();
     }
 
-    private String safeText(String value, String fallback) {
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-
-        return value.trim();
-    }
-
+    /**
+     * Checks the message entered by user has not reached the configured limit
+     */
     private void validateUserMessageLength(String message) {
         int maxInputCharacters = this.chatbotAiSettings.maxInputCharacters();
 
         if (maxInputCharacters > 0 && message != null && message.length() > maxInputCharacters) {
             throw new BadRequestException("message supera el limite maximo de caracteres configurado");
         }
-    }
-
-    private boolean referencesAnotherEngagement(Conversation conversation, String message) {
-        if (ConversationType.CONTEXTUAL != conversation.getType() || message == null || message.isBlank()) {
-            return false;
-        }
-
-        String activeEngagementId = this.safeText(conversation.getEngagementLetterId(), "");
-        Matcher matcher = ENGAGEMENT_ID_PATTERN.matcher(message);
-
-        while (matcher.find()) {
-            String candidate = matcher.group();
-            if (!candidate.equalsIgnoreCase(activeEngagementId)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
