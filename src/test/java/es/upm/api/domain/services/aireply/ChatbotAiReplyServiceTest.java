@@ -1,5 +1,7 @@
 package es.upm.api.domain.services.aireply;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.model.Conversation;
@@ -81,7 +83,7 @@ class ChatbotAiReplyServiceTest {
                 .id("conversation-ai-context")
                 .userId("customer-9")
                 .engagementLetterId("EL-555")
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
         ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
@@ -147,7 +149,7 @@ class ChatbotAiReplyServiceTest {
                 .id("conversation-context-no-platform")
                 .userId("customer-1")
                 .engagementLetterId("EL-999")
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 
@@ -183,7 +185,7 @@ class ChatbotAiReplyServiceTest {
                 .id("conversation-context-missing-values")
                 .userId("customer-2")
                 .engagementLetterId(" ")
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 
@@ -346,7 +348,7 @@ class ChatbotAiReplyServiceTest {
         return Conversation.builder()
                 .id("conversation-general")
                 .userId("professional-1")
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
     }

@@ -1,5 +1,6 @@
 package es.upm.api.domain.ports.out;
 
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
 
 import java.util.List;
@@ -11,23 +12,23 @@ public interface ConversationGateway {
 
     List<Conversation> findByUserId(String userId);
 
-    Optional<Conversation> findContextualConversation(String userId, String engagementLetterId, String type);
+    Optional<Conversation> findContextualConversation(String userId, String engagementLetterId, ConversationType type);
 
     Optional<Conversation> findActiveContextualConversation(
             String userId,
             String engagementLetterId,
-            String type
+            ConversationType type
     );
 
     List<Conversation> findByUserIdAndTypeOrderByCreatedAtDesc(
             String userId,
-            String type
+            ConversationType type
     );
 
     List<Conversation> findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
             String userId,
             String engagementLetterId,
-            String type
+            ConversationType type
     );
 
     void create(Conversation conversation);

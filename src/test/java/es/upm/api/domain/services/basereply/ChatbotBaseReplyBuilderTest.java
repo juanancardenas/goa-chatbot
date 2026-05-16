@@ -1,5 +1,7 @@
 package es.upm.api.domain.services.basereply;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationStatus;
@@ -627,7 +629,7 @@ class ChatbotBaseReplyBuilderTest {
                 .id(id)
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 5, 15, 10, 0))
                 .build();
     }

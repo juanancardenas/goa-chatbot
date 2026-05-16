@@ -1,5 +1,7 @@
 package es.upm.api.integrationtests;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
@@ -72,7 +74,7 @@ class ConversationSequenceConcurrencyIT {
                 .id(conversationId)
                 .userId("user-concurrency")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL.name())
                 .createdAt(LocalDateTime.of(2026, 5, 16, 12, 0))
                 .lastSequenceNumber(0)
                 .build());

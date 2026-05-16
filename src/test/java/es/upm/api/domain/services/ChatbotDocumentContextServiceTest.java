@@ -1,5 +1,7 @@
 package es.upm.api.domain.services;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
@@ -18,7 +20,7 @@ class ChatbotDocumentContextServiceTest {
                 .id("conversation-1")
                 .userId("user-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 30, 11, 0))
                 .build();
 

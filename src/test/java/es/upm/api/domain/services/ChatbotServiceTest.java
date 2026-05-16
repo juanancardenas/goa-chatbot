@@ -1,5 +1,7 @@
 package es.upm.api.domain.services;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.configurations.ChatbotAiProperties;
 import es.upm.api.domain.enums.*;
 import es.upm.api.domain.exceptions.BadRequestException;
@@ -161,7 +163,7 @@ class ChatbotServiceTest {
         Conversation savedConversation = conversationCaptor.getValue();
         assertThat(savedConversation.getUserId()).isEqualTo("client-1");
         assertThat(savedConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(savedConversation.getType()).isEqualTo("GENERAL");
+        assertThat(savedConversation.getType()).isEqualTo(ConversationType.GENERAL);
         assertThat(savedConversation.getCreatedAt()).isNotNull();
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
@@ -213,10 +215,10 @@ class ChatbotServiceTest {
                 .userId("customer-42")
                 .engagementLetterId("EL-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
-        when(conversationPersistence.findActiveContextualConversation("customer-42", "EL-1", "CONTEXTUAL"))
+        when(conversationPersistence.findActiveContextualConversation("customer-42", "EL-1", ConversationType.CONTEXTUAL))
                 .thenReturn(Optional.of(existingConversation));
 
         ChatbotContextualConversationCommand request = new ChatbotContextualConversationCommand("EL-1");
@@ -233,7 +235,7 @@ class ChatbotServiceTest {
     @Test
     void startContextualConversationShouldCreateConversationWhenNoActiveConversationExists() {
         this.authenticate("customer-77", "ROLE_CUSTOMER");
-        when(conversationPersistence.findActiveContextualConversation("customer-77", "EL-77", "CONTEXTUAL"))
+        when(conversationPersistence.findActiveContextualConversation("customer-77", "EL-77", ConversationType.CONTEXTUAL))
                 .thenReturn(Optional.empty());
 
         ChatbotContextualConversationCommand request = new ChatbotContextualConversationCommand("EL-77");
@@ -246,7 +248,7 @@ class ChatbotServiceTest {
 
         assertThat(savedConversation.getUserId()).isEqualTo("customer-77");
         assertThat(savedConversation.getEngagementLetterId()).isEqualTo("EL-77");
-        assertThat(savedConversation.getType()).isEqualTo("CONTEXTUAL");
+        assertThat(savedConversation.getType()).isEqualTo(ConversationType.CONTEXTUAL);
         assertThat(savedConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(response.getConversationId()).isEqualTo(savedConversation.getId());
         assertThat(response.getEngagementLetterId()).isEqualTo("EL-77");
@@ -261,18 +263,18 @@ class ChatbotServiceTest {
                 .id("conversation-1")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 9, 0))
                 .build();
         Conversation olderConversation = Conversation.builder()
                 .id("conversation-2")
                 .userId("professional-1")
                 .status(ConversationStatus.CLOSED)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 20, 9, 0))
                 .build();
 
-        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL"))
+        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
                 .thenReturn(List.of(latestConversation, olderConversation));
         when(messagePersistence.findLatestByConversationId("conversation-1"))
                 .thenReturn(Optional.of(
@@ -306,14 +308,14 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .engagementLetterId("EL-9")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 12, 0))
                 .build();
 
         when(conversationPersistence.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
                 "customer-1",
                 "EL-9",
-                "CONTEXTUAL"
+                ConversationType.CONTEXTUAL
         )).thenReturn(List.of(conversation));
         when(messagePersistence.findLatestByConversationId("conversation-ctx-1")).thenReturn(Optional.empty());
 
@@ -321,7 +323,10 @@ class ChatbotServiceTest {
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-ctx-1");
-        verify(conversationPersistence, never()).findByUserIdAndTypeOrderByCreatedAtDesc(any(), eq("CONTEXTUAL"));
+        verify(conversationPersistence, never()).findByUserIdAndTypeOrderByCreatedAtDesc(
+                any(),
+                eq(ConversationType.CONTEXTUAL)
+        );
     }
 
     @Test
@@ -345,11 +350,11 @@ class ChatbotServiceTest {
                 .id("conversation-general-1")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 9, 0))
                 .build();
 
-        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL"))
+        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
                 .thenReturn(List.of(conversation));
         when(messagePersistence.findLatestByConversationId("conversation-general-1")).thenReturn(Optional.empty());
 
@@ -357,7 +362,7 @@ class ChatbotServiceTest {
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-general-1");
-        verify(conversationPersistence).findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", "GENERAL");
+        verify(conversationPersistence).findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL);
     }
 
     @Test
@@ -369,11 +374,11 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .engagementLetterId("EL-33")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 12, 0))
                 .build();
 
-        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", "CONTEXTUAL"))
+        when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", ConversationType.CONTEXTUAL))
                 .thenReturn(List.of(conversation));
         when(messagePersistence.findLatestByConversationId("conversation-ctx-all")).thenReturn(Optional.empty());
 
@@ -381,7 +386,7 @@ class ChatbotServiceTest {
 
         assertThat(response).hasSize(1);
         assertThat(response.getFirst().getConversationId()).isEqualTo("conversation-ctx-all");
-        verify(conversationPersistence).findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", "CONTEXTUAL");
+        verify(conversationPersistence).findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", ConversationType.CONTEXTUAL);
         verify(conversationPersistence, never())
                 .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(any(), any(), any());
     }
@@ -395,7 +400,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .engagementLetterId("EL-10")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
                 .build();
 
@@ -452,7 +457,7 @@ class ChatbotServiceTest {
                 .id("conversation-history")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
@@ -480,7 +485,7 @@ class ChatbotServiceTest {
                 .id("conversation-history")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
@@ -508,7 +513,7 @@ class ChatbotServiceTest {
                 .id("conversation-history")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
@@ -551,7 +556,7 @@ class ChatbotServiceTest {
                 .id("conversation-courtesy")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
                 .build();
 
@@ -591,7 +596,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .engagementLetterId("engagement-001")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
                 .build();
 
@@ -630,7 +635,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .engagementLetterId("engagement-001")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
                 .build();
 
@@ -678,7 +683,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .engagementLetterId("engagement-001")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
                 .build();
 
@@ -730,7 +735,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -768,7 +773,7 @@ class ChatbotServiceTest {
                 .id("conversation-99")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
         when(conversationPersistence.readById("conversation-99")).thenReturn(existingConversation);
@@ -813,7 +818,7 @@ class ChatbotServiceTest {
                 .id("conversation-ai")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 
@@ -855,7 +860,7 @@ class ChatbotServiceTest {
                 .id("conversation-restricted")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 
@@ -931,7 +936,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -980,7 +985,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1031,7 +1036,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1064,7 +1069,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1096,7 +1101,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1128,7 +1133,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1160,7 +1165,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1192,7 +1197,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1233,7 +1238,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1276,7 +1281,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1315,7 +1320,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1355,7 +1360,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
@@ -1395,7 +1400,7 @@ class ChatbotServiceTest {
                 .id("conversation-general")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
 
@@ -1430,7 +1435,7 @@ class ChatbotServiceTest {
                 .id("conversation-general")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
 
@@ -1465,7 +1470,7 @@ class ChatbotServiceTest {
                 .id("conversation-general")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
 
@@ -1500,7 +1505,7 @@ class ChatbotServiceTest {
                 .id("conversation-general")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
 
@@ -1534,7 +1539,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
@@ -1564,7 +1569,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx-blank-engagement")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId(" ")
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
@@ -1595,7 +1600,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx-same-engagement")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
@@ -1635,7 +1640,7 @@ class ChatbotServiceTest {
                 .id("conversation-general")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
 
@@ -1673,7 +1678,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-300")
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                 .build();
@@ -1712,7 +1717,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx-events")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-200")
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 30))
                 .build();
@@ -1753,7 +1758,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx-empty-events")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-201")
                 .createdAt(LocalDateTime.of(2026, 4, 21, 10, 30))
                 .build();
@@ -1795,7 +1800,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx-docs")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-300")
                 .createdAt(LocalDateTime.of(2026, 4, 21, 11, 0))
                 .build();
@@ -1838,7 +1843,7 @@ class ChatbotServiceTest {
                 .id("conversation-ctx-docs-visible")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("CONTEXTUAL")
+                .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-301")
                 .createdAt(LocalDateTime.of(2026, 4, 21, 11, 0))
                 .build();
@@ -1889,7 +1894,7 @@ class ChatbotServiceTest {
                 .id("conversation-1")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
@@ -1908,7 +1913,7 @@ class ChatbotServiceTest {
                 .id("conversation-1")
                 .userId("customer-2")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
@@ -1929,7 +1934,7 @@ class ChatbotServiceTest {
                 .id("conversation-1")
                 .userId("customer-1")
                 .status(ConversationStatus.CLOSED)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
@@ -1948,7 +1953,7 @@ class ChatbotServiceTest {
                 .id("conversation-escalate")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(this.conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
@@ -1967,7 +1972,7 @@ class ChatbotServiceTest {
                 .id("conversation-delete")
                 .userId("customer-1")
                 .status(ConversationStatus.CLOSED)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-delete")).thenReturn(existingConversation);
@@ -1985,7 +1990,7 @@ class ChatbotServiceTest {
                 .id("conversation-delete")
                 .userId("customer-2")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-delete")).thenReturn(existingConversation);
@@ -2008,7 +2013,7 @@ class ChatbotServiceTest {
                 .id("conversation-closed")
                 .userId("professional-1")
                 .status(ConversationStatus.CLOSED)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 21, 11, 30))
                 .build();
         when(conversationPersistence.readById("conversation-closed")).thenReturn(existingConversation);
@@ -2030,7 +2035,7 @@ class ChatbotServiceTest {
                 .id("conversation-closed")
                 .userId("customer-1")
                 .status(ConversationStatus.CLOSED)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-closed")).thenReturn(existingConversation);
@@ -2048,7 +2053,7 @@ class ChatbotServiceTest {
                 .id("conversation-active")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-active")).thenReturn(existingConversation);
@@ -2065,7 +2070,7 @@ class ChatbotServiceTest {
                 .id("conversation-archived")
                 .userId("customer-1")
                 .status(ConversationStatus.ARCHIVED)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-archived")).thenReturn(existingConversation);
@@ -2108,7 +2113,7 @@ class ChatbotServiceTest {
                 .id("conversation-ai-table")
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
                 .build();
 

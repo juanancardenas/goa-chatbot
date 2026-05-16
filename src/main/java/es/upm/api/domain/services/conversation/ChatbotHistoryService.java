@@ -47,9 +47,9 @@ public class ChatbotHistoryService {
             String type,
             String engagementLetterId
     ) {
-        String normalizedType = this.normalizeConversationType(type);
+        ConversationType normalizedType = this.normalizeConversationType(type);
 
-        List<Conversation> conversations = ConversationType.CONTEXTUAL.name().equals(normalizedType)
+        List<Conversation> conversations = ConversationType.CONTEXTUAL == normalizedType
                 ? this.readContextualConversations(userId, engagementLetterId)
                 : this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
 
@@ -89,7 +89,7 @@ public class ChatbotHistoryService {
         return ChatbotConversationHistoryResult.builder()
                 .conversationId(conversation.getId())
                 .engagementLetterId(conversation.getEngagementLetterId())
-                .type(conversation.getType())
+                .type(conversation.getType().name())
                 .status(conversation.getStatus().name())
                 .page(normalizedPage)
                 .size(normalizedSize)
@@ -107,13 +107,13 @@ public class ChatbotHistoryService {
             return this.conversationGateway.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
                     userId,
                     engagementLetterId,
-                    ConversationType.CONTEXTUAL.name()
+                    ConversationType.CONTEXTUAL
             );
         }
 
         return this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc(
                 userId,
-                ConversationType.CONTEXTUAL.name()
+                ConversationType.CONTEXTUAL
         );
     }
 
@@ -122,7 +122,7 @@ public class ChatbotHistoryService {
 
         return ChatbotConversationSummaryResult.builder()
                 .conversationId(conversation.getId())
-                .type(conversation.getType())
+                .type(conversation.getType().name())
                 .status(this.statusName(conversation))
                 .engagementLetterId(conversation.getEngagementLetterId())
                 .createdAt(conversation.getCreatedAt().toString())
@@ -137,19 +137,18 @@ public class ChatbotHistoryService {
         return status != null ? status.name() : null;
     }
 
-    private String normalizeConversationType(String type) {
+    private ConversationType normalizeConversationType(String type) {
         if (type == null || type.isBlank()) {
-            return ConversationType.GENERAL.name();
+            return ConversationType.GENERAL;
         }
 
         String normalizedType = type.trim().toUpperCase(Locale.ROOT);
 
-        if (!ConversationType.GENERAL.name().equals(normalizedType)
-                && !ConversationType.CONTEXTUAL.name().equals(normalizedType)) {
+        try {
+            return ConversationType.valueOf(normalizedType);
+        } catch (IllegalArgumentException exception) {
             throw new BadRequestException("Tipo de conversacion no soportado: " + type);
         }
-
-        return normalizedType;
     }
 
     private int normalizeHistoryPage(Integer page) {

@@ -1,5 +1,7 @@
 package es.upm.api.domain.services.conversation;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
@@ -46,7 +48,7 @@ class ChatbotEscalationServiceTest {
                 .id("conversation-escalate")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .build();
         when(this.chatbotConversationService.requireActiveOwnedConversation("conversation-escalate", "customer-1"))
                 .thenReturn(existingConversation);
@@ -80,7 +82,7 @@ class ChatbotEscalationServiceTest {
                 .id("conversation-escalate")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .build();
         when(this.chatbotConversationService.requireActiveOwnedConversation("conversation-escalate", "customer-1"))
                 .thenReturn(existingConversation);
@@ -103,7 +105,7 @@ class ChatbotEscalationServiceTest {
                 .id("conversation-escalate")
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .build();
         when(this.chatbotConversationService.requireActiveOwnedConversation("conversation-escalate", "customer-1"))
                 .thenReturn(existingConversation);

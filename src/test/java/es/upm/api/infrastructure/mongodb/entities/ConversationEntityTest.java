@@ -1,6 +1,7 @@
 package es.upm.api.infrastructure.mongodb.entities;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +34,7 @@ class ConversationEntityTest {
         assertThat(entity.getUserId()).isEqualTo("user-1");
         assertThat(entity.getEngagementLetterId()).isEqualTo("engagement-1");
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.CLOSED);
-        assertThat(entity.getType()).isEqualTo("CHATBOT");
+        assertThat(entity.getType()).isEqualTo("GENERAL");
         assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
         assertThat(entity.getLastSequenceNumber()).isEqualTo(4);
     }
@@ -63,7 +64,7 @@ class ConversationEntityTest {
         assertThat(entity.getUserId()).isEqualTo("user-1");
         assertThat(entity.getEngagementLetterId()).isEqualTo("engagement-1");
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.CLOSED);
-        assertThat(entity.getType()).isEqualTo("CHATBOT");
+        assertThat(entity.getType()).isEqualTo("GENERAL");
         assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
         assertThat(entity.getLastSequenceNumber()).isEqualTo(4);
     }
@@ -75,7 +76,7 @@ class ConversationEntityTest {
                 .userId("user-3")
                 .engagementLetterId("engagement-3")
                 .status(ConversationStatus.ACTIVE)
-                .type("FOLLOW_UP")
+                .type("CONTEXTUAL")
                 .createdAt(LocalDateTime.of(2026, 5, 5, 8, 15))
                 .lastSequenceNumber(9)
                 .build();
@@ -86,9 +87,24 @@ class ConversationEntityTest {
         assertThat(conversation.getUserId()).isEqualTo("user-3");
         assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-3");
         assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversation.getType()).isEqualTo("FOLLOW_UP");
+        assertThat(conversation.getType()).isEqualTo(ConversationType.CONTEXTUAL);
         assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 5, 8, 15));
         assertThat(conversation.getLastSequenceNumber()).isEqualTo(9);
+    }
+
+    @Test
+    void allArgsConstructorShouldDefaultLastSequenceNumberToZeroWhenNull() {
+        ConversationEntity entity = new ConversationEntity(
+                "conversation-4",
+                "user-4",
+                null,
+                ConversationStatus.ACTIVE,
+                "GENERAL",
+                LocalDateTime.of(2026, 5, 6, 11, 45),
+                null
+        );
+
+        assertThat(entity.getLastSequenceNumber()).isZero();
     }
 
     private Conversation conversation() {
@@ -97,7 +113,7 @@ class ConversationEntityTest {
                 .userId("user-1")
                 .engagementLetterId("engagement-1")
                 .status(ConversationStatus.CLOSED)
-                .type("CHATBOT")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
                 .lastSequenceNumber(4)
                 .build();

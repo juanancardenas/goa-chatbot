@@ -313,7 +313,7 @@ public class ChatbotService {
         }
 
         if (scopeDecision.isAllowed()) {
-            if (ConversationType.CONTEXTUAL.name().equals(conversation.getType()) && conversation.getEngagementLetterId() != null) {
+            if (ConversationType.CONTEXTUAL == conversation.getType() && conversation.getEngagementLetterId() != null) {
                 PlatformQuestionType questionType = this.chatbotQuestionClassifier.classify(userMessage);
 
                 if (this.requiresPlatformContext(questionType)) {
@@ -395,7 +395,7 @@ public class ChatbotService {
             }
         } else {
             assistantReply = scopeDecision.getSafeMessage();
-            responseMode = ConversationType.CONTEXTUAL.name().equals(conversation.getType())
+            responseMode = ConversationType.CONTEXTUAL == conversation.getType()
                     ? ChatbotResponseMode.CONTEXTUAL_RESTRICTED
                     : ChatbotResponseMode.GENERAL;
             usedPlatformData = false;
@@ -522,7 +522,7 @@ public class ChatbotService {
     }
 
     private boolean referencesAnotherEngagement(Conversation conversation, String message) {
-        if (!ConversationType.CONTEXTUAL.name().equals(conversation.getType()) || message == null || message.isBlank()) {
+        if (ConversationType.CONTEXTUAL != conversation.getType() || message == null || message.isBlank()) {
             return false;
         }
 

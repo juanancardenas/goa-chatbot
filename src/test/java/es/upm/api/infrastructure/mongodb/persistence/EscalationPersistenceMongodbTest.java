@@ -1,5 +1,7 @@
 package es.upm.api.infrastructure.mongodb.persistence;
 
+import es.upm.api.domain.enums.ConversationType;
+
 import com.mongodb.client.result.UpdateResult;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.ConflictException;
@@ -143,7 +145,7 @@ class EscalationPersistenceMongodbTest {
                 .id("conversation-3")
                 .userId("user-3")
                 .status(ConversationStatus.ACTIVE)
-                .type("GENERAL")
+                .type(ConversationType.GENERAL)
                 .createdAt(LocalDateTime.of(2026, 5, 2, 12, 0))
                 .build();
     }
