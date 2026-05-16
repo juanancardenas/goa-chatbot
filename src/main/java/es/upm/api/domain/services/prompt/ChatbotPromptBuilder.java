@@ -1,6 +1,7 @@
 package es.upm.api.domain.services.prompt;
 
 import es.upm.api.configurations.ChatbotAiProperties;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import org.springframework.stereotype.Service;
 
@@ -10,7 +11,6 @@ import java.util.StringJoiner;
 @Service
 public class ChatbotPromptBuilder {
     private static final String NOT_AVAILABLE = "No disponible";
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
     private static final String SCOPE_SECTION = """
             [RESTRICCIÓN DE ÁMBITO]
             Responde únicamente dentro del ámbito de GOA, del encargo y de la información autorizada.
@@ -40,9 +40,9 @@ public class ChatbotPromptBuilder {
     }
 
     private String buildConversationTypeSection(ChatbotAiRequest request) {
-        String conversationType = this.safeText(request.getConversationType(), "GENERAL");
+        String conversationType = this.safeText(request.getConversationType(), ConversationType.GENERAL.name());
 
-        if (TYPE_CONTEXTUAL.equalsIgnoreCase(conversationType)) {
+        if (ConversationType.CONTEXTUAL.name().equalsIgnoreCase(conversationType)) {
             return """
                     [TIPO DE CONVERSACIÓN]
                     Conversación contextual.

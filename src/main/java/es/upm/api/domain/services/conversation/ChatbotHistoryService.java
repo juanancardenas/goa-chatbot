@@ -1,6 +1,7 @@
 package es.upm.api.domain.services.conversation;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
@@ -19,9 +20,6 @@ import java.util.Optional;
 
 @Service
 public class ChatbotHistoryService {
-
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
-    private static final String TYPE_GENERAL = "GENERAL";
 
     private static final int DEFAULT_HISTORY_PAGE = 0;
     private static final int DEFAULT_HISTORY_SIZE = 20;
@@ -51,7 +49,7 @@ public class ChatbotHistoryService {
     ) {
         String normalizedType = this.normalizeConversationType(type);
 
-        List<Conversation> conversations = TYPE_CONTEXTUAL.equals(normalizedType)
+        List<Conversation> conversations = ConversationType.CONTEXTUAL.name().equals(normalizedType)
                 ? this.readContextualConversations(userId, engagementLetterId)
                 : this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc(userId, normalizedType);
 
@@ -109,13 +107,13 @@ public class ChatbotHistoryService {
             return this.conversationGateway.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
                     userId,
                     engagementLetterId,
-                    TYPE_CONTEXTUAL
+                    ConversationType.CONTEXTUAL.name()
             );
         }
 
         return this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc(
                 userId,
-                TYPE_CONTEXTUAL
+                ConversationType.CONTEXTUAL.name()
         );
     }
 
@@ -141,12 +139,13 @@ public class ChatbotHistoryService {
 
     private String normalizeConversationType(String type) {
         if (type == null || type.isBlank()) {
-            return TYPE_GENERAL;
+            return ConversationType.GENERAL.name();
         }
 
         String normalizedType = type.trim().toUpperCase(Locale.ROOT);
 
-        if (!TYPE_GENERAL.equals(normalizedType) && !TYPE_CONTEXTUAL.equals(normalizedType)) {
+        if (!ConversationType.GENERAL.name().equals(normalizedType)
+                && !ConversationType.CONTEXTUAL.name().equals(normalizedType)) {
             throw new BadRequestException("Tipo de conversacion no soportado: " + type);
         }
 

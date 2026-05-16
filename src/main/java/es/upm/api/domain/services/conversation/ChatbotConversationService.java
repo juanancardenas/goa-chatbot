@@ -1,6 +1,7 @@
 package es.upm.api.domain.services.conversation;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
@@ -13,9 +14,6 @@ import java.util.UUID;
 
 @Service
 public class ChatbotConversationService {
-
-    private static final String TYPE_CONTEXTUAL = "CONTEXTUAL";
-    private static final String TYPE_GENERAL = "GENERAL";
 
     private final ConversationGateway conversationGateway;
     private final MessageGateway messageGateway;
@@ -36,7 +34,7 @@ public class ChatbotConversationService {
                 .id(UUID.randomUUID().toString())
                 .userId(userId)
                 .status(ConversationStatus.ACTIVE)
-                .type(TYPE_GENERAL)
+                .type(ConversationType.GENERAL.name())
                 .createdAt(createdAt)
                 .build();
 
@@ -50,14 +48,14 @@ public class ChatbotConversationService {
             String engagementLetterId
     ) {
         return this.conversationGateway
-                .findActiveContextualConversation(userId, engagementLetterId, TYPE_CONTEXTUAL)
+                .findActiveContextualConversation(userId, engagementLetterId, ConversationType.CONTEXTUAL.name())
                 .orElseGet(() -> {
                     Conversation conversation = Conversation.builder()
                             .id(UUID.randomUUID().toString())
                             .userId(userId)
                             .engagementLetterId(engagementLetterId)
                             .status(ConversationStatus.ACTIVE)
-                            .type(TYPE_CONTEXTUAL)
+                            .type(ConversationType.CONTEXTUAL.name())
                             .createdAt(LocalDateTime.now())
                             .build();
 
