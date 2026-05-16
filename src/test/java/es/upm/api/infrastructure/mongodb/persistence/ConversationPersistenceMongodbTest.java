@@ -3,6 +3,7 @@ package es.upm.api.infrastructure.mongodb.persistence;
 import es.upm.api.domain.enums.ConversationType;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.NotFoundException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
@@ -30,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -161,6 +163,7 @@ class ConversationPersistenceMongodbTest {
                 any(FindAndModifyOptions.class),
                 eq(ConversationEntity.class)
         );
+        verify(this.mongoTemplate, never()).updateFirst(any(Query.class), any(Update.class), eq(ConversationEntity.class));
     }
 
     @Test
@@ -199,6 +202,28 @@ class ConversationPersistenceMongodbTest {
         );
 
         assertThat(exception.getMessage()).contains("conversacion existente");
+    }
+
+    @Test
+    void reserveSequenceNumbersShouldRejectZeroOrNegativeQuantity() {
+        BadRequestException zeroException = assertThrows(
+                BadRequestException.class,
+                () -> this.conversationPersistenceMongodb.reserveSequenceNumbers("conversation-14", 0)
+        );
+        BadRequestException negativeException = assertThrows(
+                BadRequestException.class,
+                () -> this.conversationPersistenceMongodb.reserveSequenceNumbers("conversation-14", -1)
+        );
+
+        assertThat(zeroException.getMessage()).contains("quantity debe ser mayor que cero");
+        assertThat(negativeException.getMessage()).contains("quantity debe ser mayor que cero");
+        verify(this.messageRepository, never()).findFirstByConversationIdOrderBySequenceNumberDesc(any());
+        verify(this.mongoTemplate, never()).findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        );
     }
 
     private ConversationEntity conversationEntity(String id, String userId, String engagementLetterId, String type) {

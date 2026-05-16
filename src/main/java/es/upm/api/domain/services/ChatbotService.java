@@ -155,7 +155,7 @@ public class ChatbotService {
                 date
         );
 
-        return this.buildMessageResult(
+        return buildMessageResult(
                 conversation.getId(),
                 assistantReply,
                 null,
@@ -221,7 +221,7 @@ public class ChatbotService {
                 date
         );
 
-        return this.buildMessageResult(
+        return buildMessageResult(
                 conversation.getId(),
                 assistantReply,
                 null,
@@ -232,7 +232,7 @@ public class ChatbotService {
         );
     }
 
-    private ChatbotMessageResult buildMessageResult(
+    private static ChatbotMessageResult buildMessageResult(
             String conversationId,
             String message,
             String error,
