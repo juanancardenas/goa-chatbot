@@ -147,9 +147,7 @@ class ChatbotServiceTest {
                 chatbotConversationService,
                 chatbotHistoryService,
                 chatbotEscalationService,
-                chatbotAiReplyService,
                 chatbotReplyOrchestrator,
-                chatbotBaseReplyBuilder,
                 this.chatbotAiSettings
         );
     }

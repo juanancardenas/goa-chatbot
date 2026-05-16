@@ -93,6 +93,29 @@ public class ChatbotReplyOrchestrator {
         );
     }
 
+    public ChatbotReplyDecision resolveGeneralStartReply(
+            Conversation conversation,
+            ConversationProfileType profile,
+            String userMessage
+    ) {
+        String baseReply = this.chatbotBaseReplyBuilder.generalStartReply(profile);
+
+        String assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                profile,
+                userMessage,
+                baseReply,
+                Optional.empty()
+        );
+
+        return this.replyDecision(
+                assistantReply,
+                ChatbotResponseMode.GENERAL,
+                false,
+                List.of()
+        );
+    }
+
     private ChatbotReplyDecision resolveContextualReply(
             Conversation conversation,
             ConversationProfileType profile,

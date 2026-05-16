@@ -77,6 +77,33 @@ class ChatbotReplyOrchestratorTest {
     }
 
     @Test
+    void resolveGeneralStartReplyShouldBuildStartReplyWithAiEnhancement() {
+        Conversation conversation = this.generalConversation();
+        when(this.chatbotBaseReplyBuilder.generalStartReply(ConversationProfileType.CLIENT))
+                .thenReturn("Base start");
+        when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "hola",
+                "Base start",
+                Optional.empty()
+        )).thenReturn("Start final");
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveGeneralStartReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "hola"
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo("Start final");
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        assertThat(decision.getSourcesSummary()).isEmpty();
+        verify(this.chatbotScopePolicy, never()).evaluate(any(), any());
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
     void resolveReplyShouldRestrictContextualConversationWhenMessageReferencesAnotherEngagement() {
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 this.contextualConversation("EL-1"),
@@ -109,6 +136,31 @@ class ChatbotReplyOrchestratorTest {
         assertThat(decision.getAssistantReply()).isEqualTo("No puedo responder fuera del encargo");
         assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
         assertThat(decision.isUsedPlatformData()).isFalse();
+    }
+
+    @Test
+    void resolveReplyShouldUseGeneralModeWhenGeneralConversationIsRejectedByScope() {
+        Conversation conversation = this.generalConversation();
+        when(this.chatbotBaseReplyBuilder.isCourtesyMessage("otra cosa")).thenReturn(false);
+        when(this.chatbotScopePolicy.evaluate(conversation, "otra cosa"))
+                .thenReturn(ChatbotScopeDecision.reject(
+                        ChatbotScopeViolationReason.OUT_OF_DOMAIN,
+                        "Respuesta segura general",
+                        false
+                ));
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "otra cosa"
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo("Respuesta segura general");
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        assertThat(decision.getSourcesSummary()).isEmpty();
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+        verify(this.chatbotAiReplyService, never()).generateConfiguredAssistantReply(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -145,6 +197,41 @@ class ChatbotReplyOrchestratorTest {
         assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
         assertThat(decision.isUsedPlatformData()).isTrue();
         assertThat(decision.getSourcesSummary()).containsExactly("Hoja de encargo EL-1");
+    }
+
+    @Test
+    void resolveReplyShouldAllowReferenceToSameEngagementIgnoringCase() {
+        Conversation conversation = this.contextualConversation("EL-1");
+        ChatbotPlatformContext context = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-1")
+                .sourcesSummary(List.of("Hoja de encargo EL-1"))
+                .build();
+        when(this.chatbotBaseReplyBuilder.isCourtesyMessage("revisa el-1")).thenReturn(false);
+        when(this.chatbotScopePolicy.evaluate(conversation, "revisa el-1")).thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotPlatformContextService.loadContext("EL-1")).thenReturn(Optional.of(context));
+        when(this.chatbotBaseReplyBuilder.contextualPlatformReply(
+                ConversationProfileType.CLIENT,
+                "revisa el-1",
+                conversation,
+                context
+        )).thenReturn("Base mismo encargo");
+        when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "revisa el-1",
+                "Base mismo encargo",
+                Optional.of(context)
+        )).thenReturn("Respuesta mismo encargo");
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "revisa el-1"
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo("Respuesta mismo encargo");
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
+        assertThat(decision.isUsedPlatformData()).isTrue();
     }
 
     @Test
@@ -200,6 +287,33 @@ class ChatbotReplyOrchestratorTest {
         assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(decision.isUsedPlatformData()).isFalse();
         assertThat(decision.getSourcesSummary()).isEmpty();
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
+    void resolveReplyShouldUseGeneralReplyWhenContextualConversationHasNoEngagementLetter() {
+        Conversation conversation = this.contextualConversation(null);
+        when(this.chatbotBaseReplyBuilder.isCourtesyMessage("pregunta")).thenReturn(false);
+        when(this.chatbotScopePolicy.evaluate(conversation, "pregunta")).thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotBaseReplyBuilder.generalFaqReply(ConversationProfileType.CLIENT, "pregunta"))
+                .thenReturn("Base sin encargo");
+        when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "pregunta",
+                "Base sin encargo",
+                Optional.empty()
+        )).thenReturn("Respuesta sin encargo");
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "pregunta"
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo("Respuesta sin encargo");
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(decision.isUsedPlatformData()).isFalse();
         verify(this.chatbotPlatformContextService, never()).loadContext(any());
     }
 

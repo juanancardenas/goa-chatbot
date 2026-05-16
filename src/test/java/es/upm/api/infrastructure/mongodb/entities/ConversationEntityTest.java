@@ -25,6 +25,18 @@ class ConversationEntityTest {
     }
 
     @Test
+    void builderShouldUseZeroLastSequenceNumberByDefault() {
+        ConversationEntity entity = ConversationEntity.builder()
+                .id("conversation-1")
+                .userId("user-1")
+                .type("GENERAL")
+                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .build();
+
+        assertThat(entity.getLastSequenceNumber()).isZero();
+    }
+
+    @Test
     void constructorShouldCopyConversationProperties() {
         Conversation conversation = this.conversation();
 
@@ -37,6 +49,23 @@ class ConversationEntityTest {
         assertThat(entity.getType()).isEqualTo("GENERAL");
         assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
         assertThat(entity.getLastSequenceNumber()).isEqualTo(4);
+    }
+
+    @Test
+    void constructorShouldAllowNullConversationTypeAndDefaultNullSequenceToZero() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-null-type")
+                .userId("user-1")
+                .status(ConversationStatus.ACTIVE)
+                .type(null)
+                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .lastSequenceNumber(null)
+                .build();
+
+        ConversationEntity entity = new ConversationEntity(conversation);
+
+        assertThat(entity.getType()).isNull();
+        assertThat(entity.getLastSequenceNumber()).isZero();
     }
 
     @Test
@@ -105,6 +134,23 @@ class ConversationEntityTest {
         );
 
         assertThat(entity.getLastSequenceNumber()).isZero();
+    }
+
+    @Test
+    void toConversationShouldAllowNullTypeAndDefaultNullSequenceToZero() {
+        ConversationEntity entity = ConversationEntity.builder()
+                .id("conversation-5")
+                .userId("user-5")
+                .status(ConversationStatus.ACTIVE)
+                .type(null)
+                .createdAt(LocalDateTime.of(2026, 5, 6, 11, 45))
+                .lastSequenceNumber(null)
+                .build();
+
+        Conversation conversation = entity.toConversation();
+
+        assertThat(conversation.getType()).isNull();
+        assertThat(conversation.getLastSequenceNumber()).isZero();
     }
 
     private Conversation conversation() {
