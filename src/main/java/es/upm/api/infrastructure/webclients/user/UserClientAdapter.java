@@ -1,8 +1,7 @@
-package es.upm.api.infrastructure.webclients;
+package es.upm.api.infrastructure.webclients.user;
 
 import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.ports.out.UserClient;
-import es.upm.api.infrastructure.webclients.user.UserFeignMapper;
 import org.springframework.stereotype.Component;
 
 @Component

@@ -1,4 +1,4 @@
-package es.upm.api.infrastructure.webclients;
+package es.upm.api.infrastructure.webclients.engagement;
 
 import es.upm.api.configurations.FeignConfig;
 import es.upm.api.infrastructure.webclients.engagement.dto.EngagementEventPageResponseDto;

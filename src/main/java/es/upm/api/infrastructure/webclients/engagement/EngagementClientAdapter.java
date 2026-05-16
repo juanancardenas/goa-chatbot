@@ -1,9 +1,8 @@
-package es.upm.api.infrastructure.webclients;
+package es.upm.api.infrastructure.webclients.engagement;
 
 import es.upm.api.domain.model.platform.EngagementEventPage;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.ports.out.EngagementClient;
-import es.upm.api.infrastructure.webclients.engagement.EngagementFeignMapper;
 import org.springframework.stereotype.Component;
 
 @Component

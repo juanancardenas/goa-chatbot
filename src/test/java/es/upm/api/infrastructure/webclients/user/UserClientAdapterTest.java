@@ -1,7 +1,6 @@
-package es.upm.api.infrastructure.webclients;
+package es.upm.api.infrastructure.webclients.user;
 
 import es.upm.api.domain.model.platform.UserSummary;
-import es.upm.api.infrastructure.webclients.user.UserFeignMapper;
 import es.upm.api.infrastructure.webclients.user.dto.UserResponseDto;
 import org.junit.jupiter.api.Test;
 

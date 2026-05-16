@@ -398,26 +398,26 @@ Adaptadores actuales:
 - NO DEBE inyectar clientes Feign concretos en `domain.services`; los servicios deben depender de puertos.
 
 Clientes y adaptadores actuales:
-- `EngagementFeignClient`, devuelve DTOs de `infrastructure.webclients.engagement.dto`.
-- `EngagementClientAdapter`, implementa `EngagementClient`.
-- `EngagementFeignMapper`, mapea DTOs de engagement a `domain.model.platform`.
-- `UserFeignClient`, devuelve DTOs de `infrastructure.webclients.user.dto`.
-- `UserClientAdapter`, implementa `UserClient`.
-- `UserFeignMapper`, mapea DTOs de user a `domain.model.platform.UserSummary`.
+- `engagement.EngagementFeignClient`, devuelve DTOs de `infrastructure.webclients.engagement.dto`.
+- `engagement.EngagementClientAdapter`, implementa `EngagementClient`.
+- `engagement.EngagementFeignMapper`, mapea DTOs de engagement a `domain.model.platform`.
+- `user.UserFeignClient`, devuelve DTOs de `infrastructure.webclients.user.dto`.
+- `user.UserClientAdapter`, implementa `UserClient`.
+- `user.UserFeignMapper`, mapea DTOs de user a `domain.model.platform.UserSummary`.
 
 Regla actual:
 
 ```text
 domain.ports.out.UserClient
-  <- infrastructure.webclients.UserClientAdapter
-      -> infrastructure.webclients.UserFeignClient
+  <- infrastructure.webclients.user.UserClientAdapter
+      -> infrastructure.webclients.user.UserFeignClient
           -> infrastructure.webclients.user.dto.UserResponseDto
 ```
 
 ```text
 domain.ports.out.EngagementClient
-  <- infrastructure.webclients.EngagementClientAdapter
-      -> infrastructure.webclients.EngagementFeignClient
+  <- infrastructure.webclients.engagement.EngagementClientAdapter
+      -> infrastructure.webclients.engagement.EngagementFeignClient
           -> infrastructure.webclients.engagement.dto.*
 ```
 

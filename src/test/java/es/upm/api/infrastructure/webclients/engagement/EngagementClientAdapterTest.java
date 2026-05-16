@@ -1,9 +1,8 @@
-package es.upm.api.infrastructure.webclients;
+package es.upm.api.infrastructure.webclients.engagement;
 
 import es.upm.api.domain.model.platform.EngagementEventPage;
 import es.upm.api.domain.model.platform.EngagementEventSummary;
 import es.upm.api.domain.model.platform.EngagementLetterSummary;
-import es.upm.api.infrastructure.webclients.engagement.EngagementFeignMapper;
 import es.upm.api.infrastructure.webclients.engagement.dto.EngagementEventPageResponseDto;
 import es.upm.api.infrastructure.webclients.engagement.dto.EngagementEventResponseDto;
 import es.upm.api.infrastructure.webclients.engagement.dto.EngagementLetterResponseDto;
