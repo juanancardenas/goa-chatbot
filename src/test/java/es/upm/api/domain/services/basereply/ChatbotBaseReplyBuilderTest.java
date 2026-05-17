@@ -6,7 +6,6 @@ import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.model.Conversation;
-import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import org.junit.jupiter.api.Test;
@@ -19,7 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +35,9 @@ class ChatbotBaseReplyBuilderTest {
 
     @Mock
     private ChatbotGeneralReplyBuilder chatbotGeneralReplyBuilder;
+
+    @Mock
+    private ChatbotPlatformReplyBuilder chatbotPlatformReplyBuilder;
 
     @Mock
     private ChatbotDocumentContextService chatbotDocumentContextService;
@@ -129,339 +130,63 @@ class ChatbotBaseReplyBuilderTest {
     }
 
     @Test
-    void contextualPlatformReplyShouldReturnLegalTasksListWhenTasksExist() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .legalTaskSummaries(List.of("Estudio de antecedentes", "Asesoramiento juridico"))
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Cuales son las tareas legales"))
-                .thenReturn(PlatformQuestionType.LEGAL_TASKS);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.PROFESSIONAL,
-                "Cuales son las tareas legales",
-                this.conversation("conversation-1"),
-                platformContext
-        );
-
-        assertThat(reply).contains("Tareas");
-        assertThat(reply).contains("Estudio de antecedentes");
-        assertThat(reply).contains("Asesoramiento juridico");
-    }
-
-    @Test
-    void contextualPlatformReplyShouldReturnNoLegalTasksReplyWhenTasksAreMissing() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .legalTaskSummaries(List.of())
-                .build();
+    void contextualPlatformReplyShouldClassifyAndDelegateToPlatformReplyBuilder() {
+        Conversation conversation = this.conversation("conversation-platform");
+        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder().build();
         when(this.chatbotQuestionClassifier.classify("Que tareas legales tiene el encargo"))
                 .thenReturn(PlatformQuestionType.LEGAL_TASKS);
+        when(this.chatbotPlatformReplyBuilder.contextualPlatformReply(
+                ConversationProfileType.CLIENT,
+                conversation,
+                platformContext,
+                PlatformQuestionType.LEGAL_TASKS,
+                this.chatbotDocumentContextService
+        )).thenReturn("Respuesta plataforma");
 
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
+        assertThat(this.chatbotBaseReplyBuilder.contextualPlatformReply(
                 ConversationProfileType.CLIENT,
                 "Que tareas legales tiene el encargo",
-                this.conversation("conversation-no-tasks"),
+                conversation,
                 platformContext
-        );
+        )).isEqualTo("Respuesta plataforma");
 
-        assertThat(reply).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_LEGAL_TASKS_REPLY);
+        verify(this.chatbotPlatformReplyBuilder).contextualPlatformReply(
+                ConversationProfileType.CLIENT,
+                conversation,
+                platformContext,
+                PlatformQuestionType.LEGAL_TASKS,
+                this.chatbotDocumentContextService
+        );
     }
 
     @Test
-    void contextualPlatformReplyShouldReturnProfessionalNoLegalTasksReplyWhenTasksAreMissing() {
+    void contextualPlatformReplyShouldDelegateWithGeneralContextWhenClassifierReturnsNull() {
+        Conversation conversation = this.conversation("conversation-platform-null");
         ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder().build();
-        when(this.chatbotQuestionClassifier.classify("Que tareas profesionales hay"))
-                .thenReturn(PlatformQuestionType.LEGAL_TASKS);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.PROFESSIONAL,
-                "Que tareas profesionales hay",
-                this.conversation("conversation-no-professional-tasks"),
-                platformContext
-        );
-
-        assertThat(reply).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_LEGAL_TASKS_REPLY);
-    }
-
-    @Test
-    void contextualPlatformReplyShouldReturnNoEventsReplyWhenTimelineHasNoEventsOrProcedures() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .recentEventSummaries(List.of())
-                .procedureTitles(List.of())
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Que hitos tiene mi caso"))
-                .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.CLIENT,
-                "Que hitos tiene mi caso",
-                this.conversation("conversation-2"),
-                platformContext
-        );
-
-        assertThat(reply).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY);
-    }
-
-    @Test
-    void contextualPlatformReplyShouldAppendEventsAndProceduresForTimelineQuestion() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .recentEventSummaries(List.of("Demanda admitida", "Vista senalada"))
-                .procedureTitles(List.of("Procedimiento ordinario"))
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Que hitos recientes tiene el expediente"))
-                .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.PROFESSIONAL,
-                "Que hitos recientes tiene el expediente",
-                this.conversation("conversation-timeline"),
-                platformContext
-        );
-
-        assertThat(reply).contains("Demanda admitida");
-        assertThat(reply).contains("Vista senalada");
-        assertThat(reply).contains("Procedimiento ordinario");
-    }
-
-    @Test
-    void contextualPlatformReplyShouldAppendClientEventsAndProceduresForTimelineQuestion() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .recentEventSummaries(List.of("Providencia recibida"))
-                .procedureTitles(List.of("Juicio verbal"))
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Que eventos tiene este caso"))
-                .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.CLIENT,
-                "Que eventos tiene este caso",
-                this.conversation("conversation-client-timeline"),
-                platformContext
-        );
-
-        assertThat(reply).contains("Providencia recibida");
-        assertThat(reply).contains("Juicio verbal");
-    }
-
-    @Test
-    void contextualPlatformReplyShouldReturnProfessionalNoEventsReplyWhenTimelineHasNoEvents() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder().build();
-        when(this.chatbotQuestionClassifier.classify("Que eventos recientes hay"))
-                .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.PROFESSIONAL,
-                "Que eventos recientes hay",
-                this.conversation("conversation-professional-no-events"),
-                platformContext
-        );
-
-        assertThat(reply).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY);
-    }
-
-    @Test
-    void contextualPlatformReplyShouldBuildStatusReplyWithProcedures() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .engagementLetterId("EL-STATUS")
-                .ownerDisplayName("Laura")
-                .procedureTitles(List.of("Recurso administrativo"))
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Cual es el estado de este encargo"))
-                .thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.PROFESSIONAL,
-                "Cual es el estado de este encargo",
-                this.conversation("conversation-status"),
-                platformContext
-        );
-
-        assertThat(reply).contains("EL-STATUS");
-        assertThat(reply).contains("Laura");
-        assertThat(reply).contains("Recurso administrativo");
-    }
-
-    @Test
-    void contextualPlatformReplyShouldAppendVisibleDocumentsForDocumentsQuestion() {
-        Conversation conversation = this.conversation("conversation-docs");
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .procedureTitles(List.of("Reclamacion civil"))
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Que documentos veo en mi caso"))
-                .thenReturn(PlatformQuestionType.DOCUMENTS);
-        when(this.chatbotDocumentContextService.loadDocumentContext(conversation))
-                .thenReturn(ChatbotDocumentContext.builder()
-                        .available(true)
-                        .authorizedSourceConfigured(true)
-                        .visibleDocumentTitles(List.of("Contrato", "Poder"))
-                        .build());
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.CLIENT,
-                "Que documentos veo en mi caso",
-                conversation,
-                platformContext
-        );
-
-        assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
-        assertThat(reply).contains("Reclamacion civil");
-        assertThat(reply).contains("Documentos visibles preparados");
-        assertThat(reply).contains("Contrato");
-        assertThat(reply).contains("Poder");
-    }
-
-    @Test
-    void contextualPlatformReplyShouldReturnDocumentsStubWhenDocumentContextIsMissing() {
-        Conversation conversation = this.conversation("conversation-docs-missing");
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .procedureTitles(List.of())
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Que documentos hay"))
-                .thenReturn(PlatformQuestionType.DOCUMENTS);
-        when(this.chatbotDocumentContextService.loadDocumentContext(conversation)).thenReturn(null);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.PROFESSIONAL,
-                "Que documentos hay",
-                conversation,
-                platformContext
-        );
-
-        assertThat(reply).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
-    }
-
-    @Test
-    void contextualPlatformReplyShouldReturnDocumentsStubWhenVisibleDocumentTitlesAreEmpty() {
-        Conversation conversation = this.conversation("conversation-docs-empty");
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder().build();
-        when(this.chatbotQuestionClassifier.classify("Documentos disponibles"))
-                .thenReturn(PlatformQuestionType.DOCUMENTS);
-        when(this.chatbotDocumentContextService.loadDocumentContext(conversation))
-                .thenReturn(ChatbotDocumentContext.builder()
-                        .available(true)
-                        .authorizedSourceConfigured(true)
-                        .visibleDocumentTitles(List.of())
-                        .build());
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.CLIENT,
-                "Documentos disponibles",
-                conversation,
-                platformContext
-        );
-
-        assertThat(reply).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
-    }
-
-    @Test
-    void contextualPlatformReplyShouldAppendProfessionalProceduresForDocumentsQuestion() {
-        Conversation conversation = this.conversation("conversation-docs-professional-procedures");
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .procedureTitles(List.of("Apelacion"))
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Documentos del expediente"))
-                .thenReturn(PlatformQuestionType.DOCUMENTS);
-        when(this.chatbotDocumentContextService.loadDocumentContext(conversation)).thenReturn(null);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.PROFESSIONAL,
-                "Documentos del expediente",
-                conversation,
-                platformContext
-        );
-
-        assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
-        assertThat(reply).contains("Apelacion");
-    }
-
-    @Test
-    void contextualPlatformReplyShouldBuildGeneralContextReplyCombiningAvailableSections() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .engagementLetterId("EL-555")
-                .ownerDisplayName("Ana")
-                .procedureTitles(List.of("Reclamacion civil"))
-                .recentEventSummaries(List.of("Escrito presentado"))
-                .legalTaskSummaries(List.of("Revisar documentacion"))
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Dame un resumen del caso"))
-                .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.CLIENT,
-                "Dame un resumen del caso",
-                this.conversation("conversation-3"),
-                platformContext
-        );
-
-        assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
-        assertThat(reply).contains("EL-555");
-        assertThat(reply).contains("Escrito presentado");
-        assertThat(reply).contains("Revisar documentacion");
-    }
-
-    @Test
-    void contextualPlatformReplyShouldBuildGeneralContextReplyWhenClassifierReturnsNull() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .engagementLetterId("EL-GENERAL")
-                .ownerDisplayName("Carlos")
-                .recentEventSummaries(List.of())
-                .legalTaskSummaries(List.of())
-                .build();
         when(this.chatbotQuestionClassifier.classify("Dame informacion relacionada"))
                 .thenReturn(null);
+        when(this.chatbotPlatformReplyBuilder.contextualPlatformReply(
+                ConversationProfileType.PROFESSIONAL,
+                conversation,
+                platformContext,
+                PlatformQuestionType.GENERAL_CONTEXT,
+                this.chatbotDocumentContextService
+        )).thenReturn("Respuesta general contextual");
 
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
+        assertThat(this.chatbotBaseReplyBuilder.contextualPlatformReply(
                 ConversationProfileType.PROFESSIONAL,
                 "Dame informacion relacionada",
-                this.conversation("conversation-general-null"),
+                conversation,
                 platformContext
-        );
+        )).isEqualTo("Respuesta general contextual");
 
-        assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
-        assertThat(reply).contains("EL-GENERAL");
-        assertThat(reply).contains("Carlos");
-        assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY);
-    }
-
-    @Test
-    void contextualPlatformReplyShouldBuildProfessionalGeneralContextWithEvents() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .engagementLetterId("EL-PRO")
-                .ownerDisplayName("Marta")
-                .recentEventSummaries(List.of("Resolucion notificada"))
-                .legalTaskSummaries(List.of())
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Resumen profesional del caso"))
-                .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
+        verify(this.chatbotPlatformReplyBuilder).contextualPlatformReply(
                 ConversationProfileType.PROFESSIONAL,
-                "Resumen profesional del caso",
-                this.conversation("conversation-professional-general"),
-                platformContext
+                conversation,
+                platformContext,
+                PlatformQuestionType.GENERAL_CONTEXT,
+                this.chatbotDocumentContextService
         );
-
-        assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
-        assertThat(reply).contains("Resolucion notificada");
-    }
-
-    @Test
-    void contextualPlatformReplyShouldBuildClientGeneralContextWithoutEvents() {
-        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
-                .engagementLetterId("EL-CLIENT")
-                .ownerDisplayName("Diego")
-                .build();
-        when(this.chatbotQuestionClassifier.classify("Resumen sin eventos"))
-                .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
-
-        String reply = this.chatbotBaseReplyBuilder.contextualPlatformReply(
-                ConversationProfileType.CLIENT,
-                "Resumen sin eventos",
-                this.conversation("conversation-client-general-no-events"),
-                platformContext
-        );
-
-        assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
-        assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY);
     }
 
     private static Stream<Arguments> contextUnavailableReplies() {

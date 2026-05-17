@@ -35,6 +35,7 @@ import es.upm.api.domain.services.basereply.ChatbotCourtesyReplyBuilder;
 import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
 import es.upm.api.domain.services.basereply.ChatbotGeneralReplyBuilder;
 import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
+import es.upm.api.domain.services.basereply.ChatbotPlatformReplyBuilder;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.conversation.ChatbotConversationService;
 import es.upm.api.domain.services.conversation.ChatbotEscalationService;
@@ -135,6 +136,7 @@ class ChatbotServiceTest {
         ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
                 new ChatbotCourtesyReplyBuilder(),
                 new ChatbotGeneralReplyBuilder(this.chatbotQuestionClassifier),
+                new ChatbotPlatformReplyBuilder(),
                 this.chatbotQuestionClassifier,
                 this.chatbotDocumentContextService
         );
