@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.context.annotation.Configuration;
 
 @OpenAPIDefinition(
-        info = @Info(title = "Mi API", version = "v1"),
+        info = @Info(title = "GOA Chatbot API", version = "v1"),
         security = @SecurityRequirement(name = "bearerAuth")
 )
 @SecurityScheme(
@@ -21,4 +21,3 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
     // empty
 }
-
