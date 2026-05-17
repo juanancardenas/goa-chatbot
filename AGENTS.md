@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base e IA, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode` y el refuerzo de consistencia conversacional de **2026-05-16**.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode` y el refuerzo de consistencia conversacional de **2026-05-17**.
 
 ## Niveles de regla
 
@@ -61,12 +61,14 @@ es.upm.api/
       security/
     ports/out/
     services/
-      aireply/
-      basereply/
       classification/
       conversation/
       policies/
       prompt/
+      reply/
+        ai/
+        base/
+        context/
   infrastructure/
     ai/
     dtos/
@@ -245,27 +247,34 @@ Nota:
 
 Servicios actuales:
 - `ChatbotService`
-- `aireply.ChatbotAiReplyService`
-- `basereply.ChatbotBaseReplyBuilder`
-- `basereply.ChatbotPlatformContextService`
-- `basereply.ChatbotDocumentContextService`
+- `reply.ChatbotReplyOrchestrator`
+- `reply.ai.ChatbotAiReplyService`
+- `reply.base.ChatbotBaseReplyBuilder`
+- `reply.base.ChatbotContextualFallbackReplyBuilder`
+- `reply.base.ChatbotCourtesyReplyBuilder`
+- `reply.base.ChatbotGeneralReplyBuilder`
+- `reply.base.ChatbotPlatformReplyBuilder`
+- `reply.context.ChatbotPlatformContextService`
+- `reply.context.ChatbotDocumentContextService`
 - `classification.ChatbotQuestionClassifier`
+- `classification.ChatbotQuestionTypes`
 - `conversation.ChatbotConversationService`
 - `conversation.ChatbotEscalationService`
 - `conversation.ChatbotHistoryService`
 - `conversation.ChatbotMessageService`
-- `conversation.ChatbotReplyOrchestrator`
 - `conversation.ChatbotResponseSanitizer`
 - `policies.ChatbotScopePolicy`
 - `prompt.ChatbotPromptBuilder`
 
 Reglas de organizacion:
 - `ChatbotService` DEBE actuar como orquestador fino de caso de uso HTTP/dominio; NO DEBE concentrar reglas que ya pertenezcan a servicios especializados.
-- `aireply` DEBE contener la preparacion de `ChatbotAiRequest`, la llamada al puerto `ChatbotAiClient`, el uso de mensajes recientes para prompt y el fallback seguro ante errores de IA.
-- `basereply` DEBE contener respuestas base seguras, contexto de plataforma/documental y composicion determinista previa a la IA.
+- `reply` DEBE contener la decision y composicion de respuestas del asistente.
+- `reply.ai` DEBE contener la preparacion de `ChatbotAiRequest`, la llamada al puerto `ChatbotAiClient`, el uso de mensajes recientes para prompt y el fallback seguro ante errores de IA.
+- `reply.base` DEBE contener respuestas base seguras, cortesia, respuesta general, fallback contextual y composicion determinista previa a la IA.
+- `reply.context` DEBE contener carga/preparacion de contexto de plataforma y contexto documental.
 - `classification` DEBE contener clasificadores de intencion o tipo de pregunta.
-- `conversation` DEBE contener ciclo de vida de conversaciones, historial, mensajes, escalado, orquestacion de decision de respuesta y normalizacion de respuestas para frontend.
-- `conversation.ChatbotReplyOrchestrator` DEBE decidir la respuesta asistente para un mensaje ya validado: cortesia, restricciones de scope, cambio de encargo, contexto de plataforma, fallback contextual y respuesta general. NO DEBE persistir mensajes ni modificar conversaciones.
+- `conversation` DEBE contener ciclo de vida de conversaciones, historial, mensajes, escalado y normalizacion de respuestas para frontend.
+- `reply.ChatbotReplyOrchestrator` DEBE decidir la respuesta asistente para un mensaje ya validado: cortesia, restricciones de scope, cambio de encargo, contexto de plataforma, fallback contextual y respuesta general. NO DEBE persistir mensajes ni modificar conversaciones.
 - `policies` DEBE contener decisiones de permisos, alcance o restricciones funcionales.
 - `prompt` DEBE contener construccion de prompts e instrucciones para la IA.
 - Los servicios especializados PUEDEN depender entre si dentro de `domain.services` cuando la responsabilidad sea clara; DEBEN seguir dependiendo de infraestructura solo mediante puertos.
@@ -294,7 +303,7 @@ ChatbotService -> conversation.ChatbotMessageService
 ChatbotService -> conversation.ChatbotHistoryService
 ChatbotService -> conversation.ChatbotEscalationService
 ChatbotService -> conversation.ChatbotResponseSanitizer
-ChatbotService -> conversation.ChatbotReplyOrchestrator
+ChatbotService -> reply.ChatbotReplyOrchestrator
 ChatbotService -> ChatbotAiSettings
 
 conversation.ChatbotConversationService -> ConversationGateway
@@ -305,20 +314,25 @@ conversation.ChatbotHistoryService -> ConversationGateway
 conversation.ChatbotHistoryService -> MessageGateway
 conversation.ChatbotEscalationService -> EscalationGateway
 conversation.ChatbotEscalationService -> UserClient
-conversation.ChatbotReplyOrchestrator -> basereply.ChatbotBaseReplyBuilder
-conversation.ChatbotReplyOrchestrator -> basereply.ChatbotPlatformContextService
-conversation.ChatbotReplyOrchestrator -> aireply.ChatbotAiReplyService
-conversation.ChatbotReplyOrchestrator -> policies.ChatbotScopePolicy
+reply.ChatbotReplyOrchestrator -> reply.base.ChatbotBaseReplyBuilder
+reply.ChatbotReplyOrchestrator -> reply.context.ChatbotPlatformContextService
+reply.ChatbotReplyOrchestrator -> reply.ai.ChatbotAiReplyService
+reply.ChatbotReplyOrchestrator -> policies.ChatbotScopePolicy
 
-basereply.ChatbotPlatformContextService -> EngagementClient
-aireply.ChatbotAiReplyService -> ChatbotAiClient
-aireply.ChatbotAiReplyService -> ChatbotAiSettings
-aireply.ChatbotAiReplyService -> conversation.ChatbotMessageService
+reply.base.ChatbotBaseReplyBuilder -> reply.base.ChatbotCourtesyReplyBuilder
+reply.base.ChatbotBaseReplyBuilder -> reply.base.ChatbotGeneralReplyBuilder
+reply.base.ChatbotBaseReplyBuilder -> reply.base.ChatbotContextualFallbackReplyBuilder
+reply.base.ChatbotBaseReplyBuilder -> reply.base.ChatbotPlatformReplyBuilder
+reply.base.ChatbotPlatformReplyBuilder -> reply.context.ChatbotDocumentContextService
+reply.context.ChatbotPlatformContextService -> EngagementClient
+reply.ai.ChatbotAiReplyService -> ChatbotAiClient
+reply.ai.ChatbotAiReplyService -> ChatbotAiSettings
+reply.ai.ChatbotAiReplyService -> conversation.ChatbotMessageService
 prompt.ChatbotPromptBuilder -> ChatbotAiSettings
 ```
 
 Deuda tecnica conocida:
-- Mantener `ChatbotService` como orquestador fino; la decision de respuesta de `sendMessage` debe permanecer en `conversation.ChatbotReplyOrchestrator`.
+- Mantener `ChatbotService` como orquestador fino; la decision de respuesta de `sendMessage` debe permanecer en `reply.ChatbotReplyOrchestrator`.
 
 ## Adaptador IA (`infrastructure.ai`)
 
@@ -329,7 +343,7 @@ Deuda tecnica conocida:
 - DEBE aislar errores del proveedor y devolver una respuesta segura si la IA no esta disponible.
 - DEBE usar `ChatbotAiProperties` solo en infraestructura para configuracion de proveedor, modelo, limites y activacion.
 - `domain.services` DEBE depender de `ChatbotAiSettings`, no de `ChatbotAiProperties`.
-- DEBE recibir ya preparadas las instrucciones, contexto permitido y mensajes recientes desde `domain.services.aireply.ChatbotAiReplyService`.
+- DEBE recibir ya preparadas las instrucciones, contexto permitido y mensajes recientes desde `domain.services.reply.ai.ChatbotAiReplyService`.
 - NO DEBE filtrar excepciones tecnicas del proveedor hacia los resources.
 - NO DEBE meter reglas de negocio del chatbot en el adaptador, salvo las necesarias para traducir errores tecnicos.
 
@@ -357,10 +371,12 @@ domain.ports.out.ChatbotAiSettings
 - NO DEBE realizar llamadas al proveedor de IA.
 - NO DEBE acceder a MongoDB, Feign ni recursos HTTP.
 
-## Respuestas base e IA (`domain.services.basereply` y `domain.services.aireply`)
+## Respuestas base, contexto e IA (`domain.services.reply.base`, `domain.services.reply.context` y `domain.services.reply.ai`)
 
 - `ChatbotBaseReplyBuilder` DEBE generar respuestas deterministas y seguras para inicio, FAQ general, contexto de plataforma, contexto no disponible, documentos y cortesia.
-- `ChatbotBaseReplyBuilder` DEBE usar `ChatbotQuestionClassifier` y `ChatbotDocumentContextService` cuando la respuesta base dependa de tipo de pregunta o contexto documental.
+- `ChatbotBaseReplyBuilder` DEBE actuar como fachada de respuestas base y delegar en builders especializados de `reply.base`.
+- `ChatbotContextualFallbackReplyBuilder` DEBE generar respuestas seguras cuando una conversacion contextual no tenga contexto de plataforma disponible.
+- `ChatbotPlatformReplyBuilder` DEBE componer respuestas deterministas con contexto de plataforma y usar `ChatbotDocumentContextService` cuando la respuesta dependa de contexto documental.
 - `ChatbotAiReplyService` DEBE enriquecer la respuesta base solo cuando `chatbot.ai.enabled=true`.
 - `ChatbotAiReplyService` DEBE construir `ChatbotAiRequest` con conversacion, perfil, respuesta base, contexto de plataforma permitido, mensajes recientes y propiedades IA.
 - `ChatbotAiReplyService` DEBE devolver la respuesta base si el proveedor IA falla, devuelve error, devuelve contenido vacio o lanza excepcion.
@@ -552,7 +568,7 @@ Excepciones actuales:
 
 ## Contexto de plataforma
 
-- `basereply.ChatbotPlatformContextService` DEBE cargar contexto asociado al `engagementLetterId` usando `EngagementClient`.
+- `reply.context.ChatbotPlatformContextService` DEBE cargar contexto asociado al `engagementLetterId` usando `EngagementClient`.
 - DEBE tratar el contexto de plataforma como snapshot de lectura.
 - DEBE devolver fuentes/resumen mediante `sourcesSummary` cuando se use informacion de plataforma.
 - DEBE degradar con seguridad si no hay contexto disponible.
@@ -560,7 +576,7 @@ Excepciones actuales:
 
 ## Documentos y contexto documental
 
-- `basereply.ChatbotDocumentContextService` DEBE encapsular la disponibilidad y preparacion de contexto documental.
+- `reply.context.ChatbotDocumentContextService` DEBE encapsular la disponibilidad y preparacion de contexto documental.
 - DEBE respetar `chatbot.ai.documents-available`.
 - DEBE evitar simular documentos inexistentes como si fueran fuente real.
 - PUEDE devolver contexto vacio o no disponible si aun no hay integracion documental implementada.
@@ -586,12 +602,16 @@ Reglas:
 - DEBE probar configuracion critica de IA.
 - DEBERIA mockear proveedores externos y clientes Feign en tests de servicio/resource.
 - DEBERIA evitar dependencias fragiles de `LocalDateTime.now()` salvo que el comportamiento temporal sea parte del caso probado.
-- DEBERIA actualizar paquetes de test cuando se muevan clases en `main`; actualmente puede haber tests con rutas historicas respecto a `domain.services.basereply`.
+- DEBERIA actualizar paquetes de test cuando se muevan clases en `main`; los tests de servicios de respuesta deben seguir la estructura fisica de `domain.services.reply`.
 
 Tests actuales destacados:
 - `ChatbotServiceTest`
 - `ChatbotAiReplyServiceTest`
 - `ChatbotBaseReplyBuilderTest`
+- `ChatbotContextualFallbackReplyBuilderTest`
+- `ChatbotCourtesyReplyBuilderTest`
+- `ChatbotGeneralReplyBuilderTest`
+- `ChatbotPlatformReplyBuilderTest`
 - `ChatbotConversationServiceTest`
 - `ChatbotEscalationServiceTest`
 - `ChatbotHistoryServiceTest`
@@ -648,8 +668,7 @@ Reglas:
 1. Mantener `ChatbotService` como orquestador fino; si `sendMessage` sigue creciendo, extraer un caso de uso dedicado para flujo de envio.
 2. Mantener los mappers Feign localizados en infraestructura para que cambios de contratos externos no alcancen el dominio.
 3. Revisar DTOs no usados o residuales (`ChatbotConversationMessageResponseDto`, `ChatbotConversationResponseDto`) y eliminarlos si no forman parte del contrato publico.
-4. Mover tests historicos `ChatbotPlatformContextServiceTest` y `ChatbotDocumentContextServiceTest` al paquete `domain.services.basereply` si se decide alinear fisicamente ruta de test y paquete main.
-5. Revisar si `ChatbotPromptBuilder` sigue siendo necesario como servicio separado ahora que `ChatbotAiReplyService` prepara la request IA.
+4. Revisar si `ChatbotPromptBuilder` sigue siendo necesario como servicio separado ahora que `ChatbotAiReplyService` prepara la request IA.
 
 ## Checklist para agentes de IA antes de modificar codigo
 
@@ -657,9 +676,9 @@ Reglas:
 - Verificar que ninguna clase de `domain` importe `infrastructure.*`.
 - Si se toca un endpoint, actualizar DTO, mapper y resource, no el modelo Mongo.
 - Si se toca un caso de uso, trabajar con comandos/resultados internos, no DTOs HTTP.
-- Si se toca el flujo conversacional, ubicar la regla en `conversation`, `basereply`, `aireply`, `classification` o `policies` antes de ampliar `ChatbotService`.
+- Si se toca el flujo conversacional, ubicar la regla en `conversation`, `reply`, `classification` o `policies` antes de ampliar `ChatbotService`.
 - Si se toca persistencia, mapear entre entidad y dominio dentro de `infrastructure.mongodb`.
-- Si se toca IA de dominio, usar `domain.services.aireply`; si se toca proveedor real, mantener Spring AI dentro de `infrastructure.ai`.
+- Si se toca IA de dominio, usar `domain.services.reply.ai`; si se toca proveedor real, mantener Spring AI dentro de `infrastructure.ai`.
 - Si se toca contexto de plataforma, usar puertos (`EngagementClient`, `UserClient`) y no Feign directo.
 - Si se toca seguridad, revisar `ResourceServerConfig` y `Security`.
 - Si se introduce una excepcion funcional, mapearla en `ApiExceptionHandler`.
