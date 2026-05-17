@@ -175,6 +175,44 @@ class ChatbotPromptBuilderTest {
         assertThat(prompt).contains("no inventes datos de plataforma");
     }
 
+    @Test
+    void shouldUseSettingsBasePromptDefaultConversationTypeAndRoleFallbacks() {
+        ChatbotAiRequest request = ChatbotAiRequest.builder()
+                .basePrompt(" ")
+                .conversationType(null)
+                .roleProfile(" ")
+                .documentsAvailable(null)
+                .platformContext(null)
+                .recentMessages(null)
+                .build();
+
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
+
+        assertThat(prompt).contains("Prompt base de pruebas para GOA.");
+        assertThat(prompt).contains("ConversaciÃ³n general");
+        assertThat(prompt).contains("Rol conversacional: No disponible");
+        assertThat(prompt).contains("El servicio documental no estÃ¡ disponible actualmente");
+        assertThat(prompt).contains("[HISTORIAL RECIENTE]");
+        assertThat(prompt).contains("No hay mensajes recientes disponibles");
+    }
+
+    @Test
+    void shouldTreatUnknownConversationTypeAsGeneralConversation() {
+        ChatbotAiRequest request = ChatbotAiRequest.builder()
+                .basePrompt("Prompt base")
+                .conversationType("UNKNOWN")
+                .roleProfile("CLIENT")
+                .documentsAvailable(false)
+                .platformContext("No disponible")
+                .recentMessages(List.of())
+                .build();
+
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
+
+        assertThat(prompt).contains("ConversaciÃ³n general");
+        assertThat(prompt).doesNotContain("ConversaciÃ³n contextual");
+    }
+
     private static class TestChatbotAiSettings implements ChatbotAiSettings {
 
         @Override
