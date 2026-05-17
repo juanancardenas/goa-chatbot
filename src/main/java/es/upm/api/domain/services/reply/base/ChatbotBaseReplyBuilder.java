@@ -54,16 +54,16 @@ public class ChatbotBaseReplyBuilder {
         return this.generalReplyBuilder.generalFaqReply(profile, userMessage);
     }
 
-    /* --- CONTEXTUAL REPLY ------------------------------------------ */
+    /* --- CONTEXTUAL FALLBACK REPLY --------------------------------- */
 
-    public String contextualReply(
+    public String contextualFallbackReply(
             ConversationProfileType profile,
             String userMessage
     ) {
         return this.contextualFallbackReplyBuilder.contextualFallbackReply(profile, userMessage);
     }
 
-    /* --- PLATFORM CONTEXT ------------------------------------------ */
+    /* --- CONTEXTUAL PLATFORM REPLY --------------------------------- */
 
     public String contextualPlatformReply(
             ConversationProfileType profile,
