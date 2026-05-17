@@ -1,30 +1,37 @@
 package es.upm.api.domain.services;
 
+import es.upm.api.domain.common.ChatbotResponseMessages;
+import es.upm.api.domain.enums.ChatbotResponseMode;
+import es.upm.api.domain.enums.ChatbotScopeViolationReason;
+import es.upm.api.domain.enums.ConversationProfileType;
+import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.ConversationType;
-
-import es.upm.api.domain.enums.*;
+import es.upm.api.domain.enums.MessageSenderType;
+import es.upm.api.domain.enums.MessageType;
+import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
-import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Message;
+import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.chatbot.command.ChatbotContextualConversationCommand;
 import es.upm.api.domain.model.chatbot.command.ChatbotMessageCommand;
 import es.upm.api.domain.model.chatbot.result.ChatbotConfigurationResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
-import es.upm.api.domain.model.security.AuthenticatedUserContext;
 import es.upm.api.domain.model.pagination.PageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
+import es.upm.api.domain.model.security.AuthenticatedUserContext;
+import es.upm.api.domain.ports.out.ChatbotAiClient;
+import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
-import es.upm.api.domain.ports.out.ChatbotAiClient;
-import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
 import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
+import es.upm.api.domain.services.basereply.ChatbotCourtesyReplyBuilder;
 import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
 import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
@@ -33,10 +40,9 @@ import es.upm.api.domain.services.conversation.ChatbotEscalationService;
 import es.upm.api.domain.services.conversation.ChatbotHistoryService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
-import es.upm.api.domain.services.reply.ChatbotReplyOrchestrator;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
-import es.upm.api.domain.common.ChatbotResponseMessages;
+import es.upm.api.domain.services.reply.ChatbotReplyOrchestrator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -126,6 +132,7 @@ class ChatbotServiceTest {
                 this.userClient
         );
         ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
+                new ChatbotCourtesyReplyBuilder(),
                 this.chatbotQuestionClassifier,
                 this.chatbotDocumentContextService
         );

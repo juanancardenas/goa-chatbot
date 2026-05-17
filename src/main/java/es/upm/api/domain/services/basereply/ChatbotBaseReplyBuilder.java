@@ -15,16 +15,34 @@ import java.util.stream.Collectors;
 @Service
 public class ChatbotBaseReplyBuilder {
 
+    private final ChatbotCourtesyReplyBuilder courtesyReplyBuilder;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ChatbotDocumentContextService chatbotDocumentContextService;
 
+    /**
+     * Constructor
+     */
     public ChatbotBaseReplyBuilder(
+            ChatbotCourtesyReplyBuilder courtesyReplyBuilder,
             ChatbotQuestionClassifier chatbotQuestionClassifier,
             ChatbotDocumentContextService chatbotDocumentContextService
     ) {
+        this.courtesyReplyBuilder = courtesyReplyBuilder;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
     }
+
+    // MANAGEMENT OF COURTESY MESSAGE ///////////////////////////////////
+
+    public boolean isCourtesyMessage(String message) {
+        return this.courtesyReplyBuilder.isCourtesyMessage(message);
+    }
+
+    public String courtesyReply(ConversationProfileType profile) {
+        return this.courtesyReplyBuilder.courtesyReply(profile);
+    }
+
+    // MANAGEMENT OF GENERAL REPLY //////////////////////////////////////
 
     public String generalStartReply(ConversationProfileType profile) {
         return switch (profile) {
@@ -32,6 +50,26 @@ public class ChatbotBaseReplyBuilder {
             case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY;
         };
     }
+
+    public String generalFaqReply(
+            ConversationProfileType profile,
+            String userMessage
+    ) {
+        PlatformQuestionType questionType = this.classifyQuestion(userMessage);
+
+        return switch (questionType) {
+            case ENGAGEMENT_STATUS -> this.buildGeneralStatusReply(profile, userMessage);
+            case LEGAL_TASKS -> this.buildGeneralLegalTasksReply(profile, userMessage);
+            case TIMELINE_EVENTS -> this.buildGeneralTimelineReply(profile, userMessage);
+            case DOCUMENTS -> this.buildGeneralDocumentsReply(profile);
+            case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile);
+        };
+    }
+
+
+    /* TERCER BLOQUE: PLATFORM CONTEXT ********************************************************************/
+
+
 
     public String contextualPlatformReply(
             ConversationProfileType profile,
@@ -69,46 +107,6 @@ public class ChatbotBaseReplyBuilder {
         };
     }
 
-    public String generalFaqReply(
-            ConversationProfileType profile,
-            String userMessage
-    ) {
-        PlatformQuestionType questionType = this.classifyQuestion(userMessage);
-
-        return switch (questionType) {
-            case ENGAGEMENT_STATUS -> this.buildGeneralStatusReply(profile, userMessage);
-            case LEGAL_TASKS -> this.buildGeneralLegalTasksReply(profile, userMessage);
-            case TIMELINE_EVENTS -> this.buildGeneralTimelineReply(profile, userMessage);
-            case DOCUMENTS -> this.buildGeneralDocumentsReply(profile);
-            case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile);
-        };
-    }
-
-    public boolean isCourtesyMessage(String message) {
-        if (message == null || message.isBlank()) {
-            return false;
-        }
-
-        String normalized = message.toLowerCase(Locale.ROOT);
-
-        return normalized.contains("gracias")
-                || normalized.contains("muchas gracias")
-                || normalized.contains("por favor")
-                || normalized.contains("te quiero")
-                || normalized.contains("te amo")
-                || normalized.contains("buen dia")
-                || normalized.contains("buen día")
-                || normalized.contains("buenas")
-                || normalized.contains("hasta luego")
-                || normalized.contains("nos vemos");
-    }
-
-    public String courtesyReply(ConversationProfileType profile) {
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_COURTESY_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_COURTESY_REPLY;
-        };
-    }
 
     private String buildEngagementStatusReply(
             ConversationProfileType profile,
@@ -274,6 +272,15 @@ public class ChatbotBaseReplyBuilder {
 
         return reply.toString();
     }
+
+
+
+
+
+
+
+    /* VER LUEGO !!! *********/
+
 
     private String buildContextUnavailableStatusReply(ConversationProfileType profile) {
         return switch (profile) {

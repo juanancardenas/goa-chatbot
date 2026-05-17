@@ -1,10 +1,9 @@
 package es.upm.api.domain.services.basereply;
 
-import es.upm.api.domain.enums.ConversationType;
-
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
@@ -24,6 +23,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +31,9 @@ class ChatbotBaseReplyBuilderTest {
 
     @Mock
     private ChatbotQuestionClassifier chatbotQuestionClassifier;
+
+    @Mock
+    private ChatbotCourtesyReplyBuilder chatbotCourtesyReplyBuilder;
 
     @Mock
     private ChatbotDocumentContextService chatbotDocumentContextService;
@@ -47,25 +50,23 @@ class ChatbotBaseReplyBuilderTest {
     }
 
     @Test
-    void courtesyHelpersShouldDetectCourtesyAndReturnReplyByProfile() {
-        assertThat(this.chatbotBaseReplyBuilder.isCourtesyMessage("Muchas gracias por todo")).isTrue();
-        assertThat(this.chatbotBaseReplyBuilder.isCourtesyMessage("Necesito ayuda con mi expediente")).isFalse();
-        assertThat(this.chatbotBaseReplyBuilder.courtesyReply(ConversationProfileType.CLIENT))
-                .isEqualTo(ChatbotResponseMessages.CLIENT_COURTESY_REPLY);
-        assertThat(this.chatbotBaseReplyBuilder.courtesyReply(ConversationProfileType.PROFESSIONAL))
-                .isEqualTo(ChatbotResponseMessages.PROFESSIONAL_COURTESY_REPLY);
-    }
+    void isCourtesyMessageShouldDelegateToCourtesyReplyBuilder() {
+        when(this.chatbotCourtesyReplyBuilder.isCourtesyMessage("Muchas gracias")).thenReturn(true);
 
-    @ParameterizedTest
-    @MethodSource("courtesyMessages")
-    void isCourtesyMessageShouldDetectSupportedCourtesyExpressions(String message) {
-        assertThat(this.chatbotBaseReplyBuilder.isCourtesyMessage(message)).isTrue();
+        assertThat(this.chatbotBaseReplyBuilder.isCourtesyMessage("Muchas gracias")).isTrue();
+
+        verify(this.chatbotCourtesyReplyBuilder).isCourtesyMessage("Muchas gracias");
     }
 
     @Test
-    void isCourtesyMessageShouldReturnFalseWhenMessageIsNullOrBlank() {
-        assertThat(this.chatbotBaseReplyBuilder.isCourtesyMessage(null)).isFalse();
-        assertThat(this.chatbotBaseReplyBuilder.isCourtesyMessage("   ")).isFalse();
+    void courtesyReplyShouldDelegateToCourtesyReplyBuilder() {
+        when(this.chatbotCourtesyReplyBuilder.courtesyReply(ConversationProfileType.CLIENT))
+                .thenReturn(ChatbotResponseMessages.CLIENT_COURTESY_REPLY);
+
+        assertThat(this.chatbotBaseReplyBuilder.courtesyReply(ConversationProfileType.CLIENT))
+                .isEqualTo(ChatbotResponseMessages.CLIENT_COURTESY_REPLY);
+
+        verify(this.chatbotCourtesyReplyBuilder).courtesyReply(ConversationProfileType.CLIENT);
     }
 
     @Test
@@ -483,18 +484,6 @@ class ChatbotBaseReplyBuilderTest {
 
         assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
         assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY);
-    }
-
-    private static Stream<String> courtesyMessages() {
-        return Stream.of(
-                "por favor revisalo",
-                "te quiero ayudar",
-                "te amo por ayudar",
-                "buen dia",
-                "buenas tardes",
-                "hasta luego",
-                "nos vemos"
-        );
     }
 
     private static Stream<Arguments> contextUnavailableReplies() {
