@@ -18,21 +18,18 @@ public class ChatbotBaseReplyBuilder {
     private final ChatbotGeneralReplyBuilder generalReplyBuilder;
     private final ChatbotPlatformReplyBuilder platformReplyBuilder;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
-    private final ChatbotDocumentContextService chatbotDocumentContextService;
 
     // Constructor
     public ChatbotBaseReplyBuilder(
             ChatbotCourtesyReplyBuilder courtesyReplyBuilder,
             ChatbotGeneralReplyBuilder generalReplyBuilder,
             ChatbotPlatformReplyBuilder platformReplyBuilder,
-            ChatbotQuestionClassifier chatbotQuestionClassifier,
-            ChatbotDocumentContextService chatbotDocumentContextService
+            ChatbotQuestionClassifier chatbotQuestionClassifier
     ) {
         this.courtesyReplyBuilder = courtesyReplyBuilder;
         this.generalReplyBuilder = generalReplyBuilder;
         this.platformReplyBuilder = platformReplyBuilder;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
-        this.chatbotDocumentContextService = chatbotDocumentContextService;
     }
 
     /* --- MANAGEMENT OF COURTESY MESSAGE ---------------------------- */
@@ -69,8 +66,7 @@ public class ChatbotBaseReplyBuilder {
                 profile,
                 conversation,
                 platformContext,
-                questionType,
-                this.chatbotDocumentContextService
+                questionType
         );
     }
 

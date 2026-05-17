@@ -136,9 +136,8 @@ class ChatbotServiceTest {
         ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
                 new ChatbotCourtesyReplyBuilder(),
                 new ChatbotGeneralReplyBuilder(this.chatbotQuestionClassifier),
-                new ChatbotPlatformReplyBuilder(),
-                this.chatbotQuestionClassifier,
-                this.chatbotDocumentContextService
+                new ChatbotPlatformReplyBuilder(this.chatbotDocumentContextService),
+                this.chatbotQuestionClassifier
         );
         ChatbotAiReplyService chatbotAiReplyService = new ChatbotAiReplyService(
                 this.chatbotAiClient,

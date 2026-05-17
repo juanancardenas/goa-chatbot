@@ -1,10 +1,8 @@
-package es.upm.api.domain.services;
-
-import es.upm.api.domain.enums.ConversationType;
+package es.upm.api.domain.services.basereply;
 
 import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
-import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;

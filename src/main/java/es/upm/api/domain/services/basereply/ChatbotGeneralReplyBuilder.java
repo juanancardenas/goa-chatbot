@@ -117,7 +117,6 @@ public class ChatbotGeneralReplyBuilder {
                 || normalized.contains("este expediente");
     }
 
-    //TODO: Ver si se unifica
     private PlatformQuestionType classifyQuestion(String userMessage) {
         return Optional.ofNullable(this.chatbotQuestionClassifier.classify(userMessage))
                 .orElse(PlatformQuestionType.GENERAL_CONTEXT);

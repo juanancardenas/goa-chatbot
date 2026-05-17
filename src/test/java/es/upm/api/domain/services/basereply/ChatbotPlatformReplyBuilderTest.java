@@ -8,6 +8,7 @@ import es.upm.api.domain.enums.PlatformQuestionType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -25,7 +26,12 @@ class ChatbotPlatformReplyBuilderTest {
     @Mock
     private ChatbotDocumentContextService chatbotDocumentContextService;
 
-    private final ChatbotPlatformReplyBuilder chatbotPlatformReplyBuilder = new ChatbotPlatformReplyBuilder();
+    private ChatbotPlatformReplyBuilder chatbotPlatformReplyBuilder;
+
+    @BeforeEach
+    void setUp() {
+        this.chatbotPlatformReplyBuilder = new ChatbotPlatformReplyBuilder(this.chatbotDocumentContextService);
+    }
 
     @Test
     void contextualPlatformReplyShouldReturnLegalTasksListWhenTasksExist() {
@@ -37,8 +43,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 this.conversation("conversation-1"),
                 platformContext,
-                PlatformQuestionType.LEGAL_TASKS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.LEGAL_TASKS
         );
 
         assertThat(reply).contains("Tareas");
@@ -56,8 +61,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 this.conversation("conversation-no-tasks"),
                 platformContext,
-                PlatformQuestionType.LEGAL_TASKS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.LEGAL_TASKS
         );
 
         assertThat(reply).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_LEGAL_TASKS_REPLY);
@@ -71,8 +75,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 this.conversation("conversation-no-professional-tasks"),
                 platformContext,
-                PlatformQuestionType.LEGAL_TASKS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.LEGAL_TASKS
         );
 
         assertThat(reply).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_LEGAL_TASKS_REPLY);
@@ -89,8 +92,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 this.conversation("conversation-2"),
                 platformContext,
-                PlatformQuestionType.TIMELINE_EVENTS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.TIMELINE_EVENTS
         );
 
         assertThat(reply).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY);
@@ -107,8 +109,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 this.conversation("conversation-timeline"),
                 platformContext,
-                PlatformQuestionType.TIMELINE_EVENTS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.TIMELINE_EVENTS
         );
 
         assertThat(reply).contains("Demanda admitida");
@@ -127,8 +128,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 this.conversation("conversation-client-timeline"),
                 platformContext,
-                PlatformQuestionType.TIMELINE_EVENTS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.TIMELINE_EVENTS
         );
 
         assertThat(reply).contains("Providencia recibida");
@@ -143,8 +143,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 this.conversation("conversation-professional-no-events"),
                 platformContext,
-                PlatformQuestionType.TIMELINE_EVENTS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.TIMELINE_EVENTS
         );
 
         assertThat(reply).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY);
@@ -162,8 +161,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 this.conversation("conversation-status"),
                 platformContext,
-                PlatformQuestionType.ENGAGEMENT_STATUS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.ENGAGEMENT_STATUS
         );
 
         assertThat(reply).contains("EL-STATUS");
@@ -188,8 +186,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 conversation,
                 platformContext,
-                PlatformQuestionType.DOCUMENTS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.DOCUMENTS
         );
 
         assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
@@ -211,8 +208,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 conversation,
                 platformContext,
-                PlatformQuestionType.DOCUMENTS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.DOCUMENTS
         );
 
         assertThat(reply).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
@@ -233,8 +229,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 conversation,
                 platformContext,
-                PlatformQuestionType.DOCUMENTS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.DOCUMENTS
         );
 
         assertThat(reply).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
@@ -252,8 +247,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 conversation,
                 platformContext,
-                PlatformQuestionType.DOCUMENTS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.DOCUMENTS
         );
 
         assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
@@ -274,8 +268,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 this.conversation("conversation-3"),
                 platformContext,
-                PlatformQuestionType.GENERAL_CONTEXT,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.GENERAL_CONTEXT
         );
 
         assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
@@ -297,8 +290,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 this.conversation("conversation-general-null"),
                 platformContext,
-                PlatformQuestionType.GENERAL_CONTEXT,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.GENERAL_CONTEXT
         );
 
         assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
@@ -320,8 +312,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 this.conversation("conversation-professional-general"),
                 platformContext,
-                PlatformQuestionType.GENERAL_CONTEXT,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.GENERAL_CONTEXT
         );
 
         assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
@@ -339,8 +330,7 @@ class ChatbotPlatformReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 this.conversation("conversation-client-general-no-events"),
                 platformContext,
-                PlatformQuestionType.GENERAL_CONTEXT,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.GENERAL_CONTEXT
         );
 
         assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY);

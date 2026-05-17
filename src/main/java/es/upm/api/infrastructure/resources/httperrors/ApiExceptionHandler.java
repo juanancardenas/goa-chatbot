@@ -1,6 +1,10 @@
 package es.upm.api.infrastructure.resources.httperrors;
 
-import es.upm.api.domain.exceptions.*;
+import es.upm.api.domain.exceptions.BadGatewayException;
+import es.upm.api.domain.exceptions.BadRequestException;
+import es.upm.api.domain.exceptions.ConflictException;
+import es.upm.api.domain.exceptions.ForbiddenException;
+import es.upm.api.domain.exceptions.NotFoundException;
 import feign.FeignException;
 import feign.RetryableException;
 import org.apache.logging.log4j.LogManager;

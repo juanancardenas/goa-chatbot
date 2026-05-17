@@ -39,9 +39,6 @@ class ChatbotBaseReplyBuilderTest {
     @Mock
     private ChatbotPlatformReplyBuilder chatbotPlatformReplyBuilder;
 
-    @Mock
-    private ChatbotDocumentContextService chatbotDocumentContextService;
-
     @InjectMocks
     private ChatbotBaseReplyBuilder chatbotBaseReplyBuilder;
 
@@ -139,8 +136,7 @@ class ChatbotBaseReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 conversation,
                 platformContext,
-                PlatformQuestionType.LEGAL_TASKS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.LEGAL_TASKS
         )).thenReturn("Respuesta plataforma");
 
         assertThat(this.chatbotBaseReplyBuilder.contextualPlatformReply(
@@ -154,8 +150,7 @@ class ChatbotBaseReplyBuilderTest {
                 ConversationProfileType.CLIENT,
                 conversation,
                 platformContext,
-                PlatformQuestionType.LEGAL_TASKS,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.LEGAL_TASKS
         );
     }
 
@@ -169,8 +164,7 @@ class ChatbotBaseReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 conversation,
                 platformContext,
-                PlatformQuestionType.GENERAL_CONTEXT,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.GENERAL_CONTEXT
         )).thenReturn("Respuesta general contextual");
 
         assertThat(this.chatbotBaseReplyBuilder.contextualPlatformReply(
@@ -184,8 +178,7 @@ class ChatbotBaseReplyBuilderTest {
                 ConversationProfileType.PROFESSIONAL,
                 conversation,
                 platformContext,
-                PlatformQuestionType.GENERAL_CONTEXT,
-                this.chatbotDocumentContextService
+                PlatformQuestionType.GENERAL_CONTEXT
         );
     }
 

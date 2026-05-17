@@ -12,19 +12,24 @@ import java.util.stream.Collectors;
 @Service
 public class ChatbotPlatformReplyBuilder {
 
+    private final ChatbotDocumentContextService documentContextService;
+
+    public ChatbotPlatformReplyBuilder(ChatbotDocumentContextService documentContextService) {
+        this.documentContextService = documentContextService;
+    }
+
     public String contextualPlatformReply(
             ConversationProfileType profile,
             Conversation conversation,
             ChatbotPlatformContext platformContext,
-            PlatformQuestionType questionType,
-            ChatbotDocumentContextService documentContextService
+            PlatformQuestionType questionType
     ) {
 
         return switch (questionType) {
             case ENGAGEMENT_STATUS -> this.buildEngagementStatusReply(profile, platformContext);
             case LEGAL_TASKS -> this.buildLegalTasksReply(profile, platformContext);
             case TIMELINE_EVENTS -> this.buildTimelineReply(profile, platformContext);
-            case DOCUMENTS -> this.buildDocumentsReply(profile, conversation, platformContext, documentContextService);
+            case DOCUMENTS -> this.buildDocumentsReply(profile, conversation, platformContext);
             case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile, platformContext);
         };
     }
@@ -127,10 +132,9 @@ public class ChatbotPlatformReplyBuilder {
     private String buildDocumentsReply(
             ConversationProfileType profile,
             Conversation conversation,
-            ChatbotPlatformContext platformContext,
-            ChatbotDocumentContextService documentContextService
+            ChatbotPlatformContext platformContext
     ) {
-        var documentContext = documentContextService.loadDocumentContext(conversation);
+        var documentContext = this.documentContextService.loadDocumentContext(conversation);
 
         StringBuilder reply = new StringBuilder(
                 switch (profile) {
@@ -152,6 +156,7 @@ public class ChatbotPlatformReplyBuilder {
         if (documentContext != null
                 && documentContext.getVisibleDocumentTitles() != null
                 && !documentContext.getVisibleDocumentTitles().isEmpty()) {
+            reply.append(" ");
             reply.append("Documentos visibles preparados para futura integración: ")
                     .append(String.join(", ", documentContext.getVisibleDocumentTitles()))
                     .append(".");
