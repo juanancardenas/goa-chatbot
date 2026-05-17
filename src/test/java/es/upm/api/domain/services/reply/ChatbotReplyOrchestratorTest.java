@@ -338,18 +338,18 @@ class ChatbotReplyOrchestratorTest {
     }
 
     @Test
-    void resolveReplyShouldUseContextualReplyWhenContextualConversationHasNoPlatformContext() {
+    void resolveReplyShouldUseContextualFallbackReplyWhenContextualConversationHasNoPlatformContext() {
         Conversation conversation = this.contextualConversation("EL-1");
         when(this.chatbotBaseReplyBuilder.isCourtesyMessage("estado")).thenReturn(false);
         when(this.chatbotScopePolicy.evaluate(conversation, "estado")).thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotPlatformContextService.loadContext("EL-1")).thenReturn(Optional.empty());
         when(this.chatbotBaseReplyBuilder.contextualReply(ConversationProfileType.CLIENT, "estado"))
-                .thenReturn("Base fallback");
+                .thenReturn("Base contextual fallback");
         when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.CLIENT,
                 "estado",
-                "Base fallback",
+                "Base contextual fallback",
                 Optional.empty()
         )).thenReturn("Respuesta fallback");
 

@@ -31,7 +31,7 @@ import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
 import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
-import es.upm.api.domain.services.basereply.ChatbotContextualReplyBuilder;
+import es.upm.api.domain.services.basereply.ChatbotContextualFallbackReplyBuilder;
 import es.upm.api.domain.services.basereply.ChatbotCourtesyReplyBuilder;
 import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
 import es.upm.api.domain.services.basereply.ChatbotGeneralReplyBuilder;
@@ -137,7 +137,7 @@ class ChatbotServiceTest {
         ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
                 new ChatbotCourtesyReplyBuilder(),
                 new ChatbotGeneralReplyBuilder(this.chatbotQuestionClassifier),
-                new ChatbotContextualReplyBuilder(this.chatbotQuestionClassifier),
+                new ChatbotContextualFallbackReplyBuilder(this.chatbotQuestionClassifier),
                 new ChatbotPlatformReplyBuilder(this.chatbotDocumentContextService),
                 this.chatbotQuestionClassifier
         );

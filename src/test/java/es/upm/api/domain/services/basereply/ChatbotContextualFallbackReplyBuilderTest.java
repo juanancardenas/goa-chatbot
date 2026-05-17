@@ -19,30 +19,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ChatbotContextualReplyBuilderTest {
+class ChatbotContextualFallbackReplyBuilderTest {
 
     @Mock
     private ChatbotQuestionClassifier chatbotQuestionClassifier;
 
     @InjectMocks
-    private ChatbotContextualReplyBuilder chatbotContextualReplyBuilder;
+    private ChatbotContextualFallbackReplyBuilder chatbotContextualFallbackReplyBuilder;
 
     @Test
-    void contextualReplyShouldReturnUnavailableReplyWhenClassifierReturnsNull() {
+    void contextualFallbackReplyShouldReturnUnavailableReplyWhenClassifierReturnsNull() {
         when(this.chatbotQuestionClassifier.classify("Dame contexto del caso")).thenReturn(null);
 
-        assertThat(this.chatbotContextualReplyBuilder.contextualReply(
+        assertThat(this.chatbotContextualFallbackReplyBuilder.contextualFallbackReply(
                 ConversationProfileType.CLIENT,
                 "Dame contexto del caso"
         )).isEqualTo(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY);
     }
 
     @Test
-    void contextualReplyShouldReturnReplyByQuestionTypeAndProfile() {
+    void contextualFallbackReplyShouldReturnReplyByQuestionTypeAndProfile() {
         when(this.chatbotQuestionClassifier.classify("Que hitos recientes tiene el caso"))
                 .thenReturn(PlatformQuestionType.TIMELINE_EVENTS);
 
-        assertThat(this.chatbotContextualReplyBuilder.contextualReply(
+        assertThat(this.chatbotContextualFallbackReplyBuilder.contextualFallbackReply(
                 ConversationProfileType.PROFESSIONAL,
                 "Que hitos recientes tiene el caso"
         )).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXT_UNAVAILABLE_EVENTS_REPLY);
@@ -50,7 +50,7 @@ class ChatbotContextualReplyBuilderTest {
 
     @ParameterizedTest
     @MethodSource("contextUnavailableReplies")
-    void contextualReplyShouldReturnUnavailableReplyByQuestionTypeAndProfile(
+    void contextualFallbackReplyShouldReturnUnavailableReplyByQuestionTypeAndProfile(
             ConversationProfileType profile,
             PlatformQuestionType questionType,
             String expectedReply
@@ -58,7 +58,7 @@ class ChatbotContextualReplyBuilderTest {
         String message = "Pregunta sin contexto " + profile + " " + questionType;
         when(this.chatbotQuestionClassifier.classify(message)).thenReturn(questionType);
 
-        assertThat(this.chatbotContextualReplyBuilder.contextualReply(profile, message))
+        assertThat(this.chatbotContextualFallbackReplyBuilder.contextualFallbackReply(profile, message))
                 .isEqualTo(expectedReply);
     }
 

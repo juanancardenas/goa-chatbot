@@ -15,7 +15,7 @@ public class ChatbotBaseReplyBuilder {
     // Attributes
     private final ChatbotCourtesyReplyBuilder courtesyReplyBuilder;
     private final ChatbotGeneralReplyBuilder generalReplyBuilder;
-    private final ChatbotContextualReplyBuilder contextualReplyBuilder;
+    private final ChatbotContextualFallbackReplyBuilder contextualFallbackReplyBuilder;
     private final ChatbotPlatformReplyBuilder platformReplyBuilder;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
 
@@ -23,13 +23,13 @@ public class ChatbotBaseReplyBuilder {
     public ChatbotBaseReplyBuilder(
             ChatbotCourtesyReplyBuilder courtesyReplyBuilder,
             ChatbotGeneralReplyBuilder generalReplyBuilder,
-            ChatbotContextualReplyBuilder contextualReplyBuilder,
+            ChatbotContextualFallbackReplyBuilder contextualFallbackReplyBuilder,
             ChatbotPlatformReplyBuilder platformReplyBuilder,
             ChatbotQuestionClassifier chatbotQuestionClassifier
     ) {
         this.courtesyReplyBuilder = courtesyReplyBuilder;
         this.generalReplyBuilder = generalReplyBuilder;
-        this.contextualReplyBuilder = contextualReplyBuilder;
+        this.contextualFallbackReplyBuilder = contextualFallbackReplyBuilder;
         this.platformReplyBuilder = platformReplyBuilder;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
     }
@@ -60,7 +60,7 @@ public class ChatbotBaseReplyBuilder {
             ConversationProfileType profile,
             String userMessage
     ) {
-        return this.contextualReplyBuilder.contextualReply(profile, userMessage);
+        return this.contextualFallbackReplyBuilder.contextualFallbackReply(profile, userMessage);
     }
 
     /* --- PLATFORM CONTEXT ------------------------------------------ */
