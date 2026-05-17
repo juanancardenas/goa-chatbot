@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.basereply;
+package es.upm.api.domain.services.reply.base;
 
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;
@@ -57,7 +57,8 @@ class ChatbotCourtesyReplyBuilderTest {
     private static Stream<String> nonCourtesyMessages() {
         return Stream.of(
                 "Necesito ayuda con mi expediente",
-                "Cual es el estado del caso"
+                "Cual es el estado del caso",
+                "agradeceria informacion del caso"
         );
     }
 }

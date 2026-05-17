@@ -1,8 +1,7 @@
-package es.upm.api.domain.services.aireply;
-
-import es.upm.api.domain.enums.ConversationType;
+package es.upm.api.domain.services.reply.ai;
 
 import es.upm.api.domain.enums.ConversationProfileType;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
@@ -177,6 +176,35 @@ class ChatbotAiReplyServiceTest {
         assertThat(requestCaptor.getValue().getPlatformContext())
                 .isEqualTo("No hay contexto de plataforma disponible.");
         assertThat(requestCaptor.getValue().getUserMessage()).contains("encargo activo: EL-999");
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldNotAddContextualRulesForGeneralConversation() {
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
+                .thenReturn(List.of());
+        when(this.chatbotAiClient.generate(any(ChatbotAiRequest.class)))
+                .thenReturn(ChatbotAiResponse.builder()
+                        .content("AI general reply")
+                        .finishReason("SUCCESS")
+                        .build());
+
+        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                this.generalConversation(),
+                ConversationProfileType.PROFESSIONAL,
+                "General question",
+                "Safe base reply",
+                Optional.empty()
+        );
+
+        ArgumentCaptor<ChatbotAiRequest> requestCaptor = ArgumentCaptor.forClass(ChatbotAiRequest.class);
+        verify(this.chatbotAiClient).generate(requestCaptor.capture());
+
+        assertThat(response).isEqualTo("AI general reply");
+        assertThat(requestCaptor.getValue().getUserMessage())
+                .contains("Pregunta actual del usuario:")
+                .doesNotContain("Reglas adicionales para chat contextual")
+                .doesNotContain("encargo activo:");
     }
 
     @Test

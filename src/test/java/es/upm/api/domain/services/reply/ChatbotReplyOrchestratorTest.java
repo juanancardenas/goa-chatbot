@@ -9,9 +9,9 @@ import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.chatbot.reply.ChatbotReplyDecision;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
-import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
-import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
-import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
+import es.upm.api.domain.services.reply.ai.ChatbotAiReplyService;
+import es.upm.api.domain.services.reply.base.ChatbotBaseReplyBuilder;
+import es.upm.api.domain.services.reply.context.ChatbotPlatformContextService;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import org.junit.jupiter.api.BeforeEach;
@@ -338,18 +338,18 @@ class ChatbotReplyOrchestratorTest {
     }
 
     @Test
-    void resolveReplyShouldUseContextualReplyWhenContextualConversationHasNoPlatformContext() {
+    void resolveReplyShouldUseContextualFallbackReplyWhenContextualConversationHasNoPlatformContext() {
         Conversation conversation = this.contextualConversation("EL-1");
         when(this.chatbotBaseReplyBuilder.isCourtesyMessage("estado")).thenReturn(false);
         when(this.chatbotScopePolicy.evaluate(conversation, "estado")).thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotPlatformContextService.loadContext("EL-1")).thenReturn(Optional.empty());
         when(this.chatbotBaseReplyBuilder.contextualReply(ConversationProfileType.CLIENT, "estado"))
-                .thenReturn("Base fallback");
+                .thenReturn("Base contextual fallback");
         when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.CLIENT,
                 "estado",
-                "Base fallback",
+                "Base contextual fallback",
                 Optional.empty()
         )).thenReturn("Respuesta fallback");
 

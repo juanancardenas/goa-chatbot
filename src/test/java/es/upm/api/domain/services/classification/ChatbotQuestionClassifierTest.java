@@ -94,4 +94,31 @@ class ChatbotQuestionClassifierTest {
 
         assertThat(result).isEqualTo(PlatformQuestionType.DOCUMENTS);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Que viene ahora",
+            "Como sigue el expediente",
+            "Cuando es la proxima fecha"
+    })
+    void classifyShouldReturnTimelineEventsForFollowUpAndDateSignals(String message) {
+        assertThat(this.classifier.classify(message)).isEqualTo(PlatformQuestionType.TIMELINE_EVENTS);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Cual es la situacion",
+            "Como va esto",
+            "Hay algun avance"
+    })
+    void classifyShouldReturnEngagementStatusForDirectStatusSignals(String message) {
+        assertThat(this.classifier.classify(message)).isEqualTo(PlatformQuestionType.ENGAGEMENT_STATUS);
+    }
+
+    @Test
+    void shouldKeepLegalTasksPriorityOverTimelineWhenQuestionMentionsBoth() {
+        PlatformQuestionType result = this.classifier.classify("Que tareas legales hay y cuales son los proximos pasos");
+
+        assertThat(result).isEqualTo(PlatformQuestionType.LEGAL_TASKS);
+    }
 }

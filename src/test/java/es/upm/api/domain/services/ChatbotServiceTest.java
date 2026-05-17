@@ -29,14 +29,14 @@ import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.UserClient;
-import es.upm.api.domain.services.aireply.ChatbotAiReplyService;
-import es.upm.api.domain.services.basereply.ChatbotBaseReplyBuilder;
-import es.upm.api.domain.services.basereply.ChatbotContextualReplyBuilder;
-import es.upm.api.domain.services.basereply.ChatbotCourtesyReplyBuilder;
-import es.upm.api.domain.services.basereply.ChatbotDocumentContextService;
-import es.upm.api.domain.services.basereply.ChatbotGeneralReplyBuilder;
-import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
-import es.upm.api.domain.services.basereply.ChatbotPlatformReplyBuilder;
+import es.upm.api.domain.services.reply.ai.ChatbotAiReplyService;
+import es.upm.api.domain.services.reply.base.ChatbotBaseReplyBuilder;
+import es.upm.api.domain.services.reply.base.ChatbotContextualFallbackReplyBuilder;
+import es.upm.api.domain.services.reply.base.ChatbotCourtesyReplyBuilder;
+import es.upm.api.domain.services.reply.context.ChatbotDocumentContextService;
+import es.upm.api.domain.services.reply.base.ChatbotGeneralReplyBuilder;
+import es.upm.api.domain.services.reply.context.ChatbotPlatformContextService;
+import es.upm.api.domain.services.reply.base.ChatbotPlatformReplyBuilder;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import es.upm.api.domain.services.conversation.ChatbotConversationService;
 import es.upm.api.domain.services.conversation.ChatbotEscalationService;
@@ -137,7 +137,7 @@ class ChatbotServiceTest {
         ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
                 new ChatbotCourtesyReplyBuilder(),
                 new ChatbotGeneralReplyBuilder(this.chatbotQuestionClassifier),
-                new ChatbotContextualReplyBuilder(this.chatbotQuestionClassifier),
+                new ChatbotContextualFallbackReplyBuilder(this.chatbotQuestionClassifier),
                 new ChatbotPlatformReplyBuilder(this.chatbotDocumentContextService),
                 this.chatbotQuestionClassifier
         );

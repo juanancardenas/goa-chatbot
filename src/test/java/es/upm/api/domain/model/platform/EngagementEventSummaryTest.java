@@ -72,4 +72,31 @@ class EngagementEventSummaryTest {
 
         assertThat(summary.displayText()).isEqualTo("Evento sin t\u00edtulo [MILESTONE] - DONE");
     }
+
+    @Test
+    void displayTextShouldIgnoreCommentAndDate() {
+        EngagementEventSummary summary = new EngagementEventSummary(
+                "EVENT",
+                "DONE",
+                "Resolucion recibida",
+                "Comentario interno",
+                LocalDate.of(2026, 5, 8)
+        );
+
+        assertThat(summary.displayText()).isEqualTo("Resolucion recibida [EVENT] - DONE");
+        assertThat(summary.displayText()).doesNotContain("Comentario interno");
+        assertThat(summary.displayText()).doesNotContain("2026");
+    }
+
+    @Test
+    void noArgsConstructorShouldAllowSettingFieldsBeforeDisplayText() {
+        EngagementEventSummary summary = new EngagementEventSummary();
+        summary.setType(" TASK ");
+        summary.setState(" OPEN ");
+        summary.setTitle(" Preparar escrito ");
+        summary.setComment("comentario");
+        summary.setDate(LocalDate.of(2026, 5, 9));
+
+        assertThat(summary.displayText()).isEqualTo("Preparar escrito [TASK] - OPEN");
+    }
 }

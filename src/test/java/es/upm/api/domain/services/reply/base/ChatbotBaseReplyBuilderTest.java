@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.basereply;
+package es.upm.api.domain.services.reply.base;
 
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;
@@ -33,7 +33,7 @@ class ChatbotBaseReplyBuilderTest {
     private ChatbotGeneralReplyBuilder chatbotGeneralReplyBuilder;
 
     @Mock
-    private ChatbotContextualReplyBuilder chatbotContextualReplyBuilder;
+    private ChatbotContextualFallbackReplyBuilder chatbotContextualFallbackReplyBuilder;
 
     @Mock
     private ChatbotPlatformReplyBuilder chatbotPlatformReplyBuilder;
@@ -91,8 +91,8 @@ class ChatbotBaseReplyBuilderTest {
     }
 
     @Test
-    void contextualReplyShouldDelegateToContextualReplyBuilder() {
-        when(this.chatbotContextualReplyBuilder.contextualReply(
+    void contextualReplyShouldDelegateToContextualFallbackReplyBuilder() {
+        when(this.chatbotContextualFallbackReplyBuilder.contextualFallbackReply(
                 ConversationProfileType.CLIENT,
                 "Dame contexto del caso"
         )).thenReturn(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY);
@@ -102,7 +102,7 @@ class ChatbotBaseReplyBuilderTest {
                 "Dame contexto del caso"
         )).isEqualTo(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY);
 
-        verify(this.chatbotContextualReplyBuilder).contextualReply(
+        verify(this.chatbotContextualFallbackReplyBuilder).contextualFallbackReply(
                 ConversationProfileType.CLIENT,
                 "Dame contexto del caso"
         );

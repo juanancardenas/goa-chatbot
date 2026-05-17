@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.basereply;
+package es.upm.api.domain.services.reply.base;
 
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;
@@ -7,15 +7,15 @@ import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ChatbotContextualReplyBuilder {
+public class ChatbotContextualFallbackReplyBuilder {
 
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
 
-    public ChatbotContextualReplyBuilder(ChatbotQuestionClassifier chatbotQuestionClassifier) {
+    public ChatbotContextualFallbackReplyBuilder(ChatbotQuestionClassifier chatbotQuestionClassifier) {
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
     }
 
-    public String contextualReply(
+    public String contextualFallbackReply(
             ConversationProfileType profile,
             String userMessage
     ) {

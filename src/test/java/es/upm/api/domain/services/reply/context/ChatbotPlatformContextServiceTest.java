@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.basereply;
+package es.upm.api.domain.services.reply.context;
 
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.model.platform.EngagementEventPage;
@@ -351,6 +351,56 @@ class ChatbotPlatformContextServiceTest {
         assertThat(result.get().getLegalTaskSummaries()).containsExactly(
                 "Procedimiento sin título: Asesoramiento jurídico."
         );
+    }
+
+    @Test
+    void loadContextShouldDeduplicateLegalTasksAndLimitLegalTaskSources() {
+        LegalProcedureSummary firstProcedure = new LegalProcedureSummary(
+                "Procedimiento A",
+                null,
+                null,
+                List.of(" Revisar contrato ", "Revisar contrato", "Preparar demanda")
+        );
+        LegalProcedureSummary secondProcedure = new LegalProcedureSummary(
+                "Procedimiento B",
+                null,
+                null,
+                List.of("Presentar escrito", "Coordinar vista")
+        );
+
+        when(this.engagementClient.readById("engagement-legal-tasks"))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        null,
+                        List.of(firstProcedure, secondProcedure)
+                ));
+        when(this.engagementClient.readEventsByEngagementLetterId("engagement-legal-tasks", 0, 5))
+                .thenReturn(null);
+
+        Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-legal-tasks");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getLegalTaskSummaries()).containsExactly(
+                "Procedimiento A: Revisar contrato",
+                "Procedimiento A: Preparar demanda",
+                "Procedimiento B: Presentar escrito",
+                "Procedimiento B: Coordinar vista"
+        );
+        assertThat(result.get().getSourcesSummary())
+                .filteredOn(source -> source.startsWith("Legal Task:"))
+                .hasSize(3);
+    }
+
+    @Test
+    void loadContextShouldReturnEmptyWhenBothEngagementAndEventsClientsFail() {
+        when(this.engagementClient.readById("engagement-unavailable"))
+                .thenThrow(new IllegalStateException("engagement unavailable"));
+        when(this.engagementClient.readEventsByEngagementLetterId("engagement-unavailable", 0, 5))
+                .thenThrow(new IllegalStateException("events unavailable"));
+
+        assertThat(this.chatbotPlatformContextService.loadContext("engagement-unavailable")).isEmpty();
     }
 
     @Test
