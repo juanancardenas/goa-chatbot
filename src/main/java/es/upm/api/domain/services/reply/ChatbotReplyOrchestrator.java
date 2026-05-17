@@ -125,7 +125,7 @@ public class ChatbotReplyOrchestrator {
                 .loadContext(conversation.getEngagementLetterId());
 
         if (platformContext.isEmpty()) {
-            String baseReply = this.chatbotBaseReplyBuilder.contextualFallbackReply(
+            String baseReply = this.chatbotBaseReplyBuilder.contextualReply(
                     profile,
                     userMessage
             );

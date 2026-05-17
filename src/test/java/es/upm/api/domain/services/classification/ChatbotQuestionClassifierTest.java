@@ -55,6 +55,19 @@ class ChatbotQuestionClassifierTest {
     }
 
     @Test
+    void classifyOrGeneralContextShouldFallbackWhenClassifierReturnsNull() {
+        ChatbotQuestionClassifier nullClassifier = new ChatbotQuestionClassifier() {
+            @Override
+            public PlatformQuestionType classify(String message) {
+                return null;
+            }
+        };
+
+        assertThat(ChatbotQuestionTypes.classifyOrGeneralContext(nullClassifier, "Dame contexto"))
+                .isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
+    }
+
+    @Test
     void shouldClassifyLegalTasksQuestionInEnglish() {
         PlatformQuestionType result = this.classifier.classify("What are the Legal Tasks of this engagement?");
 

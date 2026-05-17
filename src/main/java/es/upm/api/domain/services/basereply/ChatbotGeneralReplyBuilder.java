@@ -7,7 +7,8 @@ import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import org.springframework.stereotype.Service;
 
 import java.util.Locale;
-import java.util.Optional;
+
+import static es.upm.api.domain.services.classification.ChatbotQuestionTypes.classifyOrGeneralContext;
 
 @Service
 public class ChatbotGeneralReplyBuilder {
@@ -29,7 +30,7 @@ public class ChatbotGeneralReplyBuilder {
             ConversationProfileType profile,
             String userMessage
     ) {
-        PlatformQuestionType questionType = this.classifyQuestion(userMessage);
+        PlatformQuestionType questionType = classifyOrGeneralContext(this.chatbotQuestionClassifier, userMessage);
 
         return switch (questionType) {
             case ENGAGEMENT_STATUS -> this.buildGeneralStatusReply(profile, userMessage);
@@ -115,10 +116,5 @@ public class ChatbotGeneralReplyBuilder {
                 || normalized.contains("del expediente")
                 || normalized.contains("mi expediente")
                 || normalized.contains("este expediente");
-    }
-
-    private PlatformQuestionType classifyQuestion(String userMessage) {
-        return Optional.ofNullable(this.chatbotQuestionClassifier.classify(userMessage))
-                .orElse(PlatformQuestionType.GENERAL_CONTEXT);
     }
 }
