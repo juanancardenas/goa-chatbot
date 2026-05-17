@@ -33,7 +33,7 @@ import es.upm.api.domain.services.conversation.ChatbotEscalationService;
 import es.upm.api.domain.services.conversation.ChatbotHistoryService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
-import es.upm.api.domain.services.conversation.ChatbotReplyOrchestrator;
+import es.upm.api.domain.services.reply.ChatbotReplyOrchestrator;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.common.ChatbotResponseMessages;
