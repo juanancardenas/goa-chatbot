@@ -30,6 +30,7 @@ import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.domain.services.reply.ai.ChatbotAiReplyService;
+import es.upm.api.domain.services.reply.ai.prompt.ChatbotAiRequestBuilder;
 import es.upm.api.domain.services.reply.base.ChatbotBaseReplyBuilder;
 import es.upm.api.domain.services.reply.base.ChatbotContextualFallbackReplyBuilder;
 import es.upm.api.domain.services.reply.base.ChatbotCourtesyReplyBuilder;
@@ -144,7 +145,7 @@ class ChatbotServiceTest {
         ChatbotAiReplyService chatbotAiReplyService = new ChatbotAiReplyService(
                 this.chatbotAiClient,
                 this.chatbotAiSettings,
-                chatbotMessageService
+                new ChatbotAiRequestBuilder(this.chatbotAiSettings, chatbotMessageService)
         );
         ChatbotReplyOrchestrator chatbotReplyOrchestrator = new ChatbotReplyOrchestrator(
                 chatbotBaseReplyBuilder,
