@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.basereply;
+package es.upm.api.domain.services.reply.base;
 
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;

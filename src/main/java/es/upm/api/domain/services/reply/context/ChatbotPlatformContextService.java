@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.basereply;
+package es.upm.api.domain.services.reply.context;
 
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.model.platform.EngagementEventPage;

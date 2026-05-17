@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.basereply;
+package es.upm.api.domain.services.reply.context;
 
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.ConversationType;

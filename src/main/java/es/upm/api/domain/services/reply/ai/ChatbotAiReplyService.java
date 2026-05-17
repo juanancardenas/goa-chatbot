@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.aireply;
+package es.upm.api.domain.services.reply.ai;
 
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationType;
