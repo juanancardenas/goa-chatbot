@@ -81,6 +81,15 @@ class ChatbotGeneralReplyBuilderTest {
         )).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_CONTEXT_REPLY);
     }
 
+    @ParameterizedTest
+    @MethodSource("specificEngagementMessages")
+    void generalFaqReplyShouldTreatCaseReferencesAsSpecificEngagementData(String message) {
+        when(this.chatbotQuestionClassifier.classify(message)).thenReturn(PlatformQuestionType.ENGAGEMENT_STATUS);
+
+        assertThat(this.chatbotGeneralReplyBuilder.generalFaqReply(ConversationProfileType.PROFESSIONAL, message))
+                .isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_STATUS_REPLY);
+    }
+
     private static Stream<Arguments> generalFaqReplies() {
         return Stream.of(
                 Arguments.of(
@@ -155,6 +164,15 @@ class ChatbotGeneralReplyBuilderTest {
                         "Que puedes explicar",
                         ChatbotResponseMessages.CLIENT_GENERAL_CONTEXT_REPLY
                 )
+        );
+    }
+
+    private static Stream<String> specificEngagementMessages() {
+        return Stream.of(
+                "Dame el estado de este encargo",
+                "Dame el estado de mi hoja de encargo",
+                "Dame el estado del expediente",
+                "Dame el estado de este expediente"
         );
     }
 }

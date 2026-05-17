@@ -137,6 +137,40 @@ class ConversationEntityTest {
     }
 
     @Test
+    void allArgsConstructorShouldPreserveExplicitLastSequenceNumber() {
+        ConversationEntity entity = new ConversationEntity(
+                "conversation-sequence",
+                "user-sequence",
+                "engagement-sequence",
+                ConversationStatus.ARCHIVED,
+                "CONTEXTUAL",
+                LocalDateTime.of(2026, 5, 6, 12, 0),
+                12
+        );
+
+        assertThat(entity.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
+        assertThat(entity.getLastSequenceNumber()).isEqualTo(12);
+    }
+
+    @Test
+    void constructorShouldAllowNullStatusFromConversation() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-null-status")
+                .userId("user-1")
+                .status(null)
+                .type(ConversationType.GENERAL)
+                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .lastSequenceNumber(1)
+                .build();
+
+        ConversationEntity entity = new ConversationEntity(conversation);
+
+        assertThat(entity.getStatus()).isNull();
+        assertThat(entity.getType()).isEqualTo("GENERAL");
+        assertThat(entity.getLastSequenceNumber()).isEqualTo(1);
+    }
+
+    @Test
     void toConversationShouldAllowNullTypeAndDefaultNullSequenceToZero() {
         ConversationEntity entity = ConversationEntity.builder()
                 .id("conversation-5")

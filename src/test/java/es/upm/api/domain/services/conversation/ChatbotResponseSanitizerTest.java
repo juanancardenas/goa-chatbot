@@ -93,4 +93,28 @@ class ChatbotResponseSanitizerTest {
                         "Despues"
                 ));
     }
+
+    @Test
+    void normalizeReplyForFrontendShouldSkipSeparatorRowsWithColonsAndDashes() {
+        String reply = """
+                | Campo | Valor |
+                | :--- | ---: |
+                | Estado | Activo |
+                """;
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
+                .isEqualTo(String.join(
+                        System.lineSeparator(),
+                        "- Campo: Valor",
+                        "- Estado: Activo"
+                ));
+    }
+
+    @Test
+    void normalizeReplyForFrontendShouldTrimPipeRowsAndIgnoreEmptyCells() {
+        String reply = "  |  Tarea  |   |  Responsable  |  ";
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
+                .isEqualTo("- Tarea: Responsable");
+    }
 }

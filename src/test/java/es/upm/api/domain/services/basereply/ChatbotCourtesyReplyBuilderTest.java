@@ -57,7 +57,8 @@ class ChatbotCourtesyReplyBuilderTest {
     private static Stream<String> nonCourtesyMessages() {
         return Stream.of(
                 "Necesito ayuda con mi expediente",
-                "Cual es el estado del caso"
+                "Cual es el estado del caso",
+                "agradeceria informacion del caso"
         );
     }
 }
