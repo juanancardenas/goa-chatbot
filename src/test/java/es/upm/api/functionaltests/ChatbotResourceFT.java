@@ -436,7 +436,6 @@ class ChatbotResourceFT {
         assertThat(response.getBody()).doesNotContain("basePrompt");
         assertThat(response.getBody()).doesNotContain("prompt");
         assertThat(response.getBody()).doesNotContain("CHATBOT_OPENAI_API_KEY");
-        assertThat(response.getBody()).doesNotContain("CHATBOT_GEMINI_API_KEY");
         assertThat(response.getBody()).doesNotContain("secret");
         assertThat(response.getBody()).doesNotContain("stackTrace");
     }

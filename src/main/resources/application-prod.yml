@@ -15,18 +15,6 @@ spring:
           model: gpt-4o-mini
           temperature: 0.2
           max-output-tokens: 500
-
-    # Alternativa si el estudio decide cambiar de OpenAI a Gemini:
-    # model:
-    #   chat: google-genai
-    # google:
-    #   genai:
-    #     api-key: ${CHATBOT_GEMINI_API_KEY}
-    #     chat:
-    #       options:
-    #         model: gemini-2.0-flash
-    #         temperature: 0.2
-    #         max-output-tokens: 500
   data:
     mongodb:
       auto-index-creation: true

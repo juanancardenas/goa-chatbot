@@ -43,3 +43,27 @@
 ```
 
 * Cliente Web: `http://localhost:8086/swagger-ui.html`
+
+### Variables de entorno en produccion
+
+El despliegue en AWS App Runner requiere:
+
+| Variable | Uso |
+| --- | --- |
+| `CHATBOT_OPENAI_API_KEY` | API key usada por Spring AI/OpenAI en el perfil `prod`. |
+
+Alternativa si el estudio decide cambiar de OpenAI a Gemini:
+
+```yaml
+# Alternativa si el estudio decide cambiar de OpenAI a Gemini:
+# model:
+#   chat: google-genai
+# google:
+#   genai:
+#     api-key: ${CHATBOT_GEMINI_API_KEY}
+#     chat:
+#       options:
+#         model: gemini-2.0-flash
+#         temperature: 0.2
+#         max-output-tokens: 500
+```
