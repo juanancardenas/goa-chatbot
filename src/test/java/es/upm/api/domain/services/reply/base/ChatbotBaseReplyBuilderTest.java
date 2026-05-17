@@ -91,13 +91,13 @@ class ChatbotBaseReplyBuilderTest {
     }
 
     @Test
-    void contextualReplyShouldDelegateToContextualFallbackReplyBuilder() {
+    void contextualFallbackReplyShouldDelegateToContextualFallbackReplyBuilder() {
         when(this.chatbotContextualFallbackReplyBuilder.contextualFallbackReply(
                 ConversationProfileType.CLIENT,
                 "Dame contexto del caso"
         )).thenReturn(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY);
 
-        assertThat(this.chatbotBaseReplyBuilder.contextualReply(
+        assertThat(this.chatbotBaseReplyBuilder.contextualFallbackReply(
                 ConversationProfileType.CLIENT,
                 "Dame contexto del caso"
         )).isEqualTo(ChatbotResponseMessages.CONTEXTUAL_PLATFORM_DATA_UNAVAILABLE_REPLY);

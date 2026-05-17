@@ -343,7 +343,7 @@ class ChatbotReplyOrchestratorTest {
         when(this.chatbotBaseReplyBuilder.isCourtesyMessage("estado")).thenReturn(false);
         when(this.chatbotScopePolicy.evaluate(conversation, "estado")).thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotPlatformContextService.loadContext("EL-1")).thenReturn(Optional.empty());
-        when(this.chatbotBaseReplyBuilder.contextualReply(ConversationProfileType.CLIENT, "estado"))
+        when(this.chatbotBaseReplyBuilder.contextualFallbackReply(ConversationProfileType.CLIENT, "estado"))
                 .thenReturn("Base contextual fallback");
         when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
