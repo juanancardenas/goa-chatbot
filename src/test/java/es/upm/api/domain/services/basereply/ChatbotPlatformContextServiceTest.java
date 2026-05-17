@@ -1,4 +1,4 @@
-package es.upm.api.domain.services;
+package es.upm.api.domain.services.basereply;
 
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.model.platform.EngagementEventPage;
@@ -7,7 +7,6 @@ import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.ports.out.EngagementClient;
-import es.upm.api.domain.services.basereply.ChatbotPlatformContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

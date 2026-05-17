@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.conversation;
+package es.upm.api.domain.services.reply;
 
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ChatbotResponseMode;
@@ -338,12 +338,12 @@ class ChatbotReplyOrchestratorTest {
     }
 
     @Test
-    void resolveReplyShouldFallbackWhenContextualConversationHasNoPlatformContext() {
+    void resolveReplyShouldUseContextualReplyWhenContextualConversationHasNoPlatformContext() {
         Conversation conversation = this.contextualConversation("EL-1");
         when(this.chatbotBaseReplyBuilder.isCourtesyMessage("estado")).thenReturn(false);
         when(this.chatbotScopePolicy.evaluate(conversation, "estado")).thenReturn(ChatbotScopeDecision.allow());
         when(this.chatbotPlatformContextService.loadContext("EL-1")).thenReturn(Optional.empty());
-        when(this.chatbotBaseReplyBuilder.contextualFallbackReply(ConversationProfileType.CLIENT, "estado"))
+        when(this.chatbotBaseReplyBuilder.contextualReply(ConversationProfileType.CLIENT, "estado"))
                 .thenReturn("Base fallback");
         when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,

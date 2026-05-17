@@ -1,4 +1,4 @@
-package es.upm.api.domain.services.conversation;
+package es.upm.api.domain.services.reply;
 
 import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ChatbotResponseMode;
@@ -125,7 +125,7 @@ public class ChatbotReplyOrchestrator {
                 .loadContext(conversation.getEngagementLetterId());
 
         if (platformContext.isEmpty()) {
-            String baseReply = this.chatbotBaseReplyBuilder.contextualFallbackReply(
+            String baseReply = this.chatbotBaseReplyBuilder.contextualReply(
                     profile,
                     userMessage
             );
@@ -215,7 +215,7 @@ public class ChatbotReplyOrchestrator {
             return List.of();
         }
 
-        return sourcesSummary;
+        return List.copyOf(sourcesSummary);
     }
 
     private ChatbotResponseMode restrictedResponseMode(Conversation conversation) {

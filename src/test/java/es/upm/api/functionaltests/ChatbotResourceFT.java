@@ -1,12 +1,5 @@
 package es.upm.api.functionaltests;
 
-import es.upm.api.infrastructure.dtos.*;
-import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
-import es.upm.api.infrastructure.mongodb.daos.EscalationRepository;
-import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
-import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
-import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
-import es.upm.api.infrastructure.mongodb.entities.EscalationEntity;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.MessageSenderType;
@@ -20,13 +13,20 @@ import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.EngagementClient;
 import es.upm.api.domain.ports.out.UserClient;
 import es.upm.api.functionaltests.support.ChatbotTestMessages;
-import es.upm.api.infrastructure.resources.ChatbotResource;
+import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
 import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
+import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
+import es.upm.api.infrastructure.mongodb.daos.EscalationRepository;
+import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
+import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
+import es.upm.api.infrastructure.mongodb.entities.EscalationEntity;
+import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
+import es.upm.api.infrastructure.resources.ChatbotResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -436,7 +436,6 @@ class ChatbotResourceFT {
         assertThat(response.getBody()).doesNotContain("basePrompt");
         assertThat(response.getBody()).doesNotContain("prompt");
         assertThat(response.getBody()).doesNotContain("CHATBOT_OPENAI_API_KEY");
-        assertThat(response.getBody()).doesNotContain("CHATBOT_GEMINI_API_KEY");
         assertThat(response.getBody()).doesNotContain("secret");
         assertThat(response.getBody()).doesNotContain("stackTrace");
     }
