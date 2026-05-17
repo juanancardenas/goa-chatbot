@@ -8,26 +8,27 @@ import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.services.classification.ChatbotQuestionClassifier;
 import org.springframework.stereotype.Service;
 
-import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 public class ChatbotBaseReplyBuilder {
 
+    // Attributes
     private final ChatbotCourtesyReplyBuilder courtesyReplyBuilder;
+    private final ChatbotGeneralReplyBuilder generalReplyBuilder;
     private final ChatbotQuestionClassifier chatbotQuestionClassifier;
     private final ChatbotDocumentContextService chatbotDocumentContextService;
 
-    /**
-     * Constructor
-     */
+    // Constructor
     public ChatbotBaseReplyBuilder(
             ChatbotCourtesyReplyBuilder courtesyReplyBuilder,
+            ChatbotGeneralReplyBuilder generalReplyBuilder,
             ChatbotQuestionClassifier chatbotQuestionClassifier,
             ChatbotDocumentContextService chatbotDocumentContextService
     ) {
         this.courtesyReplyBuilder = courtesyReplyBuilder;
+        this.generalReplyBuilder = generalReplyBuilder;
         this.chatbotQuestionClassifier = chatbotQuestionClassifier;
         this.chatbotDocumentContextService = chatbotDocumentContextService;
     }
@@ -45,26 +46,14 @@ public class ChatbotBaseReplyBuilder {
     // MANAGEMENT OF GENERAL REPLY //////////////////////////////////////
 
     public String generalStartReply(ConversationProfileType profile) {
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_START_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY;
-        };
+        return this.generalReplyBuilder.generalStartReply(profile);
     }
 
-    public String generalFaqReply(
-            ConversationProfileType profile,
-            String userMessage
-    ) {
-        PlatformQuestionType questionType = this.classifyQuestion(userMessage);
-
-        return switch (questionType) {
-            case ENGAGEMENT_STATUS -> this.buildGeneralStatusReply(profile, userMessage);
-            case LEGAL_TASKS -> this.buildGeneralLegalTasksReply(profile, userMessage);
-            case TIMELINE_EVENTS -> this.buildGeneralTimelineReply(profile, userMessage);
-            case DOCUMENTS -> this.buildGeneralDocumentsReply(profile);
-            case GENERAL_CONTEXT -> this.buildGeneralContextReply(profile);
-        };
+    public String generalFaqReply(ConversationProfileType profile, String userMessage) {
+        return this.generalReplyBuilder.generalFaqReply(profile, userMessage);
     }
+
+
 
 
     /* TERCER BLOQUE: PLATFORM CONTEXT ********************************************************************/
@@ -320,82 +309,5 @@ public class ChatbotBaseReplyBuilder {
     private PlatformQuestionType classifyQuestion(String userMessage) {
         return Optional.ofNullable(this.chatbotQuestionClassifier.classify(userMessage))
                 .orElse(PlatformQuestionType.GENERAL_CONTEXT);
-    }
-
-    private String buildGeneralStatusReply(ConversationProfileType profile, String message) {
-        if (this.asksForSpecificEngagementData(message)) {
-            return switch (profile) {
-                case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_STATUS_REPLY;
-                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_STATUS_REPLY;
-            };
-        }
-
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_STATUS_EXAMPLE_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_STATUS_EXAMPLE_REPLY;
-        };
-    }
-
-    private String buildGeneralTimelineReply(ConversationProfileType profile, String message) {
-        if (this.asksForSpecificEngagementData(message)) {
-            return switch (profile) {
-                case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_TIMELINE_REPLY;
-                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_REPLY;
-            };
-        }
-
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_TIMELINE_EXAMPLE_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_TIMELINE_EXAMPLE_REPLY;
-        };
-    }
-
-    private String buildGeneralDocumentsReply(ConversationProfileType profile) {
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_DOCUMENTS_STUB_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_DOCUMENTS_STUB_REPLY;
-        };
-    }
-
-    private String buildGeneralLegalTasksReply(ConversationProfileType profile, String message) {
-        if (this.asksForSpecificEngagementData(message)) {
-            return switch (profile) {
-                case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_LEGAL_TASKS_REPLY;
-                case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_LEGAL_TASKS_REPLY;
-            };
-        }
-
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_LEGAL_TASKS_EXAMPLE_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_LEGAL_TASKS_EXAMPLE_REPLY;
-        };
-    }
-
-    private String buildGeneralContextReply(ConversationProfileType profile) {
-        return switch (profile) {
-            case CLIENT -> ChatbotResponseMessages.CLIENT_GENERAL_CONTEXT_REPLY;
-            case PROFESSIONAL -> ChatbotResponseMessages.PROFESSIONAL_GENERAL_CONTEXT_REPLY;
-        };
-    }
-
-    private boolean asksForSpecificEngagementData(String message) {
-        if (message == null || message.isBlank()) {
-            return false;
-        }
-
-        String normalized = message.toLowerCase(Locale.ROOT);
-
-        return normalized.contains("este encargo")
-                || normalized.contains("mi encargo")
-                || normalized.contains("del encargo")
-                || normalized.contains("de un encargo")
-                || normalized.contains("este caso")
-                || normalized.contains("mi caso")
-                || normalized.contains("del caso")
-                || normalized.contains("esta hoja de encargo")
-                || normalized.contains("mi hoja de encargo")
-                || normalized.contains("del expediente")
-                || normalized.contains("mi expediente")
-                || normalized.contains("este expediente");
     }
 }
