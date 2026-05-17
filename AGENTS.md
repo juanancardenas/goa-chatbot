@@ -230,7 +230,8 @@ Nota:
 
 ## Servicios (`domain.services`)
 
-- DEBE usar `@Service` y sufijo `Service`.
+- Los componentes de dominio gestionados por Spring DEBEN usar `@Service`.
+- DEBEN usar un sufijo acorde a su responsabilidad: `Service`, `Builder`, `Policy`, `Classifier`, `Orchestrator` o equivalente ya establecido en el paquete.
 - DEBE trabajar con modelos de dominio, comandos y resultados internos; no con DTOs HTTP.
 - DEBE acceder a infraestructura exclusivamente mediante puertos de `domain.ports.out`.
 - NO DEBE importar clases de `infrastructure.*`.
@@ -378,8 +379,9 @@ domain.ports.out.ChatbotAiSettings
 
 ## Respuestas base, contexto e IA (`domain.services.reply.base`, `domain.services.reply.context` y `domain.services.reply.ai`)
 
-- `ChatbotBaseReplyBuilder` DEBE generar respuestas deterministas y seguras para inicio, FAQ general, contexto de plataforma, contexto no disponible, documentos y cortesia.
 - `ChatbotBaseReplyBuilder` DEBE actuar como fachada de respuestas base y delegar en builders especializados de `reply.base`.
+- `ChatbotBaseReplyBuilder.contextualFallbackReply(...)` DEBE delegar el fallback contextual en `ChatbotContextualFallbackReplyBuilder`.
+- Las respuestas deterministas y seguras para inicio, FAQ general, contexto de plataforma, contexto no disponible, documentos y cortesia DEBEN vivir en builders especializados de `reply.base`.
 - `ChatbotContextualFallbackReplyBuilder` DEBE generar respuestas seguras cuando una conversacion contextual no tenga contexto de plataforma disponible.
 - `ChatbotPlatformReplyBuilder` DEBE componer respuestas deterministas con contexto de plataforma y usar `ChatbotDocumentContextService` cuando la respuesta dependa de contexto documental.
 - `ChatbotAiReplyService` DEBE enriquecer la respuesta base solo cuando `chatbot.ai.enabled=true`.
@@ -506,6 +508,7 @@ Deuda tecnica conocida:
 
 Configuraciones actuales:
 - `ChatbotAiProperties`
+- `ChatbotMongoIndexInitializer`
 - `FeignConfig`
 - `LoggingFilter`
 - `OpenApiConfig`
@@ -615,6 +618,7 @@ Tests actuales destacados:
 - `ChatbotServiceTest`
 - `ChatbotAiReplyServiceTest`
 - `ChatbotAiRequestBuilderTest`
+- `ChatbotPromptBuilderTest`
 - `ChatbotBaseReplyBuilderTest`
 - `ChatbotContextualFallbackReplyBuilderTest`
 - `ChatbotCourtesyReplyBuilderTest`
