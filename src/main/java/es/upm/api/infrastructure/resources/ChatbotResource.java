@@ -52,7 +52,7 @@ public class ChatbotResource {
     public static final String ESCALATE_CONVERSATION = "/conversations/{conversationId}/escalate";
     public static final String CONFIGURATION_STATUS = "/configuration/status";
 
-    // Attributes to implement the in ports
+    // Input ports consumed by the REST adapter
     private final ReadConversationHistoryListUseCase readConversationHistoryListUseCase;
     private final StartContextualConversationUseCase startContextualConversationUseCase;
     private final StartGeneralConversationUseCase startGeneralConversationUseCase;

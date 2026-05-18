@@ -7,18 +7,19 @@ import es.upm.api.domain.model.platform.EngagementLetterSummary;
 import es.upm.api.domain.model.platform.LegalProcedureSummary;
 import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.ports.out.EngagementClient;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import lombok.extern.slf4j.Slf4j;
-
 @Slf4j
 @Service
 public class ChatbotPlatformContextService {
     private static final String DEFAULT_OWNER = "usuario del encargo";
+    private static final String ENGAGEMENT_LETTER_SOURCE = "engagement-letter";
+    private static final String ENGAGEMENT_EVENTS_SOURCE = "engagement-events";
 
     private final EngagementClient engagementClient;
 
@@ -28,20 +29,21 @@ public class ChatbotPlatformContextService {
 
     public Optional<ChatbotPlatformContext> loadContext(String engagementLetterId) {
         if (engagementLetterId == null || engagementLetterId.isBlank()) {
-            log.warn("Platform context not loaded because engagementLetterId is blank");
+            log.debug("Platform context skipped because engagementLetterId is blank");
             return Optional.empty();
         }
 
         try {
-            log.info("Loading platform context for engagementLetterId={}", engagementLetterId);
+            log.debug("Loading platform context. engagementLetterId={}", engagementLetterId);
 
             Optional<EngagementLetterSummary> engagementLetter = this.readEngagementLetterSafely(engagementLetterId);
             List<String> recentEventSummaries = this.readRecentEventSummaries(engagementLetterId);
 
-            log.info(
-                    "Engagement context response. engagementLetterId={}, found={}",
+            log.debug(
+                    "Platform context sources loaded. engagementLetterId={}, engagementFound={}, eventsCount={}",
                     engagementLetterId,
-                    engagementLetter.isPresent()
+                    engagementLetter.isPresent(),
+                    recentEventSummaries.size()
             );
 
             String ownerDisplayName = engagementLetter
@@ -62,6 +64,10 @@ public class ChatbotPlatformContextService {
             List<String> legalTaskSummaries = this.buildLegalTaskSummaries(engagementLetter);
 
             if (procedureTitles.isEmpty() && legalTaskSummaries.isEmpty() && recentEventSummaries.isEmpty() && engagementLetter.isEmpty()) {
+                log.debug(
+                        "Platform context not built because no source data was available. engagementLetterId={}",
+                        engagementLetterId
+                );
                 return Optional.empty();
             }
 
@@ -84,8 +90,9 @@ public class ChatbotPlatformContextService {
                     .forEach(sourcesSummary::add);
 
             log.info(
-                    "Platform context built. engagementLetterId={}, procedures={}, legalTasks={}, events={}, sources={}",
+                    "Platform context built. engagementLetterId={}, engagementFound={}, proceduresCount={}, legalTasksCount={}, eventsCount={}, sourcesCount={}",
                     engagementLetterId,
+                    engagementLetter.isPresent(),
                     procedureTitles.size(),
                     legalTaskSummaries.size(),
                     recentEventSummaries.size(),
@@ -102,12 +109,17 @@ public class ChatbotPlatformContextService {
                             .sourcesSummary(sourcesSummary)
                             .build()
             );
+
         } catch (RuntimeException exception) {
             log.warn(
-                    "Could not load platform context. engagementLetterId={}, error={}, message={}",
+                    "Platform context build failed. engagementLetterId={}, errorType={}",
                     engagementLetterId,
-                    exception.getClass().getSimpleName(),
-                    exception.getMessage()
+                    exception.getClass().getSimpleName()
+            );
+            log.debug(
+                    "Platform context build failure details. engagementLetterId={}",
+                    engagementLetterId,
+                    exception
             );
             return Optional.empty();
         }
@@ -116,14 +128,20 @@ public class ChatbotPlatformContextService {
     private Optional<EngagementLetterSummary> readEngagementLetterSafely(String engagementLetterId) {
         try {
             return Optional.ofNullable(this.engagementClient.readById(engagementLetterId));
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException exception) {
+            this.logPlatformSourceFailure(engagementLetterId, ENGAGEMENT_LETTER_SOURCE, exception);
+
             return Optional.empty();
         }
     }
 
     private List<String> readRecentEventSummaries(String engagementLetterId) {
         try {
-            EngagementEventPage eventsPage = this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5);
+            EngagementEventPage eventsPage = this.engagementClient.readEventsByEngagementLetterId(
+                    engagementLetterId,
+                    0,
+                    5
+            );
 
             return Optional.ofNullable(eventsPage)
                     .map(EngagementEventPage::getContent)
@@ -133,7 +151,10 @@ public class ChatbotPlatformContextService {
                     .filter(text -> text != null && !text.isBlank())
                     .limit(3)
                     .toList();
-        } catch (RuntimeException ignored) {
+
+        } catch (RuntimeException exception) {
+            this.logPlatformSourceFailure(engagementLetterId, ENGAGEMENT_EVENTS_SOURCE, exception);
+
             return List.of();
         }
     }
@@ -161,6 +182,25 @@ public class ChatbotPlatformContextService {
         }
 
         return value.trim();
+    }
+
+    private void logPlatformSourceFailure(
+            String engagementLetterId,
+            String source,
+            RuntimeException exception
+    ) {
+        log.warn(
+                "Platform context source unavailable. engagementLetterId={}, source={}, errorType={}",
+                engagementLetterId,
+                source,
+                exception.getClass().getSimpleName()
+        );
+        log.debug(
+                "Platform context source failure details. engagementLetterId={}, source={}",
+                engagementLetterId,
+                source,
+                exception
+        );
     }
 
 }
