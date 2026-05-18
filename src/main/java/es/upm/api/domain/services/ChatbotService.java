@@ -14,6 +14,7 @@ import es.upm.api.domain.model.chatbot.result.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotConversationSummaryResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
 import es.upm.api.domain.model.security.AuthenticatedUserContext;
+import es.upm.api.domain.ports.in.*;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.services.conversation.ChatbotConversationService;
 import es.upm.api.domain.services.conversation.ChatbotEscalationService;
@@ -27,7 +28,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class ChatbotService {
+public class ChatbotService implements
+        ReadConversationHistoryListUseCase,
+        ReadConversationHistoryUseCase,
+        StartContextualConversationUseCase,
+        StartGeneralConversationUseCase,
+        SendChatbotMessageUseCase,
+        CloseConversationUseCase,
+        EscalateConversationUseCase,
+        DeleteConversationUseCase,
+        ReopenConversationUseCase,
+        ReadChatbotConfigurationUseCase {
 
     // Attributes
     private final ChatbotMessageService chatbotMessageService;
