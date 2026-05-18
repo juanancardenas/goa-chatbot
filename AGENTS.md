@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode` y el refuerzo de consistencia conversacional de **2026-05-17**.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17** y la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**.
 
 ## Niveles de regla
 
@@ -27,11 +27,12 @@ El proyecto sigue una aproximacion de **arquitectura hexagonal / puertos y adapt
 
 ```text
 resources HTTP
-  -> domain.services
-      -> domain.ports.out
-          <- infrastructure.mongodb
-          <- infrastructure.ai
-          <- infrastructure.webclients
+  -> domain.ports.in
+      <- domain.services
+          -> domain.ports.out
+              <- infrastructure.mongodb
+              <- infrastructure.ai
+              <- infrastructure.webclients
 ```
 
 Regla principal:
@@ -59,7 +60,9 @@ es.upm.api/
       pagination/
       platform/
       security/
-    ports/out/
+    ports/
+      in/
+      out/
     services/
       classification/
       conversation/
@@ -95,18 +98,20 @@ Notas:
 - Los comandos/resultados internos usados para desacoplar DTOs viven actualmente en `domain.model.chatbot.command`, `domain.model.chatbot.reply` y `domain.model.chatbot.result`.
 - El contexto de usuario autenticado vive en `domain.model.security`.
 - Los modelos auxiliares de paginacion viven en `domain.model.pagination`.
+- Los puertos de entrada de casos de uso viven en `domain.ports.in`; `ChatbotResource` depende de ellos y `ChatbotService` los implementa.
 
 ## Resources HTTP (`infrastructure.resources`)
 
 - DEBE usar `@RestController` y sufijo `Resource`.
 - DEBE definir rutas base y subrutas como constantes `public static final String`.
-- DEBE delegar la logica de negocio en `domain.services`.
+- DEBE delegar la logica de negocio en puertos de entrada de `domain.ports.in`.
 - DEBE aplicar seguridad con `@PreAuthorize` y constantes de `infrastructure.resources.Security`.
 - NO DEBE usar expresiones SpEL literales directamente en `@PreAuthorize` si ya existe una constante reutilizable.
 - DEBE usar `@Valid` en cuerpos de entrada cuando aplique.
-- DEBE convertir DTOs HTTP de entrada a comandos internos antes de llamar al servicio.
+- DEBE convertir DTOs HTTP de entrada a comandos internos antes de llamar al puerto de entrada.
 - DEBE convertir resultados internos de dominio a DTOs HTTP de salida antes de devolver respuesta.
-- DEBE resolver el usuario autenticado con `AuthenticatedUserContextResolver` y pasar `AuthenticatedUserContext` al servicio de dominio.
+- DEBE resolver el usuario autenticado con `AuthenticatedUserContextResolver` y pasar `AuthenticatedUserContext` al puerto de entrada.
+- DEBE inyectar interfaces de `domain.ports.in`, no implementaciones concretas de servicios de dominio.
 - NO DEBE acceder a repositorios, clientes Feign, Spring AI ni MongoDB directamente.
 - NO DEBE contener reglas de negocio conversacional, reglas de scope, prompt engineering ni logica de persistencia.
 
@@ -123,7 +128,7 @@ public ChatbotMessageResponseDto sendMessage(
         Authentication authentication
 ) {
     return ChatbotMessageResponseDto.fromDomain(
-            this.chatbotService.sendMessage(
+            this.sendChatbotMessageUseCase.sendMessage(
                     this.authenticatedUserContextResolver.resolve(authentication),
                     requestDto.toCommand()
             )
@@ -147,8 +152,6 @@ DTOs HTTP actuales:
 - `ChatbotContextualConversationRequestDto`
 - `ChatbotContextualConversationResponseDto`
 - `ChatbotConversationHistoryResponseDto`
-- `ChatbotConversationMessageResponseDto`
-- `ChatbotConversationResponseDto`
 - `ChatbotConversationSummaryDto`
 - `ChatbotHistoryMessageDto`
 - `ChatbotMessageRequestDto`
@@ -159,6 +162,8 @@ Regla de direccion de dependencias:
 ```text
 infrastructure.dtos -> domain.model.chatbot.command/result  OK
 domain.services -> infrastructure.dtos                      PROHIBIDO
+infrastructure.resources -> domain.ports.in                 OK
+infrastructure.resources -> domain.services                  EVITAR
 ```
 
 ## Dominio (`domain`)
@@ -174,6 +179,7 @@ domain.services -> infrastructure.dtos                      PROHIBIDO
 - DEBE ubicar enumerados de negocio en `domain.enums`.
 - DEBE ubicar mensajes constantes reutilizables en `domain.common`.
 - DEBE ubicar excepciones propias en `domain.exceptions`.
+- DEBE ubicar puertos de entrada de casos de uso en `domain.ports.in`.
 - DEBE ubicar puertos de salida en `domain.ports.out`.
 - DEBE ubicar casos de uso y servicios de dominio en `domain.services`.
 
@@ -200,6 +206,18 @@ Modelos internos de resultado actuales:
 - `ChatbotConversationHistoryResult`
 - `ChatbotConversationSummaryResult`
 - `ChatbotHistoryMessageResult`
+
+Puertos de entrada actuales:
+- `CloseConversationUseCase`
+- `DeleteConversationUseCase`
+- `EscalateConversationUseCase`
+- `ReadChatbotConfigurationUseCase`
+- `ReadConversationHistoryListUseCase`
+- `ReadConversationHistoryUseCase`
+- `ReopenConversationUseCase`
+- `SendChatbotMessageUseCase`
+- `StartContextualConversationUseCase`
+- `StartGeneralConversationUseCase`
 
 Modelos auxiliares internos actuales:
 - `PageResult`
@@ -233,6 +251,7 @@ Nota:
 - Los componentes de dominio gestionados por Spring DEBEN usar `@Service`.
 - DEBEN usar un sufijo acorde a su responsabilidad: `Service`, `Builder`, `Policy`, `Classifier`, `Orchestrator` o equivalente ya establecido en el paquete.
 - DEBE trabajar con modelos de dominio, comandos y resultados internos; no con DTOs HTTP.
+- DEBE implementar puertos de entrada `domain.ports.in` cuando actue como caso de uso invocado desde resources.
 - DEBE acceder a infraestructura exclusivamente mediante puertos de `domain.ports.out`.
 - NO DEBE importar clases de `infrastructure.*`.
 - NO DEBE acceder directamente a `MongoRepository`, Feign clients concretos o `ChatClient` de Spring AI.
@@ -270,7 +289,7 @@ Servicios actuales:
 - `prompt.ChatbotPromptBuilder`
 
 Reglas de organizacion:
-- `ChatbotService` DEBE actuar como orquestador fino de caso de uso HTTP/dominio; NO DEBE concentrar reglas que ya pertenezcan a servicios especializados.
+- `ChatbotService` DEBE actuar como orquestador fino de caso de uso HTTP/dominio e implementar los puertos de entrada de `domain.ports.in`; NO DEBE concentrar reglas que ya pertenezcan a servicios especializados.
 - `reply` DEBE contener la decision y composicion de respuestas del asistente.
 - `reply.ai` DEBE contener la orquestacion de respuesta con IA: llamada al puerto `ChatbotAiClient`, activacion por propiedades y fallback seguro ante errores de IA.
 - `reply.ai.prompt` DEBE contener la preparacion de `ChatbotAiRequest`, incluyendo mensaje de usuario para IA, contexto de plataforma serializado y mensajes recientes para prompt.
@@ -282,6 +301,53 @@ Reglas de organizacion:
 - `policies` DEBE contener decisiones de permisos, alcance o restricciones funcionales.
 - `prompt` DEBE contener construccion de prompts e instrucciones para la IA.
 - Los servicios especializados PUEDEN depender entre si dentro de `domain.services` cuando la responsabilidad sea clara; DEBEN seguir dependiendo de infraestructura solo mediante puertos.
+
+## Puertos de entrada (`domain.ports.in`)
+
+- DEBE definir contratos de casos de uso invocados por adaptadores de entrada, principalmente resources HTTP.
+- DEBE permanecer libre de anotaciones Spring MVC, persistencia, Feign o detalles de infraestructura.
+- DEBE usar modelos de dominio, comandos internos, resultados internos y `AuthenticatedUserContext`; NO DEBE usar DTOs HTTP.
+- DEBE tener nombres orientados al caso de uso y sufijo `UseCase`.
+- DEBE ser implementado por servicios de dominio, actualmente `ChatbotService`.
+- NO DEBE contener logica de implementacion.
+- NO DEBE depender de `domain.ports.out`; esa dependencia pertenece a los servicios que implementan el caso de uso.
+
+Puertos actuales:
+- `CloseConversationUseCase`
+- `DeleteConversationUseCase`
+- `EscalateConversationUseCase`
+- `ReadChatbotConfigurationUseCase`
+- `ReadConversationHistoryListUseCase`
+- `ReadConversationHistoryUseCase`
+- `ReopenConversationUseCase`
+- `SendChatbotMessageUseCase`
+- `StartContextualConversationUseCase`
+- `StartGeneralConversationUseCase`
+
+Regla de direccion:
+
+```text
+infrastructure.resources.ChatbotResource
+  -> domain.ports.in.*UseCase
+      <- domain.services.ChatbotService
+```
+
+Regla recomendada:
+
+```text
+ChatbotResource -> ReadConversationHistoryListUseCase
+ChatbotResource -> StartContextualConversationUseCase
+ChatbotResource -> StartGeneralConversationUseCase
+ChatbotResource -> SendChatbotMessageUseCase
+ChatbotResource -> ReadChatbotConfigurationUseCase
+ChatbotResource -> ReadConversationHistoryUseCase
+ChatbotResource -> DeleteConversationUseCase
+ChatbotResource -> CloseConversationUseCase
+ChatbotResource -> ReopenConversationUseCase
+ChatbotResource -> EscalateConversationUseCase
+
+ChatbotService <- todos los puertos anteriores
+```
 
 ## Puertos de salida (`domain.ports.out`)
 
@@ -616,6 +682,7 @@ Reglas:
 
 Tests actuales destacados:
 - `ChatbotServiceTest`
+- `ChatbotResourceTest`
 - `ChatbotAiReplyServiceTest`
 - `ChatbotAiRequestBuilderTest`
 - `ChatbotPromptBuilderTest`
@@ -662,6 +729,7 @@ Reglas:
 ## Antipatrones prohibidos
 
 - Logica de negocio en resources.
+- Resources HTTP inyectando implementaciones concretas de `domain.services` cuando exista un puerto de entrada aplicable.
 - Servicios de dominio importando `infrastructure.*`.
 - DTOs HTTP usados como parametros o retornos de `domain.services`.
 - Acceso directo a `MongoRepository` desde servicios de dominio.
@@ -678,16 +746,16 @@ Reglas:
 ## Deuda tecnica priorizada
 
 1. Mantener `ChatbotService` como orquestador fino; si `sendMessage` sigue creciendo, extraer un caso de uso dedicado para flujo de envio.
-2. Mantener los mappers Feign localizados en infraestructura para que cambios de contratos externos no alcancen el dominio.
-3. Revisar DTOs no usados o residuales (`ChatbotConversationMessageResponseDto`, `ChatbotConversationResponseDto`) y eliminarlos si no forman parte del contrato publico.
-4. Revisar si `ChatbotPromptBuilder` y `ChatbotAiRequestBuilder` deben compartir algun helper de normalizacion si crece la preparacion del prompt.
+2. Revisar si `ChatbotPromptBuilder` y `ChatbotAiRequestBuilder` deben compartir algun helper de normalizacion para evitar duplicar reglas como `safeText` y textos de valor no disponible.
 
 ## Checklist para agentes de IA antes de modificar codigo
 
 - Identificar si el cambio pertenece a `domain`, `infrastructure` o `configurations`.
 - Verificar que ninguna clase de `domain` importe `infrastructure.*`.
 - Si se toca un endpoint, actualizar DTO, mapper y resource, no el modelo Mongo.
+- Si se toca un endpoint de chatbot, inyectar y llamar al puerto de entrada `domain.ports.in` correspondiente, no a `ChatbotService` directamente.
 - Si se toca un caso de uso, trabajar con comandos/resultados internos, no DTOs HTTP.
+- Si se crea un caso de uso HTTP nuevo, definir su `*UseCase` en `domain.ports.in`, implementarlo en un servicio de dominio y cubrir la llamada desde el resource con test.
 - Si se toca el flujo conversacional, ubicar la regla en `conversation`, `reply`, `classification` o `policies` antes de ampliar `ChatbotService`.
 - Si se toca persistencia, mapear entre entidad y dominio dentro de `infrastructure.mongodb`.
 - Si se toca IA de dominio, usar `domain.services.reply.ai`; si se toca proveedor real, mantener Spring AI dentro de `infrastructure.ai`.
