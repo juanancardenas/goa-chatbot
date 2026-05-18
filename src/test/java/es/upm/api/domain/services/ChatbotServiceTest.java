@@ -23,6 +23,16 @@ import es.upm.api.domain.model.pagination.PageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.model.security.AuthenticatedUserContext;
+import es.upm.api.domain.ports.in.CloseConversationUseCase;
+import es.upm.api.domain.ports.in.DeleteConversationUseCase;
+import es.upm.api.domain.ports.in.EscalateConversationUseCase;
+import es.upm.api.domain.ports.in.ReadChatbotConfigurationUseCase;
+import es.upm.api.domain.ports.in.ReadConversationHistoryListUseCase;
+import es.upm.api.domain.ports.in.ReadConversationHistoryUseCase;
+import es.upm.api.domain.ports.in.ReopenConversationUseCase;
+import es.upm.api.domain.ports.in.SendChatbotMessageUseCase;
+import es.upm.api.domain.ports.in.StartContextualConversationUseCase;
+import es.upm.api.domain.ports.in.StartGeneralConversationUseCase;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.ports.out.ConversationGateway;
@@ -163,6 +173,21 @@ class ChatbotServiceTest {
                 chatbotReplyOrchestrator,
                 this.chatbotAiSettings
         );
+    }
+
+    @Test
+    void chatbotServiceShouldImplementInboundUseCasePorts() {
+        assertThat(this.chatbotService)
+                .isInstanceOf(ReadConversationHistoryListUseCase.class)
+                .isInstanceOf(ReadConversationHistoryUseCase.class)
+                .isInstanceOf(StartContextualConversationUseCase.class)
+                .isInstanceOf(StartGeneralConversationUseCase.class)
+                .isInstanceOf(SendChatbotMessageUseCase.class)
+                .isInstanceOf(CloseConversationUseCase.class)
+                .isInstanceOf(EscalateConversationUseCase.class)
+                .isInstanceOf(DeleteConversationUseCase.class)
+                .isInstanceOf(ReopenConversationUseCase.class)
+                .isInstanceOf(ReadChatbotConfigurationUseCase.class);
     }
 
     @Test

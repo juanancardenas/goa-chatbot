@@ -1,6 +1,15 @@
 package es.upm.api.infrastructure.resources;
 
-import es.upm.api.domain.services.ChatbotService;
+import es.upm.api.domain.ports.in.CloseConversationUseCase;
+import es.upm.api.domain.ports.in.DeleteConversationUseCase;
+import es.upm.api.domain.ports.in.EscalateConversationUseCase;
+import es.upm.api.domain.ports.in.ReadChatbotConfigurationUseCase;
+import es.upm.api.domain.ports.in.ReadConversationHistoryListUseCase;
+import es.upm.api.domain.ports.in.ReadConversationHistoryUseCase;
+import es.upm.api.domain.ports.in.ReopenConversationUseCase;
+import es.upm.api.domain.ports.in.SendChatbotMessageUseCase;
+import es.upm.api.domain.ports.in.StartContextualConversationUseCase;
+import es.upm.api.domain.ports.in.StartGeneralConversationUseCase;
 import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
 import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
@@ -29,6 +38,8 @@ import java.util.List;
 @RestController
 @RequestMapping(ChatbotResource.CHATBOT)
 public class ChatbotResource {
+
+    // Constants defining the endpoints
     public static final String CHATBOT = "/chatbot";
     public static final String CONVERSATIONS = "/conversations";
     public static final String MESSAGES = "/messages";
@@ -41,15 +52,45 @@ public class ChatbotResource {
     public static final String ESCALATE_CONVERSATION = "/conversations/{conversationId}/escalate";
     public static final String CONFIGURATION_STATUS = "/configuration/status";
 
-    private final ChatbotService chatbotService;
+    // Attributes to implement the in ports
+    private final ReadConversationHistoryListUseCase readConversationHistoryListUseCase;
+    private final StartContextualConversationUseCase startContextualConversationUseCase;
+    private final StartGeneralConversationUseCase startGeneralConversationUseCase;
+    private final SendChatbotMessageUseCase sendChatbotMessageUseCase;
+    private final ReadChatbotConfigurationUseCase readChatbotConfigurationUseCase;
+    private final ReadConversationHistoryUseCase readConversationHistoryUseCase;
+    private final DeleteConversationUseCase deleteConversationUseCase;
+    private final CloseConversationUseCase closeConversationUseCase;
+    private final ReopenConversationUseCase reopenConversationUseCase;
+    private final EscalateConversationUseCase escalateConversationUseCase;
+
+    // Attribute for authentication
     private final AuthenticatedUserContextResolver authenticatedUserContextResolver;
 
     @Autowired
     public ChatbotResource(
-            ChatbotService chatbotService,
+            ReadConversationHistoryListUseCase readConversationHistoryListUseCase,
+            StartContextualConversationUseCase startContextualConversationUseCase,
+            StartGeneralConversationUseCase startGeneralConversationUseCase,
+            SendChatbotMessageUseCase sendChatbotMessageUseCase,
+            ReadChatbotConfigurationUseCase readChatbotConfigurationUseCase,
+            ReadConversationHistoryUseCase readConversationHistoryUseCase,
+            DeleteConversationUseCase deleteConversationUseCase,
+            CloseConversationUseCase closeConversationUseCase,
+            ReopenConversationUseCase reopenConversationUseCase,
+            EscalateConversationUseCase escalateConversationUseCase,
             AuthenticatedUserContextResolver authenticatedUserContextResolver
     ) {
-        this.chatbotService = chatbotService;
+        this.readConversationHistoryListUseCase = readConversationHistoryListUseCase;
+        this.startContextualConversationUseCase = startContextualConversationUseCase;
+        this.startGeneralConversationUseCase = startGeneralConversationUseCase;
+        this.sendChatbotMessageUseCase = sendChatbotMessageUseCase;
+        this.readChatbotConfigurationUseCase = readChatbotConfigurationUseCase;
+        this.readConversationHistoryUseCase = readConversationHistoryUseCase;
+        this.deleteConversationUseCase = deleteConversationUseCase;
+        this.closeConversationUseCase = closeConversationUseCase;
+        this.reopenConversationUseCase = reopenConversationUseCase;
+        this.escalateConversationUseCase = escalateConversationUseCase;
         this.authenticatedUserContextResolver = authenticatedUserContextResolver;
     }
 
@@ -60,7 +101,7 @@ public class ChatbotResource {
             @RequestParam(required = false) String engagementLetterId,
             Authentication authentication
     ) {
-        return this.chatbotService.readConversationHistoryList(
+        return this.readConversationHistoryListUseCase.readConversationHistoryList(
                         this.authenticatedUserContextResolver.resolve(authentication),
                         type,
                         engagementLetterId
@@ -77,7 +118,7 @@ public class ChatbotResource {
             Authentication authentication
     ) {
         return ChatbotContextualConversationResponseDto.fromDomain(
-                this.chatbotService.startContextualConversation(
+                this.startContextualConversationUseCase.startContextualConversation(
                         this.authenticatedUserContextResolver.resolve(authentication),
                         requestDto.toCommand()
                 )
@@ -91,7 +132,7 @@ public class ChatbotResource {
             Authentication authentication
     ) {
         return ChatbotMessageResponseDto.fromDomain(
-                this.chatbotService.startGeneralConversation(
+                this.startGeneralConversationUseCase.startGeneralConversation(
                         this.authenticatedUserContextResolver.resolve(authentication),
                         requestDto.toCommand()
                 )
@@ -105,7 +146,7 @@ public class ChatbotResource {
             Authentication authentication
     ) {
         return ChatbotMessageResponseDto.fromDomain(
-                this.chatbotService.sendMessage(
+                this.sendChatbotMessageUseCase.sendMessage(
                         this.authenticatedUserContextResolver.resolve(authentication),
                         requestDto.toCommand()
                 )
@@ -115,7 +156,7 @@ public class ChatbotResource {
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
     @GetMapping(CONFIGURATION_STATUS)
     public ChatbotConfigurationStatusDto readConfigurationStatus() {
-        return ChatbotConfigurationStatusDto.fromDomain(this.chatbotService.readConfigurationStatus());
+        return ChatbotConfigurationStatusDto.fromDomain(this.readChatbotConfigurationUseCase.readConfigurationStatus());
     }
 
     @PreAuthorize(Security.ADMIN_MANAGER_OPERATOR_CUSTOMER)
@@ -127,7 +168,7 @@ public class ChatbotResource {
             Authentication authentication
     ) {
         return ChatbotConversationHistoryResponseDto.fromDomain(
-                this.chatbotService.readConversationHistory(
+                this.readConversationHistoryUseCase.readConversationHistory(
                         this.authenticatedUserContextResolver.resolve(authentication),
                         conversationId,
                         page,
@@ -142,7 +183,7 @@ public class ChatbotResource {
             @PathVariable String conversationId,
             Authentication authentication
     ) {
-        this.chatbotService.deleteConversation(
+        this.deleteConversationUseCase.deleteConversation(
                 this.authenticatedUserContextResolver.resolve(authentication),
                 conversationId
         );
@@ -156,7 +197,7 @@ public class ChatbotResource {
             @PathVariable String conversationId,
             Authentication authentication
     ) {
-        this.chatbotService.closeConversation(
+        this.closeConversationUseCase.closeConversation(
                 this.authenticatedUserContextResolver.resolve(authentication),
                 conversationId
         );
@@ -170,7 +211,7 @@ public class ChatbotResource {
             @PathVariable String conversationId,
             Authentication authentication
     ) {
-        this.chatbotService.reopenConversation(
+        this.reopenConversationUseCase.reopenConversation(
                 this.authenticatedUserContextResolver.resolve(authentication),
                 conversationId
         );
@@ -184,7 +225,7 @@ public class ChatbotResource {
             @PathVariable String conversationId,
             Authentication authentication
     ) {
-        this.chatbotService.escalateConversation(
+        this.escalateConversationUseCase.escalateConversation(
                 this.authenticatedUserContextResolver.resolve(authentication),
                 conversationId
         );

@@ -14,6 +14,16 @@ import es.upm.api.domain.model.chatbot.result.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotConversationSummaryResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
 import es.upm.api.domain.model.security.AuthenticatedUserContext;
+import es.upm.api.domain.ports.in.CloseConversationUseCase;
+import es.upm.api.domain.ports.in.DeleteConversationUseCase;
+import es.upm.api.domain.ports.in.EscalateConversationUseCase;
+import es.upm.api.domain.ports.in.ReadChatbotConfigurationUseCase;
+import es.upm.api.domain.ports.in.ReadConversationHistoryListUseCase;
+import es.upm.api.domain.ports.in.ReadConversationHistoryUseCase;
+import es.upm.api.domain.ports.in.ReopenConversationUseCase;
+import es.upm.api.domain.ports.in.SendChatbotMessageUseCase;
+import es.upm.api.domain.ports.in.StartContextualConversationUseCase;
+import es.upm.api.domain.ports.in.StartGeneralConversationUseCase;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.services.conversation.ChatbotConversationService;
 import es.upm.api.domain.services.conversation.ChatbotEscalationService;
@@ -27,7 +37,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class ChatbotService {
+public class ChatbotService implements
+        ReadConversationHistoryListUseCase,
+        ReadConversationHistoryUseCase,
+        StartContextualConversationUseCase,
+        StartGeneralConversationUseCase,
+        SendChatbotMessageUseCase,
+        CloseConversationUseCase,
+        EscalateConversationUseCase,
+        DeleteConversationUseCase,
+        ReopenConversationUseCase,
+        ReadChatbotConfigurationUseCase {
 
     // Attributes
     private final ChatbotMessageService chatbotMessageService;
@@ -59,6 +79,7 @@ public class ChatbotService {
     /**
      * Reading Conversation History List to display historic of conversations
      */
+    @Override
     public List<ChatbotConversationSummaryResult> readConversationHistoryList(
             AuthenticatedUserContext authenticatedUser,
             String type,
@@ -74,6 +95,7 @@ public class ChatbotService {
     /**
      * Reading the messages of a conversation
      */
+    @Override
     public ChatbotConversationHistoryResult readConversationHistory(
             AuthenticatedUserContext authenticatedUser,
             String conversationId,
@@ -91,6 +113,7 @@ public class ChatbotService {
     /**
      * Starts Contextual Conversation, this type of conversation is receiving an EngagementLetter ID
      */
+    @Override
     public ChatbotContextualConversationResult startContextualConversation(
             AuthenticatedUserContext authenticatedUser,
             ChatbotContextualConversationCommand command
@@ -111,6 +134,7 @@ public class ChatbotService {
     /**
      * Starts General Conversation, this type of conversation is not linked to other process or entity
      */
+    @Override
     public ChatbotMessageResult startGeneralConversation(
             AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
@@ -170,6 +194,7 @@ public class ChatbotService {
      * Send Message
      * Method called each time that user clicks on Sent button in the front-end
      */
+    @Override
     public ChatbotMessageResult sendMessage(
             AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
@@ -257,6 +282,7 @@ public class ChatbotService {
      * It will be triggered once the user leaves the chatbot or selects a
      * different conversation to reopen (previous would be closed)
      */
+    @Override
     public void closeConversation(
             AuthenticatedUserContext authenticatedUser,
             String conversationId
@@ -272,6 +298,7 @@ public class ChatbotService {
      * It will be triggered once the user selects this option, creating a new
      * entry in the table escalations and locking the conversation
      */
+    @Override
     public void escalateConversation(
             AuthenticatedUserContext authenticatedUser,
             String conversationId
@@ -286,6 +313,7 @@ public class ChatbotService {
      * Delete a conversation
      * It will be triggered from list of conversations, if user runs delete action
      */
+    @Override
     public void deleteConversation(
             AuthenticatedUserContext authenticatedUser,
             String conversationId
@@ -300,6 +328,7 @@ public class ChatbotService {
      * Reopen a conversation
      * It will be triggered from list of conversations, once user selects one
      */
+    @Override
     public void reopenConversation(
             AuthenticatedUserContext authenticatedUser,
             String conversationId
@@ -313,6 +342,7 @@ public class ChatbotService {
     /**
      * Reads the AI configuration set in the model
      */
+    @Override
     public ChatbotConfigurationResult readConfigurationStatus() {
         return ChatbotConfigurationResult.builder()
                 .enabled(this.chatbotAiSettings.isEnabled())
