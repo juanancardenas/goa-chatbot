@@ -6,6 +6,8 @@ import es.upm.api.domain.model.Message;
 import es.upm.api.domain.model.chatbot.result.ChatbotHistoryMessageResult;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -17,6 +19,7 @@ public class ChatbotMessageService {
 
     private final MessageGateway messageGateway;
     private final ConversationGateway conversationGateway;
+    private static final Logger log = LoggerFactory.getLogger(ChatbotMessageService.class);
 
     public ChatbotMessageService(
             MessageGateway messageGateway,
@@ -78,7 +81,15 @@ public class ChatbotMessageService {
                     .skip(Math.max(0, messages.size() - maxMessages))
                     .map(this::toPromptHistoryLine)
                     .toList();
-        } catch (RuntimeException ignored) {
+
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Could not read recent messages for AI prompt. conversationId={}, limit={}, reason={}",
+                    conversationId,
+                    maxMessages,
+                    exception.getMessage()
+            );
+
             return List.of();
         }
     }

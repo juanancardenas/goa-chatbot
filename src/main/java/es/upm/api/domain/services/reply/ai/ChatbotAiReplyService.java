@@ -8,6 +8,8 @@ import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
 import es.upm.api.domain.services.reply.ai.prompt.ChatbotAiRequestBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -18,6 +20,7 @@ public class ChatbotAiReplyService {
     private final ChatbotAiClient chatbotAiClient;
     private final ChatbotAiSettings chatbotAiSettings;
     private final ChatbotAiRequestBuilder chatbotAiRequestBuilder;
+    private static final Logger log = LoggerFactory.getLogger(ChatbotAiReplyService.class);
 
     public ChatbotAiReplyService(
             ChatbotAiClient chatbotAiClient,
@@ -51,17 +54,44 @@ public class ChatbotAiReplyService {
 
             ChatbotAiResponse aiResponse = this.chatbotAiClient.generate(aiRequest);
 
-            if (aiResponse == null || aiResponse.getError() != null) {
+            if (aiResponse == null) {
+                log.warn(
+                        "AI reply generation returned null response. conversationId={}",
+                        conversation.getId()
+                );
+
+                return baseReply;
+            }
+
+            if (aiResponse.getError() != null) {
+                log.warn(
+                        "AI reply generation returned error. conversationId={}, error={}",
+                        conversation.getId(),
+                        aiResponse.getError()
+                );
+
                 return baseReply;
             }
 
             if (aiResponse.getContent() == null || aiResponse.getContent().isBlank()) {
+                log.warn(
+                        "AI reply generation returned blank content. conversationId={}",
+                        conversation.getId()
+                );
+
                 return baseReply;
             }
 
             return aiResponse.getContent().trim();
 
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "AI reply generation failed. conversationId={}, aiEnabled={}, reason={}",
+                    conversation.getId(),
+                    this.chatbotAiSettings.isEnabled(),
+                    exception.getMessage()
+            );
+
             return baseReply;
         }
     }
