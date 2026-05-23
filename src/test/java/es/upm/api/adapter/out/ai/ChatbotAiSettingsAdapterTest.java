@@ -1,4 +1,4 @@
-package es.upm.api.infrastructure.ai;
+package es.upm.api.adapter.out.ai;
 
 import es.upm.api.configurations.ChatbotAiProperties;
 import org.junit.jupiter.api.Test;
