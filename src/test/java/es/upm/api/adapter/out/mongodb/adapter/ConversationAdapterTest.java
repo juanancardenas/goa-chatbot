@@ -1,0 +1,240 @@
+package es.upm.api.adapter.out.mongodb.adapter;
+
+import es.upm.api.domain.enums.ConversationType;
+
+import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.domain.exceptions.BadRequestException;
+import es.upm.api.domain.exceptions.NotFoundException;
+import es.upm.api.domain.model.Conversation;
+import es.upm.api.adapter.out.mongodb.repository.ConversationRepository;
+import es.upm.api.adapter.out.mongodb.repository.MessageRepository;
+import es.upm.api.adapter.out.mongodb.entity.ConversationEntity;
+import es.upm.api.adapter.out.mongodb.entity.MessageEntity;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class ConversationAdapterTest {
+
+    @Mock
+    private ConversationRepository conversationRepository;
+
+    @Mock
+    private MessageRepository messageRepository;
+
+    @Mock
+    private MongoTemplate mongoTemplate;
+
+    @InjectMocks
+    private ConversationAdapter conversationAdapter;
+
+    @Test
+    void readByIdShouldReturnConversation() {
+        ConversationEntity entity = conversationEntity("conversation-1", "user-1", "EL-1", "CONTEXTUAL");
+        when(conversationRepository.findById("conversation-1")).thenReturn(Optional.of(entity));
+
+        Conversation result = conversationAdapter.readById("conversation-1");
+
+        assertThat(result.getId()).isEqualTo("conversation-1");
+        assertThat(result.getUserId()).isEqualTo("user-1");
+        assertThat(result.getEngagementLetterId()).isEqualTo("EL-1");
+        assertThat(result.getType()).isEqualTo(ConversationType.CONTEXTUAL);
+    }
+
+    @Test
+    void readByIdShouldThrowWhenConversationDoesNotExist() {
+        when(conversationRepository.findById("missing-id")).thenReturn(Optional.empty());
+
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> conversationAdapter.readById("missing-id")
+        );
+
+        assertThat(exception.getMessage()).contains("conversacion existente");
+    }
+
+    @Test
+    void findMethodsShouldMapEntitiesToDomain() {
+        ConversationEntity older = conversationEntity("conversation-1", "user-1", null, "GENERAL");
+        ConversationEntity latest = conversationEntity("conversation-2", "user-1", "EL-2", "CONTEXTUAL");
+
+        when(conversationRepository.findByUserIdOrderByCreatedAtDesc("user-1"))
+                .thenReturn(List.of(latest, older));
+        when(conversationRepository.findByUserIdAndEngagementLetterIdAndType("user-1", "EL-2", "CONTEXTUAL"))
+                .thenReturn(Optional.of(latest));
+        when(conversationRepository.findByUserIdAndEngagementLetterIdAndTypeAndStatus(
+                "user-1", "EL-2", "CONTEXTUAL", ConversationStatus.ACTIVE))
+                .thenReturn(Optional.of(latest));
+        when(conversationRepository.findByUserIdAndTypeOrderByCreatedAtDesc("user-1", ConversationType.GENERAL.name()))
+                .thenReturn(List.of(older));
+        when(conversationRepository.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+                "user-1", "EL-2", "CONTEXTUAL"))
+                .thenReturn(List.of(latest));
+
+        List<Conversation> byUser = conversationAdapter.findByUserId("user-1");
+        Optional<Conversation> contextual = conversationAdapter
+                .findContextualConversation("user-1", "EL-2", ConversationType.CONTEXTUAL);
+        Optional<Conversation> activeContextual = conversationAdapter
+                .findActiveContextualConversation("user-1", "EL-2", ConversationType.CONTEXTUAL);
+        List<Conversation> byType = conversationAdapter
+                .findByUserIdAndTypeOrderByCreatedAtDesc("user-1", ConversationType.GENERAL);
+        List<Conversation> byEngagement = conversationAdapter
+                .findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc("user-1", "EL-2", ConversationType.CONTEXTUAL);
+
+        assertThat(byUser).hasSize(2);
+        assertThat(contextual).isPresent();
+        assertThat(activeContextual).isPresent();
+        assertThat(byType).hasSize(1);
+        assertThat(byEngagement).hasSize(1);
+        assertThat(byUser.get(0).getId()).isEqualTo("conversation-2");
+    }
+
+    @Test
+    void createAndUpdateShouldSaveMappedEntity() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-10")
+                .userId("user-10")
+                .engagementLetterId("EL-10")
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.CONTEXTUAL)
+                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .build();
+
+        conversationAdapter.create(conversation);
+        conversationAdapter.update(conversation);
+
+        ArgumentCaptor<ConversationEntity> captor = ArgumentCaptor.forClass(ConversationEntity.class);
+        verify(conversationRepository, times(2)).save(captor.capture());
+        List<ConversationEntity> saved = captor.getAllValues();
+
+        assertThat(saved).hasSize(2);
+        assertThat(saved.get(0).getId()).isEqualTo("conversation-10");
+        assertThat(saved.get(0).getUserId()).isEqualTo("user-10");
+        assertThat(saved.get(0).getType()).isEqualTo("CONTEXTUAL");
+    }
+
+    @Test
+    void deleteShouldDelegateToRepository() {
+        conversationAdapter.delete("conversation-11");
+
+        verify(conversationRepository).deleteById("conversation-11");
+    }
+
+    @Test
+    void reserveSequenceNumbersShouldIncrementConversationCounterAtomically() {
+        ConversationEntity updated = conversationEntity("conversation-12", "user-12", null, "GENERAL");
+        updated.setLastSequenceNumber(12);
+        when(this.messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("conversation-12"))
+                .thenReturn(Optional.empty());
+        when(this.mongoTemplate.findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        )).thenReturn(updated);
+
+        Integer firstReservedSequence = this.conversationAdapter.reserveSequenceNumbers("conversation-12", 2);
+
+        assertThat(firstReservedSequence).isEqualTo(11);
+        verify(this.mongoTemplate).findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        );
+        verify(this.mongoTemplate, never()).updateFirst(any(Query.class), any(Update.class), eq(ConversationEntity.class));
+    }
+
+    @Test
+    void reserveSequenceNumbersShouldInitializeCounterFromExistingMessagesBeforeIncrement() {
+        ConversationEntity updated = conversationEntity("conversation-13", "user-13", null, "GENERAL");
+        updated.setLastSequenceNumber(7);
+        when(this.messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("conversation-13"))
+                .thenReturn(Optional.of(MessageEntity.builder().sequenceNumber(5).build()));
+        when(this.mongoTemplate.findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        )).thenReturn(updated);
+
+        Integer firstReservedSequence = this.conversationAdapter.reserveSequenceNumbers("conversation-13", 2);
+
+        assertThat(firstReservedSequence).isEqualTo(6);
+        verify(this.mongoTemplate).updateFirst(any(Query.class), any(Update.class), eq(ConversationEntity.class));
+    }
+
+    @Test
+    void reserveSequenceNumbersShouldThrowWhenConversationDoesNotExist() {
+        when(this.messageRepository.findFirstByConversationIdOrderBySequenceNumberDesc("missing-conversation"))
+                .thenReturn(Optional.empty());
+        when(this.mongoTemplate.findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        )).thenReturn(null);
+
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> this.conversationAdapter.reserveSequenceNumbers("missing-conversation", 2)
+        );
+
+        assertThat(exception.getMessage()).contains("conversacion existente");
+    }
+
+    @Test
+    void reserveSequenceNumbersShouldRejectZeroOrNegativeQuantity() {
+        BadRequestException zeroException = assertThrows(
+                BadRequestException.class,
+                () -> this.conversationAdapter.reserveSequenceNumbers("conversation-14", 0)
+        );
+        BadRequestException negativeException = assertThrows(
+                BadRequestException.class,
+                () -> this.conversationAdapter.reserveSequenceNumbers("conversation-14", -1)
+        );
+
+        assertThat(zeroException.getMessage()).contains("quantity debe ser mayor que cero");
+        assertThat(negativeException.getMessage()).contains("quantity debe ser mayor que cero");
+        verify(this.messageRepository, never()).findFirstByConversationIdOrderBySequenceNumberDesc(any());
+        verify(this.mongoTemplate, never()).findAndModify(
+                any(Query.class),
+                any(Update.class),
+                any(FindAndModifyOptions.class),
+                eq(ConversationEntity.class)
+        );
+    }
+
+    private ConversationEntity conversationEntity(String id, String userId, String engagementLetterId, String type) {
+        return new ConversationEntity(
+                id,
+                userId,
+                engagementLetterId,
+                ConversationStatus.ACTIVE,
+                type,
+                LocalDateTime.of(2026, 4, 30, 10, 0),
+                0
+        );
+    }
+}

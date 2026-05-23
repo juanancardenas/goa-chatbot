@@ -1,12 +1,12 @@
 package es.upm.api.integrationtests;
 
-import es.upm.api.infrastructure.mongodb.daos.ConversationRepository;
-import es.upm.api.infrastructure.mongodb.daos.EscalationRepository;
-import es.upm.api.infrastructure.mongodb.daos.MessageRepository;
-import es.upm.api.infrastructure.mongodb.entities.ConversationEntity;
+import es.upm.api.adapter.out.mongodb.repository.ConversationRepository;
+import es.upm.api.adapter.out.mongodb.repository.EscalationRepository;
+import es.upm.api.adapter.out.mongodb.repository.MessageRepository;
+import es.upm.api.adapter.out.mongodb.entity.ConversationEntity;
 import es.upm.api.domain.enums.ConversationStatus;
-import es.upm.api.infrastructure.mongodb.entities.EscalationEntity;
-import es.upm.api.infrastructure.mongodb.entities.MessageEntity;
+import es.upm.api.adapter.out.mongodb.entity.EscalationEntity;
+import es.upm.api.adapter.out.mongodb.entity.MessageEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
