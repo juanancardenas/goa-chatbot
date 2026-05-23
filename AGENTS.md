@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17** y la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18** y el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`.
 
 ## Niveles de regla
 
@@ -30,23 +30,40 @@ resources HTTP
   -> domain.ports.in
       <- domain.services
           -> domain.ports.out
-              <- infrastructure.mongodb
-              <- infrastructure.ai
-              <- infrastructure.webclients
+              <- adapter.out.mongodb
+              <- adapter.out.ai
+              <- adapter.out.webclient
 ```
 
 Regla principal:
 
 ```text
-domain NO DEBE depender de infrastructure.
-infrastructure PUEDE depender de domain.
+domain NO DEBE depender de adapter.
+adapter PUEDE depender de domain.
 ```
 
 ## Estructura real del microservicio
 
 ```text
 es.upm.api/
-  configurations/
+  configuration/
+  adapter/
+    in/
+      rest/
+        dto/
+        error/
+        security/
+    out/
+      ai/
+      mongodb/
+        adapter/
+        entity/
+        repository/
+      webclient/
+        engagement/
+          dto/
+        user/
+          dto/
   domain/
     common/
     enums/
@@ -73,39 +90,25 @@ es.upm.api/
           prompt/
         base/
         context/
-  infrastructure/
-    ai/
-    dtos/
-    mongodb/
-      daos/
-      entities/
-      persistence/
-    resources/
-      httperrors/
-    security/
-    webclients/
-      engagement/
-        dto/
-      user/
-        dto/
 ```
 
 Notas:
 - `domain` contiene modelo, reglas, casos de uso y puertos.
-- `infrastructure` contiene adaptadores HTTP, MongoDB, IA, Feign y DTOs de entrada/salida.
-- Los DTOs HTTP estan actualmente en `infrastructure.dtos`.
-- La resolucion del usuario autenticado vive en `infrastructure.security` y entrega `AuthenticatedUserContext` al dominio.
+- `adapter` contiene adaptadores de entrada y salida: REST, MongoDB, IA, Feign y DTOs de entrada/salida.
+- `configuration` contiene configuracion tecnica de Spring, seguridad, Feign, OpenAPI, propiedades e inicializacion de indices.
+- Los DTOs HTTP estan actualmente en `adapter.in.rest.dto`.
+- La resolucion del usuario autenticado vive en `adapter.in.rest.security` y entrega `AuthenticatedUserContext` al dominio.
 - Los comandos/resultados internos usados para desacoplar DTOs viven actualmente en `domain.model.chatbot.command`, `domain.model.chatbot.reply` y `domain.model.chatbot.result`.
 - El contexto de usuario autenticado vive en `domain.model.security`.
 - Los modelos auxiliares de paginacion viven en `domain.model.pagination`.
 - Los puertos de entrada de casos de uso viven en `domain.ports.in`; `ChatbotResource` depende de ellos y `ChatbotService` los implementa.
 
-## Resources HTTP (`infrastructure.resources`)
+## Resources HTTP (`adapter.in.rest`)
 
 - DEBE usar `@RestController` y sufijo `Resource`.
 - DEBE definir rutas base y subrutas como constantes `public static final String`.
 - DEBE delegar la logica de negocio en puertos de entrada de `domain.ports.in`.
-- DEBE aplicar seguridad con `@PreAuthorize` y constantes de `infrastructure.resources.Security`.
+- DEBE aplicar seguridad con `@PreAuthorize` y constantes de `adapter.in.rest.Security`.
 - NO DEBE usar expresiones SpEL literales directamente en `@PreAuthorize` si ya existe una constante reutilizable.
 - DEBE usar `@Valid` en cuerpos de entrada cuando aplique.
 - DEBE convertir DTOs HTTP de entrada a comandos internos antes de llamar al puerto de entrada.
@@ -136,9 +139,9 @@ public ChatbotMessageResponseDto sendMessage(
 }
 ```
 
-## DTOs y contratos HTTP (`infrastructure.dtos`)
+## DTOs y contratos HTTP (`adapter.in.rest.dto`)
 
-- DEBE ubicar los contratos HTTP en `infrastructure.dtos`.
+- DEBE ubicar los contratos HTTP en `adapter.in.rest.dto`.
 - DEBE mantener DTOs separados de modelos de dominio cuando representen entrada/salida HTTP.
 - DEBE convertir entrada HTTP a comandos internos mediante metodos `toCommand()` cuando exista caso de uso asociado.
 - DEBE convertir modelos internos a DTOs mediante metodos `fromDomain(...)`.
@@ -160,10 +163,10 @@ DTOs HTTP actuales:
 Regla de direccion de dependencias:
 
 ```text
-infrastructure.dtos -> domain.model.chatbot.command/result  OK
-domain.services -> infrastructure.dtos                      PROHIBIDO
-infrastructure.resources -> domain.ports.in                 OK
-infrastructure.resources -> domain.services                  EVITAR
+adapter.in.rest.dto -> domain.model.chatbot.command/result  OK
+domain.services -> adapter.in.rest.dto                      PROHIBIDO
+adapter.in.rest -> domain.ports.in                          OK
+adapter.in.rest -> domain.services                          EVITAR
 ```
 
 ## Dominio (`domain`)
@@ -252,8 +255,8 @@ Nota:
 - DEBEN usar un sufijo acorde a su responsabilidad: `Service`, `Builder`, `Policy`, `Classifier`, `Orchestrator` o equivalente ya establecido en el paquete.
 - DEBE trabajar con modelos de dominio, comandos y resultados internos; no con DTOs HTTP.
 - DEBE implementar puertos de entrada `domain.ports.in` cuando actue como caso de uso invocado desde resources.
-- DEBE acceder a infraestructura exclusivamente mediante puertos de `domain.ports.out`.
-- NO DEBE importar clases de `infrastructure.*`.
+- DEBE acceder a adaptadores externos exclusivamente mediante puertos de `domain.ports.out`.
+- NO DEBE importar clases de `adapter.*`.
 - NO DEBE acceder directamente a `MongoRepository`, Feign clients concretos o `ChatClient` de Spring AI.
 - DEBE encapsular reglas conversacionales en metodos privados cuando no sean triviales.
 - DEBE validar ownership de conversaciones antes de leer, modificar, borrar, cerrar, reabrir o escalar.
@@ -300,12 +303,12 @@ Reglas de organizacion:
 - `reply.ChatbotReplyOrchestrator` DEBE decidir la respuesta asistente para un mensaje ya validado: cortesia, restricciones de scope, cambio de encargo, contexto de plataforma, fallback contextual y respuesta general. NO DEBE persistir mensajes ni modificar conversaciones.
 - `policies` DEBE contener decisiones de permisos, alcance o restricciones funcionales.
 - `prompt` DEBE contener construccion de prompts e instrucciones para la IA.
-- Los servicios especializados PUEDEN depender entre si dentro de `domain.services` cuando la responsabilidad sea clara; DEBEN seguir dependiendo de infraestructura solo mediante puertos.
+- Los servicios especializados PUEDEN depender entre si dentro de `domain.services` cuando la responsabilidad sea clara; DEBEN seguir dependiendo de adaptadores solo mediante puertos.
 
 ## Puertos de entrada (`domain.ports.in`)
 
 - DEBE definir contratos de casos de uso invocados por adaptadores de entrada, principalmente resources HTTP.
-- DEBE permanecer libre de anotaciones Spring MVC, persistencia, Feign o detalles de infraestructura.
+- DEBE permanecer libre de anotaciones Spring MVC, persistencia, Feign o detalles de adaptador.
 - DEBE usar modelos de dominio, comandos internos, resultados internos y `AuthenticatedUserContext`; NO DEBE usar DTOs HTTP.
 - DEBE tener nombres orientados al caso de uso y sufijo `UseCase`.
 - DEBE ser implementado por servicios de dominio, actualmente `ChatbotService`.
@@ -327,7 +330,7 @@ Puertos actuales:
 Regla de direccion:
 
 ```text
-infrastructure.resources.ChatbotResource
+adapter.in.rest.ChatbotResource
   -> domain.ports.in.*UseCase
       <- domain.services.ChatbotService
 ```
@@ -351,7 +354,7 @@ ChatbotService <- todos los puertos anteriores
 
 ## Puertos de salida (`domain.ports.out`)
 
-- DEBE definir contratos que el dominio necesita para salir a infraestructura.
+- DEBE definir contratos que el dominio necesita para salir a adaptadores externos.
 - DEBE permanecer libre de anotaciones de persistencia, Feign, HTTP o Spring MVC.
 - DEBERIA evitar tipos especificos de frameworks en firmas de puertos.
 - NO DEBE contener logica de implementacion.
@@ -406,14 +409,14 @@ prompt.ChatbotPromptBuilder -> ChatbotAiSettings
 Deuda tecnica conocida:
 - Mantener `ChatbotService` como orquestador fino; la decision de respuesta de `sendMessage` debe permanecer en `reply.ChatbotReplyOrchestrator`.
 
-## Adaptador IA (`infrastructure.ai`)
+## Adaptador IA (`adapter.out.ai`)
 
-- DEBE ubicar integraciones reales con Spring AI, OpenAI, Ollama, Gemini u otros proveedores en `infrastructure.ai`.
+- DEBE ubicar integraciones reales con Spring AI, OpenAI, Ollama, Gemini u otros proveedores en `adapter.out.ai`.
 - DEBE implementar el puerto `ChatbotAiClient`.
 - `ChatbotAiSettingsAdapter` DEBE implementar el puerto `ChatbotAiSettings`.
 - DEBE usar modelos internos `ChatbotAiRequest` y `ChatbotAiResponse`.
 - DEBE aislar errores del proveedor y devolver una respuesta segura si la IA no esta disponible.
-- DEBE usar `ChatbotAiProperties` solo en infraestructura para configuracion de proveedor, modelo, limites y activacion.
+- DEBE usar `ChatbotAiProperties` solo en `configuration` y adaptadores de salida para configuracion de proveedor, modelo, limites y activacion.
 - `domain.services` DEBE depender de `ChatbotAiSettings`, no de `ChatbotAiProperties`.
 - DEBE recibir `ChatbotAiRequest` ya preparado desde `domain.services.reply.ai.ChatbotAiReplyService` y construir el system prompt mediante `domain.services.prompt.ChatbotPromptBuilder`.
 - NO DEBE filtrar excepciones tecnicas del proveedor hacia los resources.
@@ -427,11 +430,11 @@ Regla de direccion:
 
 ```text
 domain.ports.out.ChatbotAiClient
-  <- infrastructure.ai.SpringAiChatbotClient
+  <- adapter.out.ai.SpringAiChatbotClient
 
 domain.ports.out.ChatbotAiSettings
-  <- infrastructure.ai.ChatbotAiSettingsAdapter
-      -> configurations.ChatbotAiProperties
+  <- adapter.out.ai.ChatbotAiSettingsAdapter
+      -> configuration.ChatbotAiProperties
 ```
 
 ## Prompt engineering (`domain.services.prompt`)
@@ -467,11 +470,11 @@ domain.ports.out.ChatbotAiSettings
 - DEBE usar respuestas seguras de `ChatbotResponseMessages` cuando la pregunta exceda el alcance permitido.
 - DEBERIA evitar hard-code disperso de expresiones: si hay patrones reutilizables, centralizarlos en clasificadores o politicas.
 
-## Persistencia MongoDB (`infrastructure.mongodb`)
+## Persistencia MongoDB (`adapter.out.mongodb`)
 
-- DEBE ubicar repositories Spring Data en `infrastructure.mongodb.daos`.
-- DEBE ubicar entidades Mongo en `infrastructure.mongodb.entities`.
-- DEBE ubicar implementaciones de puertos en `infrastructure.mongodb.persistence`.
+- DEBE ubicar repositories Spring Data en `adapter.out.mongodb.repository`.
+- DEBE ubicar entidades Mongo en `adapter.out.mongodb.entity`.
+- DEBE ubicar implementaciones de puertos en `adapter.out.mongodb.adapter`.
 - DEBE usar sufijo `Entity` para documentos Mongo.
 - DEBE marcar colecciones con `@Document` e IDs con `@Id`.
 - DEBERIA usar `@Indexed` y `@CompoundIndex` cuando haya consultas frecuentes o restricciones de ordenacion.
@@ -491,25 +494,25 @@ Entidades actuales:
 - `EscalationEntity`
 
 Adaptadores actuales:
-- `ConversationPersistenceMongodb`
-- `MessagePersistenceMongodb`
-- `EscalationPersistenceMongodb`
+- `ConversationAdapter`
+- `MessageAdapter`
+- `EscalationAdapter`
 
-## Integraciones externas (`infrastructure.webclients`)
+## Integraciones externas (`adapter.out.webclient`)
 
-- DEBE aislar llamadas a otros microservicios en clientes Feign dentro de `infrastructure.webclients`.
+- DEBE aislar llamadas a otros microservicios en clientes Feign dentro de `adapter.out.webclient`.
 - DEBE usar `FeignConfig` para propagar `Authorization`.
-- DEBE ubicar DTOs propios de respuestas Feign en subpaquetes de infraestructura, por ejemplo `infrastructure.webclients.user.dto` y `infrastructure.webclients.engagement.dto`.
-- Los Feign clients NO DEBEN devolver modelos de dominio; DEBEN devolver DTOs de infraestructura.
-- Los adaptadores de webclients DEBEN implementar puertos de `domain.ports.out` y mapear DTOs Feign a modelos internos de dominio/plataforma.
-- Los mappers de infraestructura DEBEN mantener explicito el mapeo entre contrato externo y modelo interno.
+- DEBE ubicar DTOs propios de respuestas Feign en subpaquetes del adaptador, por ejemplo `adapter.out.webclient.user.dto` y `adapter.out.webclient.engagement.dto`.
+- Los Feign clients NO DEBEN devolver modelos de dominio; DEBEN devolver DTOs del adaptador.
+- Los adaptadores de webclient DEBEN implementar puertos de `domain.ports.out` y mapear DTOs Feign a modelos internos de dominio/plataforma.
+- Los mappers de adaptador DEBEN mantener explicito el mapeo entre contrato externo y modelo interno.
 - NO DEBE inyectar clientes Feign concretos en `domain.services`; los servicios deben depender de puertos.
 
 Clientes y adaptadores actuales:
-- `engagement.EngagementFeignClient`, devuelve DTOs de `infrastructure.webclients.engagement.dto`.
+- `engagement.EngagementFeignClient`, devuelve DTOs de `adapter.out.webclient.engagement.dto`.
 - `engagement.EngagementClientAdapter`, implementa `EngagementClient`.
 - `engagement.EngagementFeignMapper`, mapea DTOs de engagement a `domain.model.platform`.
-- `user.UserFeignClient`, devuelve DTOs de `infrastructure.webclients.user.dto`.
+- `user.UserFeignClient`, devuelve DTOs de `adapter.out.webclient.user.dto`.
 - `user.UserClientAdapter`, implementa `UserClient`.
 - `user.UserFeignMapper`, mapea DTOs de user a `domain.model.platform.UserSummary`.
 
@@ -517,21 +520,21 @@ Regla actual:
 
 ```text
 domain.ports.out.UserClient
-  <- infrastructure.webclients.user.UserClientAdapter
-      -> infrastructure.webclients.user.UserFeignClient
-          -> infrastructure.webclients.user.dto.UserResponseDto
+  <- adapter.out.webclient.user.UserClientAdapter
+      -> adapter.out.webclient.user.UserFeignClient
+          -> adapter.out.webclient.user.dto.UserResponseDto
 ```
 
 ```text
 domain.ports.out.EngagementClient
-  <- infrastructure.webclients.engagement.EngagementClientAdapter
-      -> infrastructure.webclients.engagement.EngagementFeignClient
-          -> infrastructure.webclients.engagement.dto.*
+  <- adapter.out.webclient.engagement.EngagementClientAdapter
+      -> adapter.out.webclient.engagement.EngagementFeignClient
+          -> adapter.out.webclient.engagement.dto.*
 ```
 
 ```text
-infrastructure.webclients.*.dto -> domain.model  PROHIBIDO
-domain.ports.out -> infrastructure.webclients.*  PROHIBIDO
+adapter.out.webclient.*.dto -> domain.model  PROHIBIDO
+domain.ports.out -> adapter.out.webclient.*  PROHIBIDO
 ```
 
 ## Seguridad
@@ -546,11 +549,11 @@ domain.ports.out -> infrastructure.webclients.*  PROHIBIDO
   - `/swagger-ui/**`
   - `/swagger-ui.html`
   - `OPTIONS /**`
-- DEBE usar constantes de `infrastructure.resources.Security` para autorizacion de metodos.
+- DEBE usar constantes de `adapter.in.rest.Security` para autorizacion de metodos.
 - NO DEBE introducir rutas publicas sin revisar `ResourceServerConfig` y el metodo resource correspondiente.
 - DEBE propagar JWT en llamadas Feign cuando exista autenticacion de usuario.
 - DEBE usar token tecnico desde `TokenManager` cuando no exista JWT de usuario.
-- DEBE resolver el usuario autenticado en `infrastructure.security.AuthenticatedUserContextResolver` y pasar `AuthenticatedUserContext` al dominio.
+- DEBE resolver el usuario autenticado en `adapter.in.rest.security.AuthenticatedUserContextResolver` y pasar `AuthenticatedUserContext` al dominio.
 - `domain.services` NO DEBE leer directamente `SecurityContextHolder`.
 
 Roles actualmente considerados en resources:
@@ -564,7 +567,7 @@ Deuda tecnica conocida:
 
 ## Configuracion y perfiles
 
-- DEBE ubicar configuracion tecnica en `configurations`.
+- DEBE ubicar configuracion tecnica en `configuration`.
 - DEBE usar `@ConfigurationProperties` para configuracion estructurada.
 - DEBE validar propiedades criticas con Bean Validation cuando aplique.
 - DEBE mantener configuracion sensible fuera del codigo fuente.
@@ -601,7 +604,7 @@ Proveedores IA soportados por configuracion:
 ## Excepciones y manejo de errores
 
 - DEBE usar excepciones propias de `domain.exceptions` para errores funcionales.
-- DEBE centralizar el mapeo HTTP en `infrastructure.resources.httperrors.ApiExceptionHandler`.
+- DEBE centralizar el mapeo HTTP en `adapter.in.rest.error.ApiExceptionHandler`.
 - NO DEBE manejar errores de forma ad hoc en cada resource salvo casos tecnicamente justificados.
 - DEBE traducir errores de validacion a `400 BAD_REQUEST`.
 - DEBE traducir errores de ownership/acceso funcional a `403 FORBIDDEN`.
@@ -666,7 +669,8 @@ Convencion actual observada:
 
 Directorios actuales:
 - `src/test/java/es/upm/api/domain/...`
-- `src/test/java/es/upm/api/infrastructure/...`
+- `src/test/java/es/upm/api/adapter/...`
+- `src/test/java/es/upm/api/configuration/...`
 - `src/test/java/es/upm/api/functionaltests/...`
 - `src/test/java/es/upm/api/integrationtests/...`
 
@@ -704,9 +708,9 @@ Tests actuales destacados:
 - `SpringAiChatbotClientTest`
 - `ChatbotResourceFT`
 - `SystemResourceFT`
-- `ConversationPersistenceMongodbTest`
-- `MessagePersistenceMongodbTest`
-- `EscalationPersistenceMongodbTest`
+- `ConversationAdapterTest`
+- `MessageAdapterTest`
+- `EscalationAdapterTest`
 
 ## Tecnologia y build
 
@@ -730,12 +734,12 @@ Reglas:
 
 - Logica de negocio en resources.
 - Resources HTTP inyectando implementaciones concretas de `domain.services` cuando exista un puerto de entrada aplicable.
-- Servicios de dominio importando `infrastructure.*`.
+- Servicios de dominio importando `adapter.*`.
 - DTOs HTTP usados como parametros o retornos de `domain.services`.
 - Acceso directo a `MongoRepository` desde servicios de dominio.
-- Entidades Mongo expuestas fuera de `infrastructure.mongodb`.
+- Entidades Mongo expuestas fuera de `adapter.out.mongodb`.
 - Clientes Feign concretos inyectados en servicios de dominio.
-- Uso directo de `ChatClient` de Spring AI fuera de `infrastructure.ai`.
+- Uso directo de `ChatClient` de Spring AI fuera de `adapter.out.ai`.
 - SpEL literal disperso en `@PreAuthorize`.
 - Mezclar contratos HTTP externos con reglas de dominio sin modelo intermedio.
 - Inventar datos de plataforma, documentos o encargo cuando no hay fuente disponible.
@@ -750,15 +754,15 @@ Reglas:
 
 ## Checklist para agentes de IA antes de modificar codigo
 
-- Identificar si el cambio pertenece a `domain`, `infrastructure` o `configurations`.
-- Verificar que ninguna clase de `domain` importe `infrastructure.*`.
+- Identificar si el cambio pertenece a `domain`, `adapter` o `configuration`.
+- Verificar que ninguna clase de `domain` importe `adapter.*`.
 - Si se toca un endpoint, actualizar DTO, mapper y resource, no el modelo Mongo.
 - Si se toca un endpoint de chatbot, inyectar y llamar al puerto de entrada `domain.ports.in` correspondiente, no a `ChatbotService` directamente.
 - Si se toca un caso de uso, trabajar con comandos/resultados internos, no DTOs HTTP.
 - Si se crea un caso de uso HTTP nuevo, definir su `*UseCase` en `domain.ports.in`, implementarlo en un servicio de dominio y cubrir la llamada desde el resource con test.
 - Si se toca el flujo conversacional, ubicar la regla en `conversation`, `reply`, `classification` o `policies` antes de ampliar `ChatbotService`.
-- Si se toca persistencia, mapear entre entidad y dominio dentro de `infrastructure.mongodb`.
-- Si se toca IA de dominio, usar `domain.services.reply.ai`; si se toca proveedor real, mantener Spring AI dentro de `infrastructure.ai`.
+- Si se toca persistencia, mapear entre entidad y dominio dentro de `adapter.out.mongodb`.
+- Si se toca IA de dominio, usar `domain.services.reply.ai`; si se toca proveedor real, mantener Spring AI dentro de `adapter.out.ai`.
 - Si se toca la preparacion de `ChatbotAiRequest`, usar `domain.services.reply.ai.prompt.ChatbotAiRequestBuilder`; si se toca el system prompt, usar `domain.services.prompt.ChatbotPromptBuilder`.
 - Si se toca contexto de plataforma, usar puertos (`EngagementClient`, `UserClient`) y no Feign directo.
 - Si se toca seguridad, revisar `ResourceServerConfig` y `Security`.

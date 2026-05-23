@@ -1,0 +1,37 @@
+package es.upm.api.adapter.out.mongodb.repository;
+
+import es.upm.api.domain.enums.ConversationStatus;
+import es.upm.api.adapter.out.mongodb.entity.ConversationEntity;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface ConversationRepository extends MongoRepository<ConversationEntity, String> {
+
+    List<ConversationEntity> findByUserIdOrderByCreatedAtDesc(String userId);
+
+    Optional<ConversationEntity> findByUserIdAndEngagementLetterIdAndType(
+            String userId,
+            String engagementLetterId,
+            String type
+    );
+
+    Optional<ConversationEntity> findByUserIdAndEngagementLetterIdAndTypeAndStatus(
+            String userId,
+            String engagementLetterId,
+            String type,
+            ConversationStatus status
+    );
+
+    List<ConversationEntity> findByUserIdAndTypeOrderByCreatedAtDesc(
+            String userId,
+            String type
+    );
+
+    List<ConversationEntity> findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
+            String userId,
+            String engagementLetterId,
+            String type
+    );
+}
