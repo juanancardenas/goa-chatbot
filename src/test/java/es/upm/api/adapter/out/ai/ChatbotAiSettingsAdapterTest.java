@@ -1,6 +1,6 @@
 package es.upm.api.adapter.out.ai;
 
-import es.upm.api.configurations.ChatbotAiProperties;
+import es.upm.api.configuration.ChatbotAiProperties;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

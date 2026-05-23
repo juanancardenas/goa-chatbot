@@ -1,6 +1,6 @@
 package es.upm.api.adapter.out.ai;
 
-import es.upm.api.configurations.ChatbotAiProperties;
+import es.upm.api.configuration.ChatbotAiProperties;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
