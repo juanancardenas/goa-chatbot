@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 import lombok.Builder;
 import lombok.Data;
@@ -33,12 +34,13 @@ public class ConversationEntity {
     private Integer lastSequenceNumber = 0;
 
     public ConversationEntity(Conversation conversation) {
+        Objects.requireNonNull(conversation, "conversation must not be null");
         this.id = conversation.getId();
-        this.userId = conversation.getUserId();
+        this.userId = Objects.requireNonNull(conversation.getUserId(), "conversation.userId must not be null");
         this.engagementLetterId = conversation.getEngagementLetterId();
-        this.status = conversation.getStatus();
-        this.type = conversation.getType() != null ? conversation.getType().name() : null;
-        this.createdAt = conversation.getCreatedAt();
+        this.status = Objects.requireNonNull(conversation.getStatus(), "conversation.status must not be null");
+        this.type = Objects.requireNonNull(conversation.getType(), "conversation.type must not be null").name();
+        this.createdAt = Objects.requireNonNull(conversation.getCreatedAt(), "conversation.createdAt must not be null");
         this.lastSequenceNumber = conversation.getLastSequenceNumber() != null
                 ? conversation.getLastSequenceNumber()
                 : 0;
@@ -68,8 +70,8 @@ public class ConversationEntity {
         this.userId = userId;
         this.engagementLetterId = engagementLetterId;
         this.status = status != null ? status : ConversationStatus.ACTIVE;
-        this.type = type;
-        this.createdAt = createdAt;
+        this.type = Objects.requireNonNull(type, "type must not be null");
+        this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
         this.lastSequenceNumber = lastSequenceNumber != null ? lastSequenceNumber : 0;
     }
 
@@ -82,9 +84,9 @@ public class ConversationEntity {
                 .id(this.id)
                 .userId(this.userId)
                 .engagementLetterId(this.engagementLetterId)
-                .status(this.status)
-                .type(this.type != null ? ConversationType.valueOf(this.type) : null)
-                .createdAt(this.createdAt)
+                .status(Objects.requireNonNull(this.status, "status must not be null"))
+                .type(ConversationType.valueOf(Objects.requireNonNull(this.type, "type must not be null")))
+                .createdAt(Objects.requireNonNull(this.createdAt, "createdAt must not be null"))
                 .lastSequenceNumber(this.lastSequenceNumber != null ? this.lastSequenceNumber : 0)
                 .build();
     }

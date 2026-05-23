@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ConversationEntityTest {
 
@@ -17,7 +18,7 @@ class ConversationEntityTest {
                 .id("conversation-1")
                 .userId("user-1")
                 .engagementLetterId("engagement-1")
-                .type("CHATBOT")
+                .type("GENERAL")
                 .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
                 .build();
 
@@ -52,7 +53,7 @@ class ConversationEntityTest {
     }
 
     @Test
-    void constructorShouldAllowNullConversationTypeAndDefaultNullSequenceToZero() {
+    void constructorShouldRejectNullConversationType() {
         Conversation conversation = Conversation.builder()
                 .id("conversation-null-type")
                 .userId("user-1")
@@ -62,10 +63,12 @@ class ConversationEntityTest {
                 .lastSequenceNumber(null)
                 .build();
 
-        ConversationEntity entity = new ConversationEntity(conversation);
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> new ConversationEntity(conversation)
+        );
 
-        assertThat(entity.getType()).isNull();
-        assertThat(entity.getLastSequenceNumber()).isZero();
+        assertThat(exception.getMessage()).isEqualTo("conversation.type must not be null");
     }
 
     @Test
@@ -75,7 +78,7 @@ class ConversationEntityTest {
                 "user-2",
                 "engagement-2",
                 null,
-                "ASSISTED",
+                "GENERAL",
                 LocalDateTime.of(2026, 5, 4, 9, 30)
         );
 
@@ -153,7 +156,7 @@ class ConversationEntityTest {
     }
 
     @Test
-    void constructorShouldAllowNullStatusFromConversation() {
+    void constructorShouldRejectNullStatusFromConversation() {
         Conversation conversation = Conversation.builder()
                 .id("conversation-null-status")
                 .userId("user-1")
@@ -163,28 +166,29 @@ class ConversationEntityTest {
                 .lastSequenceNumber(1)
                 .build();
 
-        ConversationEntity entity = new ConversationEntity(conversation);
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> new ConversationEntity(conversation)
+        );
 
-        assertThat(entity.getStatus()).isNull();
-        assertThat(entity.getType()).isEqualTo("GENERAL");
-        assertThat(entity.getLastSequenceNumber()).isEqualTo(1);
+        assertThat(exception.getMessage()).isEqualTo("conversation.status must not be null");
     }
 
     @Test
-    void toConversationShouldAllowNullTypeAndDefaultNullSequenceToZero() {
-        ConversationEntity entity = ConversationEntity.builder()
-                .id("conversation-5")
-                .userId("user-5")
-                .status(ConversationStatus.ACTIVE)
-                .type(null)
-                .createdAt(LocalDateTime.of(2026, 5, 6, 11, 45))
-                .lastSequenceNumber(null)
-                .build();
+    void builderShouldRejectNullType() {
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> ConversationEntity.builder()
+                        .id("conversation-5")
+                        .userId("user-5")
+                        .status(ConversationStatus.ACTIVE)
+                        .type(null)
+                        .createdAt(LocalDateTime.of(2026, 5, 6, 11, 45))
+                        .lastSequenceNumber(null)
+                        .build()
+        );
 
-        Conversation conversation = entity.toConversation();
-
-        assertThat(conversation.getType()).isNull();
-        assertThat(conversation.getLastSequenceNumber()).isZero();
+        assertThat(exception.getMessage()).isEqualTo("type must not be null");
     }
 
     private Conversation conversation() {
