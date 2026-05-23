@@ -1,5 +1,6 @@
 package es.upm.api.infrastructure.security;
 
+import es.upm.api.adapter.in.rest.security.AuthenticatedUserContextResolver;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.security.AuthenticatedUserContext;

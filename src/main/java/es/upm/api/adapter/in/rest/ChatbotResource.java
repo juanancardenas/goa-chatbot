@@ -1,4 +1,4 @@
-package es.upm.api.infrastructure.resources;
+package es.upm.api.adapter.in.rest;
 
 import es.upm.api.domain.ports.in.CloseConversationUseCase;
 import es.upm.api.domain.ports.in.DeleteConversationUseCase;
@@ -10,14 +10,14 @@ import es.upm.api.domain.ports.in.ReopenConversationUseCase;
 import es.upm.api.domain.ports.in.SendChatbotMessageUseCase;
 import es.upm.api.domain.ports.in.StartContextualConversationUseCase;
 import es.upm.api.domain.ports.in.StartGeneralConversationUseCase;
-import es.upm.api.infrastructure.dtos.ChatbotConfigurationStatusDto;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationResponseDto;
-import es.upm.api.infrastructure.dtos.ChatbotConversationHistoryResponseDto;
-import es.upm.api.infrastructure.dtos.ChatbotConversationSummaryDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageResponseDto;
-import es.upm.api.infrastructure.security.AuthenticatedUserContextResolver;
+import es.upm.api.adapter.in.rest.dto.ChatbotConfigurationStatusDto;
+import es.upm.api.adapter.in.rest.dto.ChatbotContextualConversationRequestDto;
+import es.upm.api.adapter.in.rest.dto.ChatbotContextualConversationResponseDto;
+import es.upm.api.adapter.in.rest.dto.ChatbotConversationHistoryResponseDto;
+import es.upm.api.adapter.in.rest.dto.ChatbotConversationSummaryDto;
+import es.upm.api.adapter.in.rest.dto.ChatbotMessageRequestDto;
+import es.upm.api.adapter.in.rest.dto.ChatbotMessageResponseDto;
+import es.upm.api.adapter.in.rest.security.AuthenticatedUserContextResolver;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

@@ -1,4 +1,4 @@
-package es.upm.api.infrastructure.dtos;
+package es.upm.api.adapter.in.rest.dto;
 
 import es.upm.api.domain.model.chatbot.result.ChatbotConversationSummaryResult;
 import lombok.AllArgsConstructor;

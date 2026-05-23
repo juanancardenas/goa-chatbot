@@ -1,4 +1,4 @@
-package es.upm.api.infrastructure.security;
+package es.upm.api.adapter.in.rest.security;
 
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.exceptions.ForbiddenException;

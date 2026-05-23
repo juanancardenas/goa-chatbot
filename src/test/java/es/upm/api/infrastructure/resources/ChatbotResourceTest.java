@@ -1,5 +1,6 @@
 package es.upm.api.infrastructure.resources;
 
+import es.upm.api.adapter.in.rest.ChatbotResource;
 import es.upm.api.domain.enums.ChatbotResponseMode;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.model.chatbot.command.ChatbotContextualConversationCommand;
@@ -21,9 +22,9 @@ import es.upm.api.domain.ports.in.ReopenConversationUseCase;
 import es.upm.api.domain.ports.in.SendChatbotMessageUseCase;
 import es.upm.api.domain.ports.in.StartContextualConversationUseCase;
 import es.upm.api.domain.ports.in.StartGeneralConversationUseCase;
-import es.upm.api.infrastructure.dtos.ChatbotContextualConversationRequestDto;
-import es.upm.api.infrastructure.dtos.ChatbotMessageRequestDto;
-import es.upm.api.infrastructure.security.AuthenticatedUserContextResolver;
+import es.upm.api.adapter.in.rest.dto.ChatbotContextualConversationRequestDto;
+import es.upm.api.adapter.in.rest.dto.ChatbotMessageRequestDto;
+import es.upm.api.adapter.in.rest.security.AuthenticatedUserContextResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

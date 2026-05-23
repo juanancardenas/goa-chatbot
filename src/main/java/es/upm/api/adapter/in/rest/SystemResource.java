@@ -1,4 +1,4 @@
-package es.upm.api.infrastructure.resources;
+package es.upm.api.adapter.in.rest;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -1,5 +1,7 @@
 package es.upm.api.infrastructure.resources.httperrors;
 
+import es.upm.api.adapter.in.rest.error.ApiExceptionHandler;
+import es.upm.api.adapter.in.rest.error.ErrorMessage;
 import es.upm.api.domain.exceptions.BadGatewayException;
 import es.upm.api.domain.exceptions.BadRequestException;
 import es.upm.api.domain.exceptions.ConflictException;

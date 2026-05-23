@@ -1,4 +1,4 @@
-package es.upm.api.infrastructure.resources;
+package es.upm.api.adapter.in.rest;
 
 public final class Security {
     public static final String AUTHENTICATED = "isAuthenticated()";

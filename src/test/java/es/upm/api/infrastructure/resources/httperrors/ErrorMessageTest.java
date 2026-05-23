@@ -1,5 +1,6 @@
 package es.upm.api.infrastructure.resources.httperrors;
 
+import es.upm.api.adapter.in.rest.error.ErrorMessage;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

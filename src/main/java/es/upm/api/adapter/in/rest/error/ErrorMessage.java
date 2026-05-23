@@ -1,4 +1,4 @@
-package es.upm.api.infrastructure.resources.httperrors;
+package es.upm.api.adapter.in.rest.error;
 
 import lombok.Getter;
 

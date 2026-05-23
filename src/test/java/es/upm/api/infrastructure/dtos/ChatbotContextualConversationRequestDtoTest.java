@@ -1,5 +1,6 @@
 package es.upm.api.infrastructure.dtos;
 
+import es.upm.api.adapter.in.rest.dto.ChatbotContextualConversationRequestDto;
 import es.upm.api.domain.model.chatbot.command.ChatbotContextualConversationCommand;
 import org.junit.jupiter.api.Test;
 
