@@ -25,6 +25,13 @@ class ChatbotResponseSanitizerTest {
     }
 
     @Test
+    void normalizeReplyForFrontendShouldKeepWhitespaceWhenReplyHasNoPipes() {
+        String reply = "  Respuesta normal  " + System.lineSeparator() + "  con espacios  ";
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply)).isEqualTo(reply);
+    }
+
+    @Test
     void normalizeReplyForFrontendShouldConvertMarkdownTableIntoBulletList() {
         String reply = """
                 | Documento | Estado |
@@ -64,6 +71,21 @@ class ChatbotResponseSanitizerTest {
     }
 
     @Test
+    void normalizeReplyForFrontendShouldTrimPlainLinesWhenReplyContainsPipes() {
+        String reply = "  Inicio con espacios  " + System.lineSeparator()
+                + "  Valor | Detalle  " + System.lineSeparator()
+                + "  Cierre con espacios  ";
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
+                .isEqualTo(String.join(
+                        System.lineSeparator(),
+                        "Inicio con espacios",
+                        "- Valor: Detalle",
+                        "Cierre con espacios"
+                ));
+    }
+
+    @Test
     void normalizeReplyForFrontendShouldJoinRowsWithMoreThanTwoCellsUsingSemicolons() {
         String reply = """
                 | Tarea | Estado | Responsable |
@@ -95,6 +117,15 @@ class ChatbotResponseSanitizerTest {
     }
 
     @Test
+    void normalizeReplyForFrontendShouldReturnEmptyStringWhenOnlyPipeNoiseExists() {
+        String reply = " | | " + System.lineSeparator()
+                + "| --- | :---: |" + System.lineSeparator()
+                + " | ";
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply)).isEmpty();
+    }
+
+    @Test
     void normalizeReplyForFrontendShouldSkipSeparatorRowsWithColonsAndDashes() {
         String reply = """
                 | Campo | Valor |
@@ -111,10 +142,33 @@ class ChatbotResponseSanitizerTest {
     }
 
     @Test
+    void normalizeReplyForFrontendShouldSkipCompactSeparatorRowsWithoutMarkdownTableShape() {
+        String reply = "Antes" + System.lineSeparator()
+                + "|:--|" + System.lineSeparator()
+                + "---|---" + System.lineSeparator()
+                + "A|B";
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
+                .isEqualTo(String.join(
+                        System.lineSeparator(),
+                        "Antes",
+                        "- A: B"
+                ));
+    }
+
+    @Test
     void normalizeReplyForFrontendShouldTrimPipeRowsAndIgnoreEmptyCells() {
         String reply = "  |  Tarea  |   |  Responsable  |  ";
 
         assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
                 .isEqualTo("- Tarea: Responsable");
+    }
+
+    @Test
+    void normalizeReplyForFrontendShouldConvertPipeRowsWithoutOuterPipes() {
+        String reply = "Tarea | Estado | Responsable";
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
+                .isEqualTo("- Tarea: Estado; Responsable");
     }
 }

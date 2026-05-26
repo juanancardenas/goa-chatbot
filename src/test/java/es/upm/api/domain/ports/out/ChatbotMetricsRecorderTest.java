@@ -1,0 +1,92 @@
+package es.upm.api.domain.ports.out;
+
+import es.upm.api.domain.enums.ChatbotResponseMode;
+import es.upm.api.domain.enums.ConversationType;
+import es.upm.api.domain.model.metrics.ChatbotAiMetric;
+import es.upm.api.domain.model.metrics.ChatbotEscalationMetric;
+import es.upm.api.domain.model.metrics.ChatbotFallbackMetric;
+import es.upm.api.domain.model.metrics.ChatbotMessageMetric;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class ChatbotMetricsRecorderTest {
+
+    private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, 5, 26, 14, 15);
+
+    @Test
+    void recorderContractShouldAcceptEveryMetricType() {
+        InMemoryChatbotMetricsRecorder recorder = new InMemoryChatbotMetricsRecorder();
+        ChatbotMessageMetric messageMetric = ChatbotMessageMetric.builder()
+                .conversationId("conversation-1")
+                .requestMessageId("message-1")
+                .userId("user-1")
+                .conversationType(ConversationType.GENERAL)
+                .responseMode(ChatbotResponseMode.GENERAL)
+                .durationMs(100L)
+                .success(true)
+                .createdAt(CREATED_AT)
+                .build();
+        ChatbotAiMetric aiMetric = ChatbotAiMetric.builder()
+                .conversationId("conversation-1")
+                .provider("openai")
+                .model("gpt-test")
+                .durationMs(90L)
+                .success(true)
+                .fallback(false)
+                .createdAt(CREATED_AT)
+                .build();
+        ChatbotEscalationMetric escalationMetric = ChatbotEscalationMetric.builder()
+                .conversationId("conversation-1")
+                .userId("user-1")
+                .success(true)
+                .createdAt(CREATED_AT)
+                .build();
+        ChatbotFallbackMetric fallbackMetric = ChatbotFallbackMetric.builder()
+                .conversationId("conversation-1")
+                .fallbackType("AI_PROVIDER")
+                .reason("Provider error")
+                .createdAt(CREATED_AT)
+                .build();
+
+        recorder.recordMessageHandled(messageMetric);
+        recorder.recordAiCall(aiMetric);
+        recorder.recordEscalation(escalationMetric);
+        recorder.recordFallback(fallbackMetric);
+
+        assertThat(recorder.messageMetric).isSameAs(messageMetric);
+        assertThat(recorder.aiMetric).isSameAs(aiMetric);
+        assertThat(recorder.escalationMetric).isSameAs(escalationMetric);
+        assertThat(recorder.fallbackMetric).isSameAs(fallbackMetric);
+    }
+
+    private static class InMemoryChatbotMetricsRecorder implements ChatbotMetricsRecorder {
+
+        private ChatbotMessageMetric messageMetric;
+        private ChatbotAiMetric aiMetric;
+        private ChatbotEscalationMetric escalationMetric;
+        private ChatbotFallbackMetric fallbackMetric;
+
+        @Override
+        public void recordMessageHandled(ChatbotMessageMetric metric) {
+            this.messageMetric = metric;
+        }
+
+        @Override
+        public void recordAiCall(ChatbotAiMetric metric) {
+            this.aiMetric = metric;
+        }
+
+        @Override
+        public void recordEscalation(ChatbotEscalationMetric metric) {
+            this.escalationMetric = metric;
+        }
+
+        @Override
+        public void recordFallback(ChatbotFallbackMetric metric) {
+            this.fallbackMetric = metric;
+        }
+    }
+}
