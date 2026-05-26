@@ -72,6 +72,70 @@ class ConversationEntityTest {
     }
 
     @Test
+    void constructorShouldRejectNullConversation() {
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> new ConversationEntity((Conversation) null)
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("conversation must not be null");
+    }
+
+    @Test
+    void constructorShouldRejectNullUserIdFromConversation() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-null-user")
+                .userId(null)
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.GENERAL)
+                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .lastSequenceNumber(1)
+                .build();
+
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> new ConversationEntity(conversation)
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("conversation.userId must not be null");
+    }
+
+    @Test
+    void constructorShouldRejectNullCreatedAtFromConversation() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-null-created-at")
+                .userId("user-1")
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.GENERAL)
+                .createdAt(null)
+                .lastSequenceNumber(1)
+                .build();
+
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> new ConversationEntity(conversation)
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("conversation.createdAt must not be null");
+    }
+
+    @Test
+    void constructorShouldDefaultNullLastSequenceNumberFromConversationToZero() {
+        Conversation conversation = Conversation.builder()
+                .id("conversation-null-sequence")
+                .userId("user-1")
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.GENERAL)
+                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .lastSequenceNumber(null)
+                .build();
+
+        ConversationEntity entity = new ConversationEntity(conversation);
+
+        assertThat(entity.getLastSequenceNumber()).isZero();
+    }
+
+    @Test
     void allArgsConstructorShouldDefaultStatusToActiveWhenNull() {
         ConversationEntity entity = new ConversationEntity(
                 "conversation-2",
@@ -84,6 +148,40 @@ class ConversationEntityTest {
 
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(entity.getLastSequenceNumber()).isZero();
+    }
+
+    @Test
+    void allArgsConstructorShouldRejectNullType() {
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> new ConversationEntity(
+                        "conversation-null-type",
+                        "user-1",
+                        null,
+                        ConversationStatus.ACTIVE,
+                        null,
+                        LocalDateTime.of(2026, 5, 4, 9, 30)
+                )
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("type must not be null");
+    }
+
+    @Test
+    void allArgsConstructorShouldRejectNullCreatedAt() {
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> new ConversationEntity(
+                        "conversation-null-created-at",
+                        "user-1",
+                        null,
+                        ConversationStatus.ACTIVE,
+                        "GENERAL",
+                        null
+                )
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("createdAt must not be null");
     }
 
     @Test
@@ -122,6 +220,90 @@ class ConversationEntityTest {
         assertThat(conversation.getType()).isEqualTo(ConversationType.CONTEXTUAL);
         assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 5, 8, 15));
         assertThat(conversation.getLastSequenceNumber()).isEqualTo(9);
+    }
+
+    @Test
+    void toConversationShouldDefaultNullLastSequenceNumberToZero() {
+        ConversationEntity entity = new ConversationEntity();
+        entity.setId("conversation-null-sequence");
+        entity.setUserId("user-3");
+        entity.setStatus(ConversationStatus.ACTIVE);
+        entity.setType("GENERAL");
+        entity.setCreatedAt(LocalDateTime.of(2026, 5, 5, 8, 15));
+        entity.setLastSequenceNumber(null);
+
+        Conversation conversation = entity.toConversation();
+
+        assertThat(conversation.getLastSequenceNumber()).isZero();
+    }
+
+    @Test
+    void toConversationShouldRejectNullStatus() {
+        ConversationEntity entity = new ConversationEntity();
+        entity.setId("conversation-null-status");
+        entity.setUserId("user-3");
+        entity.setStatus(null);
+        entity.setType("GENERAL");
+        entity.setCreatedAt(LocalDateTime.of(2026, 5, 5, 8, 15));
+
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                entity::toConversation
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("status must not be null");
+    }
+
+    @Test
+    void toConversationShouldRejectNullType() {
+        ConversationEntity entity = new ConversationEntity();
+        entity.setId("conversation-null-type");
+        entity.setUserId("user-3");
+        entity.setStatus(ConversationStatus.ACTIVE);
+        entity.setType(null);
+        entity.setCreatedAt(LocalDateTime.of(2026, 5, 5, 8, 15));
+
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                entity::toConversation
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("type must not be null");
+    }
+
+    @Test
+    void toConversationShouldRejectNullCreatedAt() {
+        ConversationEntity entity = new ConversationEntity();
+        entity.setId("conversation-null-created-at");
+        entity.setUserId("user-3");
+        entity.setStatus(ConversationStatus.ACTIVE);
+        entity.setType("GENERAL");
+        entity.setCreatedAt(null);
+
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                entity::toConversation
+        );
+
+        assertThat(exception.getMessage()).isEqualTo("createdAt must not be null");
+    }
+
+    @Test
+    void toConversationShouldRejectUnknownConversationType() {
+        ConversationEntity entity = ConversationEntity.builder()
+                .id("conversation-unknown-type")
+                .userId("user-3")
+                .status(ConversationStatus.ACTIVE)
+                .type("UNKNOWN")
+                .createdAt(LocalDateTime.of(2026, 5, 5, 8, 15))
+                .build();
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                entity::toConversation
+        );
+
+        assertThat(exception.getMessage()).contains("UNKNOWN");
     }
 
     @Test
@@ -189,6 +371,28 @@ class ConversationEntityTest {
         );
 
         assertThat(exception.getMessage()).isEqualTo("type must not be null");
+    }
+
+    @Test
+    void noArgsConstructorAndSettersShouldAllowMappingToDomain() {
+        ConversationEntity entity = new ConversationEntity();
+        entity.setId("conversation-setters");
+        entity.setUserId("user-setters");
+        entity.setEngagementLetterId("engagement-setters");
+        entity.setStatus(ConversationStatus.CLOSED);
+        entity.setType("CONTEXTUAL");
+        entity.setCreatedAt(LocalDateTime.of(2026, 5, 7, 13, 15));
+        entity.setLastSequenceNumber(17);
+
+        Conversation conversation = entity.toConversation();
+
+        assertThat(conversation.getId()).isEqualTo("conversation-setters");
+        assertThat(conversation.getUserId()).isEqualTo("user-setters");
+        assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-setters");
+        assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
+        assertThat(conversation.getType()).isEqualTo(ConversationType.CONTEXTUAL);
+        assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 7, 13, 15));
+        assertThat(conversation.getLastSequenceNumber()).isEqualTo(17);
     }
 
     private Conversation conversation() {
