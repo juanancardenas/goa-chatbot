@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18** y el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, y la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder`.
 
 ## Niveles de regla
 
@@ -74,6 +74,7 @@ es.upm.api/
         command/
         reply/
         result/
+      metrics/
       pagination/
       platform/
       security/
@@ -99,6 +100,7 @@ Notas:
 - Los DTOs HTTP estan actualmente en `adapter.in.rest.dto`.
 - La resolucion del usuario autenticado vive en `adapter.in.rest.security` y entrega `AuthenticatedUserContext` al dominio.
 - Los comandos/resultados internos usados para desacoplar DTOs viven actualmente en `domain.model.chatbot.command`, `domain.model.chatbot.reply` y `domain.model.chatbot.result`.
+- Los modelos internos de metricas conversacionales viven actualmente en `domain.model.metrics`.
 - El contexto de usuario autenticado vive en `domain.model.security`.
 - Los modelos auxiliares de paginacion viven en `domain.model.pagination`.
 - Los puertos de entrada de casos de uso viven en `domain.ports.in`; `ChatbotResource` depende de ellos y `ChatbotService` los implementa.
@@ -176,6 +178,7 @@ adapter.in.rest -> domain.services                          EVITAR
 - DEBE ubicar comandos internos de chatbot en `domain.model.chatbot.command`.
 - DEBE ubicar decisiones internas de respuesta en `domain.model.chatbot.reply`.
 - DEBE ubicar resultados internos de chatbot en `domain.model.chatbot.result`.
+- DEBE ubicar modelos internos de metricas conversacionales en `domain.model.metrics`.
 - DEBE ubicar modelos auxiliares de paginacion en `domain.model.pagination`.
 - DEBE ubicar contexto de usuario autenticado en `domain.model.security`.
 - DEBE ubicar snapshots/contexto de otros microservicios en `domain.model.platform`.
@@ -209,6 +212,12 @@ Modelos internos de resultado actuales:
 - `ChatbotConversationHistoryResult`
 - `ChatbotConversationSummaryResult`
 - `ChatbotHistoryMessageResult`
+
+Modelos internos de metricas actuales:
+- `ChatbotMessageMetric`
+- `ChatbotAiMetric`
+- `ChatbotEscalationMetric`
+- `ChatbotFallbackMetric`
 
 Puertos de entrada actuales:
 - `CloseConversationUseCase`
@@ -362,6 +371,7 @@ ChatbotService <- todos los puertos anteriores
 Puertos actuales:
 - `ChatbotAiClient`
 - `ChatbotAiSettings`
+- `ChatbotMetricsRecorder`
 - `ConversationGateway`
 - `MessageGateway`
 - `EscalationGateway`
@@ -378,6 +388,7 @@ ChatbotService -> conversation.ChatbotEscalationService
 ChatbotService -> conversation.ChatbotResponseSanitizer
 ChatbotService -> reply.ChatbotReplyOrchestrator
 ChatbotService -> ChatbotAiSettings
+ChatbotService -> ChatbotMetricsRecorder
 
 conversation.ChatbotConversationService -> ConversationGateway
 conversation.ChatbotConversationService -> MessageGateway
@@ -408,6 +419,25 @@ prompt.ChatbotPromptBuilder -> ChatbotAiSettings
 
 Deuda tecnica conocida:
 - Mantener `ChatbotService` como orquestador fino; la decision de respuesta de `sendMessage` debe permanecer en `reply.ChatbotReplyOrchestrator`.
+
+## Metricas conversacionales (`domain.model.metrics` y `ChatbotMetricsRecorder`)
+
+- DEBE ubicar eventos/modelos internos de metricas conversacionales en `domain.model.metrics`.
+- DEBE publicar metricas desde el dominio mediante el puerto de salida `domain.ports.out.ChatbotMetricsRecorder`.
+- `ChatbotMetricsRecorder` DEBE permanecer libre de detalles de Micrometer, Prometheus, MongoDB, HTTP, Feign o cualquier adaptador concreto.
+- Los modelos de metricas DEBEN representar hechos de dominio observables, no contratos HTTP ni entidades de persistencia.
+- Los servicios de dominio NO DEBEN depender de implementaciones concretas de metricas; DEBEN depender solo de `ChatbotMetricsRecorder`.
+- La implementacion tecnica de metricas, cuando exista, DEBE vivir en `adapter.out` o en un subpaquete tecnico equivalente y mapear desde los modelos de `domain.model.metrics`.
+- DEBERIA evitar usar identificadores de alta cardinalidad o datos sensibles como tags de sistemas de metricas agregadas; si se necesitan para trazabilidad, deben tratarse como evento/log estructurado segun el adaptador.
+
+Modelos de metricas actuales:
+- `ChatbotMessageMetric`: evento de mensaje gestionado por conversacion.
+- `ChatbotAiMetric`: evento de llamada o intento de uso de IA.
+- `ChatbotEscalationMetric`: evento de escalado a intervencion humana.
+- `ChatbotFallbackMetric`: evento de uso de fallback conversacional.
+
+Puerto actual:
+- `ChatbotMetricsRecorder`
 
 ## Adaptador IA (`adapter.out.ai`)
 
