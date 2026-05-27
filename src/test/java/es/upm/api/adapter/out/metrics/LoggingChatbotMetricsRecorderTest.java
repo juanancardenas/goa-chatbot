@@ -139,4 +139,64 @@ class LoggingChatbotMetricsRecorderTest {
                 .contains("chatbot_metric_type=escalation status=ignored reason=null_metric")
                 .contains("chatbot_metric_type=fallback status=ignored reason=null_metric");
     }
+
+    @Test
+    void recordMessageHandledShouldCatchLoggingFailures(CapturedOutput output) {
+        ChatbotMessageMetric metric = new ChatbotMessageMetric() {
+            @Override
+            public String getConversationId() {
+                throw new IllegalStateException("metric failure");
+            }
+        };
+
+        this.recorder.recordMessageHandled(metric);
+
+        assertThat(output)
+                .contains("chatbot_metric_type=message_handled status=failed reason=IllegalStateException");
+    }
+
+    @Test
+    void recordAiCallShouldCatchLoggingFailures(CapturedOutput output) {
+        ChatbotAiMetric metric = new ChatbotAiMetric() {
+            @Override
+            public String getConversationId() {
+                throw new IllegalStateException("metric failure");
+            }
+        };
+
+        this.recorder.recordAiCall(metric);
+
+        assertThat(output)
+                .contains("chatbot_metric_type=ai_call status=failed reason=IllegalStateException");
+    }
+
+    @Test
+    void recordEscalationShouldCatchLoggingFailures(CapturedOutput output) {
+        ChatbotEscalationMetric metric = new ChatbotEscalationMetric() {
+            @Override
+            public String getConversationId() {
+                throw new IllegalStateException("metric failure");
+            }
+        };
+
+        this.recorder.recordEscalation(metric);
+
+        assertThat(output)
+                .contains("chatbot_metric_type=escalation status=failed reason=IllegalStateException");
+    }
+
+    @Test
+    void recordFallbackShouldCatchLoggingFailures(CapturedOutput output) {
+        ChatbotFallbackMetric metric = new ChatbotFallbackMetric() {
+            @Override
+            public String getConversationId() {
+                throw new IllegalStateException("metric failure");
+            }
+        };
+
+        this.recorder.recordFallback(metric);
+
+        assertThat(output)
+                .contains("chatbot_metric_type=fallback status=failed reason=IllegalStateException");
+    }
 }
