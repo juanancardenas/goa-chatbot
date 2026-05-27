@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, y la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder`.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, y la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`.
 
 ## Niveles de regla
 
@@ -32,6 +32,7 @@ resources HTTP
           -> domain.ports.out
               <- adapter.out.mongodb
               <- adapter.out.ai
+              <- adapter.out.metrics
               <- adapter.out.webclient
 ```
 
@@ -55,6 +56,7 @@ es.upm.api/
         security/
     out/
       ai/
+      metrics/
       mongodb/
         adapter/
         entity/
@@ -95,7 +97,7 @@ es.upm.api/
 
 Notas:
 - `domain` contiene modelo, reglas, casos de uso y puertos.
-- `adapter` contiene adaptadores de entrada y salida: REST, MongoDB, IA, Feign y DTOs de entrada/salida.
+- `adapter` contiene adaptadores de entrada y salida: REST, MongoDB, IA, metricas por logging, Feign y DTOs de entrada/salida.
 - `configuration` contiene configuracion tecnica de Spring, seguridad, Feign, OpenAPI, propiedades e inicializacion de indices.
 - Los DTOs HTTP estan actualmente en `adapter.in.rest.dto`.
 - La resolucion del usuario autenticado vive en `adapter.in.rest.security` y entrega `AuthenticatedUserContext` al dominio.
@@ -428,6 +430,11 @@ Deuda tecnica conocida:
 - Los modelos de metricas DEBEN representar hechos de dominio observables, no contratos HTTP ni entidades de persistencia.
 - Los servicios de dominio NO DEBEN depender de implementaciones concretas de metricas; DEBEN depender solo de `ChatbotMetricsRecorder`.
 - La implementacion tecnica de metricas, cuando exista, DEBE vivir en `adapter.out` o en un subpaquete tecnico equivalente y mapear desde los modelos de `domain.model.metrics`.
+- La implementacion actual de metricas vive en `adapter.out.metrics.LoggingChatbotMetricsRecorder` y DEBE limitarse a registrar logs estructurados como salida tecnica inicial.
+- `LoggingChatbotMetricsRecorder` DEBE implementar `ChatbotMetricsRecorder`, estar registrado como componente Spring y no introducir dependencias de observabilidad externa, persistencia, HTTP, Feign ni MongoDB.
+- Los logs de metricas DEBEN incluir el campo comun `chatbot_metric_type` con valores identificables como `message_handled`, `ai_call`, `escalation` y `fallback`.
+- `LoggingChatbotMetricsRecorder` NO DEBE registrar contenido completo de mensajes, respuestas de IA, prompts, documentos legales, tokens, secretos ni trazas completas de excepciones.
+- `LoggingChatbotMetricsRecorder` DEBE ignorar metricas `null` de forma controlada y capturar internamente errores de logging para no interrumpir el flujo principal del chatbot.
 - DEBERIA evitar usar identificadores de alta cardinalidad o datos sensibles como tags de sistemas de metricas agregadas; si se necesitan para trazabilidad, deben tratarse como evento/log estructurado segun el adaptador.
 
 Modelos de metricas actuales:
@@ -438,6 +445,16 @@ Modelos de metricas actuales:
 
 Puerto actual:
 - `ChatbotMetricsRecorder`
+
+Adaptador actual:
+- `LoggingChatbotMetricsRecorder`
+
+Regla de direccion:
+
+```text
+domain.ports.out.ChatbotMetricsRecorder
+  <- adapter.out.metrics.LoggingChatbotMetricsRecorder
+```
 
 ## Adaptador IA (`adapter.out.ai`)
 
@@ -736,6 +753,7 @@ Tests actuales destacados:
 - `ChatbotPlatformContextServiceTest`
 - `ChatbotDocumentContextServiceTest`
 - `SpringAiChatbotClientTest`
+- `LoggingChatbotMetricsRecorderTest`
 - `ChatbotResourceFT`
 - `SystemResourceFT`
 - `ConversationAdapterTest`
