@@ -56,3 +56,4 @@ volumes:
 
 # Para ver los logs de métricas (Recorder)
 #> docker compose logs -f goa-chatbot | Select-String "chatbot_metric_type=message_handled"
+#> docker compose logs -f goa-chatbot | Select-String "chatbot_metric_type=ai_call|chatbot_metric_type=fallback"
