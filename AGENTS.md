@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`, y la trazabilidad de uso real de IA en respuestas mediante `ChatbotAiReplyResult`, `ChatbotReplyDecision.usedAi` y `ChatbotMessageMetric.usedAi` incorporada en la issue 41.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`, y la trazabilidad de uso real de IA en respuestas mediante `ChatbotAiReplyResult`, `ChatbotReplyDecision.usedAi`, `ChatbotMessageMetric.usedAi`, `ChatbotAiMetric` y `ChatbotFallbackMetric` incorporada en la issue 41.
 
 ## Niveles de regla
 
@@ -414,6 +414,7 @@ reply.base.ChatbotPlatformReplyBuilder -> reply.context.ChatbotDocumentContextSe
 reply.context.ChatbotPlatformContextService -> EngagementClient
 reply.ai.ChatbotAiReplyService -> ChatbotAiClient
 reply.ai.ChatbotAiReplyService -> ChatbotAiSettings
+reply.ai.ChatbotAiReplyService -> ChatbotMetricsRecorder
 reply.ai.ChatbotAiReplyService -> reply.ai.prompt.ChatbotAiRequestBuilder
 reply.ai.prompt.ChatbotAiRequestBuilder -> ChatbotAiSettings
 reply.ai.prompt.ChatbotAiRequestBuilder -> conversation.ChatbotMessageService
@@ -440,12 +441,17 @@ Deuda tecnica conocida:
 - DEBERIA evitar usar identificadores de alta cardinalidad o datos sensibles como tags de sistemas de metricas agregadas; si se necesitan para trazabilidad, deben tratarse como evento/log estructurado segun el adaptador.
 - `ChatbotMessageMetric.usedAi` DEBE indicar que la respuesta final enviada al usuario uso contenido real devuelto por el proveedor IA.
 - `ChatbotMessageMetric.usedAi` NO DEBE usarse para indicar que la IA estaba habilitada o que se intento llamar al proveedor; los intentos, fallos y fallback de IA deben modelarse con `ChatbotAiMetric`.
+- `ChatbotAiMetric` DEBE registrar los intentos de uso de IA realizados por `ChatbotAiReplyService`, incluyendo `provider`, `model`, `durationMs`, `success`, `fallback`, `errorType` y `createdAt`.
+- `ChatbotAiMetric.success` DEBE ser `true` solo cuando se acepta contenido no vacio del proveedor IA como respuesta final.
+- `ChatbotAiMetric.fallback` DEBE ser `true` cuando el flujo de IA termina usando la respuesta base por respuesta nula, error del proveedor, contenido vacio o excepcion tecnica.
+- `ChatbotFallbackMetric` DEBE registrarse cuando un fallo de IA obliga a usar fallback; su `fallbackType` y `reason` DEBEN usar codigos controlados, no mensajes completos de usuario, prompts, respuestas IA ni trazas.
+- Los errores de registro de `ChatbotAiMetric` o `ChatbotFallbackMetric` NO DEBEN interrumpir la generacion de la respuesta del asistente.
 
 Modelos de metricas actuales:
 - `ChatbotMessageMetric`: evento de mensaje gestionado por conversacion; resume duracion, exito, tipo de conversacion, modo de respuesta, uso de datos de plataforma y uso real de IA en la respuesta final.
-- `ChatbotAiMetric`: evento de llamada o intento de uso de IA.
+- `ChatbotAiMetric`: evento de llamada o intento de uso de IA, con resultado de exito/fallback y tipo de error controlado.
 - `ChatbotEscalationMetric`: evento de escalado a intervencion humana.
-- `ChatbotFallbackMetric`: evento de uso de fallback conversacional.
+- `ChatbotFallbackMetric`: evento de uso de fallback conversacional o fallback de IA.
 
 Puerto actual:
 - `ChatbotMetricsRecorder`
@@ -508,6 +514,9 @@ domain.ports.out.ChatbotAiSettings
 - `ChatbotAiReplyService` DEBE delegar la construccion de `ChatbotAiRequest` en `reply.ai.prompt.ChatbotAiRequestBuilder`.
 - `ChatbotAiReplyService` DEBE devolver la respuesta base si el proveedor IA falla, devuelve error, devuelve contenido vacio o lanza excepcion.
 - `ChatbotAiReplyService` DEBE devolver `ChatbotAiReplyResult`, no un `String` plano, para propagar tanto la respuesta final como si se uso IA real.
+- `ChatbotAiReplyService` DEBE publicar `ChatbotAiMetric` cuando intenta usar IA y `ChatbotFallbackMetric` cuando degrada a respuesta base por fallo de IA.
+- `ChatbotAiReplyService` DEBE medir la duracion del intento de IA con `durationMs` y debe registrar metricas tambien en respuestas nulas, errores del proveedor, contenido vacio y excepciones.
+- `ChatbotAiReplyService` DEBE capturar internamente fallos de `ChatbotMetricsRecorder` para que la trazabilidad no rompa el flujo conversacional.
 - `ChatbotAiReplyResult.usedAi` DEBE ser `true` solo cuando se acepta contenido no vacio devuelto por el proveedor IA como respuesta final.
 - `ChatbotAiReplyResult.usedAi` DEBE ser `false` cuando la IA esta desactivada, cuando falla el proveedor, cuando la respuesta del proveedor es invalida o cuando se usa la respuesta base como fallback.
 - `ChatbotAiReplyService` NO DEBE persistir mensajes ni modificar conversaciones; esa responsabilidad pertenece a los servicios de conversacion y al orquestador.

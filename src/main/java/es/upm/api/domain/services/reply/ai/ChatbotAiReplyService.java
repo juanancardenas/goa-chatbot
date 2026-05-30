@@ -87,7 +87,7 @@ public class ChatbotAiReplyService {
             }
 
             if (aiResponse.getError() != null) {
-                String errorType = this.safeErrorType(aiResponse.getError(), "AI_RESPONSE_ERROR");
+                String errorType = this.safeErrorType(aiResponse.getError());
                 log.warn(
                         "AI reply generation returned error. conversationId={}, errorType={}",
                         conversationId,
@@ -228,9 +228,9 @@ public class ChatbotAiReplyService {
         }
     }
 
-    private String safeErrorType(String error, String fallback) {
+    private String safeErrorType(String error) {
         if (error == null || error.isBlank()) {
-            return fallback;
+            return "AI_RESPONSE_ERROR";
         }
 
         return error.trim();

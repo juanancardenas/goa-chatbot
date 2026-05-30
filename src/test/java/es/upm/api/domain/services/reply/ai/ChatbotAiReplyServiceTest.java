@@ -96,6 +96,8 @@ class ChatbotAiReplyServiceTest {
                 .build();
 
         when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.provider()).thenReturn("ollama");
+        when(this.chatbotAiSettings.model()).thenReturn("llama3.2:3b");
         when(this.chatbotAiRequestBuilder.build(
                 conversation,
                 ConversationProfileType.CLIENT,
@@ -131,8 +133,8 @@ class ChatbotAiReplyServiceTest {
         verify(this.chatbotMetricsRecorder).recordAiCall(aiMetricCaptor.capture());
         ChatbotAiMetric metric = aiMetricCaptor.getValue();
         assertThat(metric.getConversationId()).isEqualTo("conversation-contextual");
-        assertThat(metric.getProvider()).isNull();
-        assertThat(metric.getModel()).isNull();
+        assertThat(metric.getProvider()).isEqualTo("ollama");
+        assertThat(metric.getModel()).isEqualTo("llama3.2:3b");
         assertThat(metric.isSuccess()).isTrue();
         assertThat(metric.isFallback()).isFalse();
         assertThat(metric.getErrorType()).isNull();
@@ -224,6 +226,49 @@ class ChatbotAiReplyServiceTest {
         assertThat(fallbackMetricCaptor.getAllValues())
                 .extracting(ChatbotFallbackMetric::getFallbackType)
                 .containsExactly("AI_NULL_RESPONSE", "AI_RESPONSE_ERROR", "AI_EMPTY_RESPONSE", "AI_EMPTY_RESPONSE");
+        assertThat(fallbackMetricCaptor.getAllValues())
+                .extracting(ChatbotFallbackMetric::getReason)
+                .containsExactly("NULL_AI_RESPONSE", "AI_PROVIDER_ERROR", "EMPTY_AI_RESPONSE", "EMPTY_AI_RESPONSE");
+        assertThat(fallbackMetricCaptor.getAllValues())
+                .allSatisfy(metric -> assertThat(metric.getCreatedAt()).isNotNull());
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldUseDefaultErrorTypeWhenAiResponseErrorIsBlank() {
+        Conversation conversation = this.generalConversation();
+        ChatbotAiRequest aiRequest = ChatbotAiRequest.builder().conversationId("conversation-general").build();
+
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
+        when(this.chatbotAiRequestBuilder.build(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        )).thenReturn(aiRequest);
+        when(this.chatbotAiClient.generate(aiRequest))
+                .thenReturn(ChatbotAiResponse.builder().error("   ").build());
+
+        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        );
+
+        assertThat(response.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(response.isUsedAi()).isFalse();
+
+        ArgumentCaptor<ChatbotAiMetric> aiMetricCaptor = ArgumentCaptor.forClass(ChatbotAiMetric.class);
+        verify(this.chatbotMetricsRecorder).recordAiCall(aiMetricCaptor.capture());
+        assertThat(aiMetricCaptor.getValue().getErrorType()).isEqualTo("AI_RESPONSE_ERROR");
+        assertThat(aiMetricCaptor.getValue().isFallback()).isTrue();
+
+        ArgumentCaptor<ChatbotFallbackMetric> fallbackMetricCaptor = ArgumentCaptor.forClass(ChatbotFallbackMetric.class);
+        verify(this.chatbotMetricsRecorder).recordFallback(fallbackMetricCaptor.capture());
+        assertThat(fallbackMetricCaptor.getValue().getFallbackType()).isEqualTo("AI_RESPONSE_ERROR");
+        assertThat(fallbackMetricCaptor.getValue().getReason()).isEqualTo("AI_RESPONSE_ERROR");
     }
 
     @Test
@@ -291,6 +336,40 @@ class ChatbotAiReplyServiceTest {
         assertThat(aiMetricCaptor.getValue().isFallback()).isTrue();
         assertThat(aiMetricCaptor.getValue().getErrorType()).isEqualTo("RuntimeException");
         verify(this.chatbotMetricsRecorder).recordFallback(any(ChatbotFallbackMetric.class));
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldReturnAiContentWhenAiMetricRecorderFails() {
+        Conversation conversation = this.generalConversation();
+        ChatbotAiRequest aiRequest = ChatbotAiRequest.builder().conversationId("conversation-general").build();
+
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
+        when(this.chatbotAiRequestBuilder.build(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        )).thenReturn(aiRequest);
+        when(this.chatbotAiClient.generate(aiRequest)).thenReturn(ChatbotAiResponse.builder()
+                .content("AI final reply")
+                .build());
+        doThrow(new RuntimeException("metrics unavailable"))
+                .when(this.chatbotMetricsRecorder)
+                .recordAiCall(any(ChatbotAiMetric.class));
+
+        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        );
+
+        assertThat(response.getAssistantReply()).isEqualTo("AI final reply");
+        assertThat(response.isUsedAi()).isTrue();
+        verify(this.chatbotMetricsRecorder).recordAiCall(any(ChatbotAiMetric.class));
+        verify(this.chatbotMetricsRecorder, never()).recordFallback(any());
     }
 
     @Test
