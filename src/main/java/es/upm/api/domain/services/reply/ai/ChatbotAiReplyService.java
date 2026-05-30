@@ -5,32 +5,40 @@ import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
 import es.upm.api.domain.model.chatbot.reply.ChatbotAiReplyResult;
+import es.upm.api.domain.model.metrics.ChatbotAiMetric;
+import es.upm.api.domain.model.metrics.ChatbotFallbackMetric;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
+import es.upm.api.domain.ports.out.ChatbotMetricsRecorder;
 import es.upm.api.domain.services.reply.ai.prompt.ChatbotAiRequestBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
 public class ChatbotAiReplyService {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatbotAiReplyService.class);
+
     private final ChatbotAiClient chatbotAiClient;
     private final ChatbotAiSettings chatbotAiSettings;
     private final ChatbotAiRequestBuilder chatbotAiRequestBuilder;
-    private static final Logger log = LoggerFactory.getLogger(ChatbotAiReplyService.class);
+    private final ChatbotMetricsRecorder chatbotMetricsRecorder;
 
     public ChatbotAiReplyService(
             ChatbotAiClient chatbotAiClient,
             ChatbotAiSettings chatbotAiSettings,
-            ChatbotAiRequestBuilder chatbotAiRequestBuilder
+            ChatbotAiRequestBuilder chatbotAiRequestBuilder,
+            ChatbotMetricsRecorder chatbotMetricsRecorder
     ) {
         this.chatbotAiClient = chatbotAiClient;
         this.chatbotAiSettings = chatbotAiSettings;
         this.chatbotAiRequestBuilder = chatbotAiRequestBuilder;
+        this.chatbotMetricsRecorder = chatbotMetricsRecorder;
     }
 
     public ChatbotAiReplyResult generateConfiguredAssistantReply(
@@ -44,6 +52,11 @@ public class ChatbotAiReplyService {
             return ChatbotAiReplyResult.withoutAi(baseReply);
         }
 
+        long startTime = System.currentTimeMillis();
+        String conversationId = conversation.getId();
+        String provider = this.chatbotAiSettings.provider();
+        String model = this.chatbotAiSettings.model();
+
         try {
             ChatbotAiRequest aiRequest = this.chatbotAiRequestBuilder.build(
                     conversation,
@@ -54,46 +67,172 @@ public class ChatbotAiReplyService {
             );
 
             ChatbotAiResponse aiResponse = this.chatbotAiClient.generate(aiRequest);
+            long durationMs = System.currentTimeMillis() - startTime;
 
             if (aiResponse == null) {
                 log.warn(
                         "AI reply generation returned null response. conversationId={}",
-                        conversation.getId()
+                        conversationId
                 );
 
-                return ChatbotAiReplyResult.withoutAi(baseReply);
+                return this.fallbackReply(
+                        conversationId,
+                        provider,
+                        model,
+                        durationMs,
+                        baseReply,
+                        "NULL_AI_RESPONSE",
+                        "AI_NULL_RESPONSE"
+                );
             }
 
             if (aiResponse.getError() != null) {
+                String errorType = this.safeErrorType(aiResponse.getError(), "AI_RESPONSE_ERROR");
                 log.warn(
-                        "AI reply generation returned error. conversationId={}, error={}",
-                        conversation.getId(),
-                        aiResponse.getError()
+                        "AI reply generation returned error. conversationId={}, errorType={}",
+                        conversationId,
+                        errorType
                 );
 
-                return ChatbotAiReplyResult.withoutAi(baseReply);
+                return this.fallbackReply(
+                        conversationId,
+                        provider,
+                        model,
+                        durationMs,
+                        baseReply,
+                        errorType,
+                        "AI_RESPONSE_ERROR"
+                );
             }
 
             if (aiResponse.getContent() == null || aiResponse.getContent().isBlank()) {
                 log.warn(
                         "AI reply generation returned blank content. conversationId={}",
-                        conversation.getId()
+                        conversationId
                 );
 
-                return ChatbotAiReplyResult.withoutAi(baseReply);
+                return this.fallbackReply(
+                        conversationId,
+                        provider,
+                        model,
+                        durationMs,
+                        baseReply,
+                        "EMPTY_AI_RESPONSE",
+                        "AI_EMPTY_RESPONSE"
+                );
             }
+
+            this.recordAiMetricSafely(
+                    this.aiMetric(conversationId, provider, model, durationMs, true, false, null)
+            );
 
             return ChatbotAiReplyResult.withAi(aiResponse.getContent().trim());
 
         } catch (RuntimeException exception) {
+            long durationMs = System.currentTimeMillis() - startTime;
+            String errorType = exception.getClass().getSimpleName();
+
             log.warn(
                     "AI reply generation failed. conversationId={}, aiEnabled={}, reason={}",
-                    conversation.getId(),
+                    conversationId,
                     this.chatbotAiSettings.isEnabled(),
-                    exception.getMessage()
+                    errorType
             );
 
-            return ChatbotAiReplyResult.withoutAi(baseReply);
+            return this.fallbackReply(
+                    conversationId,
+                    provider,
+                    model,
+                    durationMs,
+                    baseReply,
+                    errorType,
+                    "AI_EXCEPTION"
+            );
         }
+    }
+
+    private ChatbotAiReplyResult fallbackReply(
+            String conversationId,
+            String provider,
+            String model,
+            long durationMs,
+            String baseReply,
+            String errorType,
+            String fallbackType
+    ) {
+        this.recordAiMetricSafely(
+                this.aiMetric(conversationId, provider, model, durationMs, false, true, errorType)
+        );
+        this.recordFallbackMetricSafely(
+                this.fallbackMetric(conversationId, fallbackType, errorType)
+        );
+
+        return ChatbotAiReplyResult.withoutAi(baseReply);
+    }
+
+    private ChatbotAiMetric aiMetric(
+            String conversationId,
+            String provider,
+            String model,
+            long durationMs,
+            boolean success,
+            boolean fallback,
+            String errorType
+    ) {
+        return ChatbotAiMetric.builder()
+                .conversationId(conversationId)
+                .provider(provider)
+                .model(model)
+                .durationMs(durationMs)
+                .success(success)
+                .fallback(fallback)
+                .errorType(errorType)
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private ChatbotFallbackMetric fallbackMetric(
+            String conversationId,
+            String fallbackType,
+            String reason
+    ) {
+        return ChatbotFallbackMetric.builder()
+                .conversationId(conversationId)
+                .fallbackType(fallbackType)
+                .reason(reason)
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private void recordAiMetricSafely(ChatbotAiMetric metric) {
+        try {
+            this.chatbotMetricsRecorder.recordAiCall(metric);
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "AI metric recording failed. conversationId={}, reason={}",
+                    metric != null ? metric.getConversationId() : null,
+                    exception.getClass().getSimpleName()
+            );
+        }
+    }
+
+    private void recordFallbackMetricSafely(ChatbotFallbackMetric metric) {
+        try {
+            this.chatbotMetricsRecorder.recordFallback(metric);
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Fallback metric recording failed. conversationId={}, reason={}",
+                    metric != null ? metric.getConversationId() : null,
+                    exception.getClass().getSimpleName()
+            );
+        }
+    }
+
+    private String safeErrorType(String error, String fallback) {
+        if (error == null || error.isBlank()) {
+            return fallback;
+        }
+
+        return error.trim();
     }
 }
