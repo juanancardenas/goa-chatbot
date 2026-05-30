@@ -14,6 +14,8 @@ public class ChatbotReplyDecision {
 
     private final ChatbotResponseMode responseMode;
 
+    private final boolean usedAi;
+
     private final boolean usedPlatformData;
 
     @Builder.Default

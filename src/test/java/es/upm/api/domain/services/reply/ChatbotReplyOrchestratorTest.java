@@ -7,6 +7,7 @@ import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
+import es.upm.api.domain.model.chatbot.reply.ChatbotAiReplyResult;
 import es.upm.api.domain.model.chatbot.reply.ChatbotReplyDecision;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.services.reply.ai.ChatbotAiReplyService;
@@ -87,7 +88,7 @@ class ChatbotReplyOrchestratorTest {
                 "hola",
                 "Base start",
                 Optional.empty()
-        )).thenReturn("Start final");
+        )).thenReturn(ChatbotAiReplyResult.withAi("Start final"));
 
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveGeneralStartReply(
                 conversation,
@@ -97,6 +98,7 @@ class ChatbotReplyOrchestratorTest {
 
         assertThat(decision.getAssistantReply()).isEqualTo("Start final");
         assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(decision.isUsedAi()).isTrue();
         assertThat(decision.isUsedPlatformData()).isFalse();
         assertThat(decision.getSourcesSummary()).isEmpty();
         verify(this.chatbotScopePolicy, never()).evaluate(any(), any());
@@ -252,7 +254,7 @@ class ChatbotReplyOrchestratorTest {
                 "estado",
                 "Base contextual",
                 Optional.of(context)
-        )).thenReturn("Respuesta contextual");
+        )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta contextual"));
 
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 conversation,
@@ -262,6 +264,7 @@ class ChatbotReplyOrchestratorTest {
 
         assertThat(decision.getAssistantReply()).isEqualTo("Respuesta contextual");
         assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
+        assertThat(decision.isUsedAi()).isTrue();
         assertThat(decision.isUsedPlatformData()).isTrue();
         assertThat(decision.getSourcesSummary()).containsExactly("Hoja de encargo EL-1");
     }
@@ -288,7 +291,7 @@ class ChatbotReplyOrchestratorTest {
                 "estado",
                 "Base contextual",
                 Optional.of(context)
-        )).thenReturn("Respuesta contextual");
+        )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta contextual"));
 
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 conversation,
@@ -324,7 +327,7 @@ class ChatbotReplyOrchestratorTest {
                 "revisa el-1",
                 "Base mismo encargo",
                 Optional.of(context)
-        )).thenReturn("Respuesta mismo encargo");
+        )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta mismo encargo"));
 
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 conversation,
@@ -351,7 +354,7 @@ class ChatbotReplyOrchestratorTest {
                 "estado",
                 "Base contextual fallback",
                 Optional.empty()
-        )).thenReturn("Respuesta fallback");
+        )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta fallback"));
 
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 conversation,
@@ -378,7 +381,7 @@ class ChatbotReplyOrchestratorTest {
                 eq("pregunta"),
                 eq("Base general"),
                 eq(Optional.empty())
-        )).thenReturn("Respuesta general");
+        )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta general"));
 
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 conversation,
@@ -406,7 +409,7 @@ class ChatbotReplyOrchestratorTest {
                 "pregunta",
                 "Base sin encargo",
                 Optional.empty()
-        )).thenReturn("Respuesta sin encargo");
+        )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta sin encargo"));
 
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 conversation,

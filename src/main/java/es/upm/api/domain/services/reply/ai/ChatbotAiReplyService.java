@@ -4,6 +4,7 @@ import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
+import es.upm.api.domain.model.chatbot.reply.ChatbotAiReplyResult;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
@@ -32,7 +33,7 @@ public class ChatbotAiReplyService {
         this.chatbotAiRequestBuilder = chatbotAiRequestBuilder;
     }
 
-    public String generateConfiguredAssistantReply(
+    public ChatbotAiReplyResult generateConfiguredAssistantReply(
             Conversation conversation,
             ConversationProfileType profile,
             String userMessage,
@@ -40,7 +41,7 @@ public class ChatbotAiReplyService {
             Optional<ChatbotPlatformContext> platformContext
     ) {
         if (!this.chatbotAiSettings.isEnabled()) {
-            return baseReply;
+            return ChatbotAiReplyResult.withoutAi(baseReply);
         }
 
         try {
@@ -60,7 +61,7 @@ public class ChatbotAiReplyService {
                         conversation.getId()
                 );
 
-                return baseReply;
+                return ChatbotAiReplyResult.withoutAi(baseReply);
             }
 
             if (aiResponse.getError() != null) {
@@ -70,7 +71,7 @@ public class ChatbotAiReplyService {
                         aiResponse.getError()
                 );
 
-                return baseReply;
+                return ChatbotAiReplyResult.withoutAi(baseReply);
             }
 
             if (aiResponse.getContent() == null || aiResponse.getContent().isBlank()) {
@@ -79,10 +80,10 @@ public class ChatbotAiReplyService {
                         conversation.getId()
                 );
 
-                return baseReply;
+                return ChatbotAiReplyResult.withoutAi(baseReply);
             }
 
-            return aiResponse.getContent().trim();
+            return ChatbotAiReplyResult.withAi(aiResponse.getContent().trim());
 
         } catch (RuntimeException exception) {
             log.warn(
@@ -92,7 +93,7 @@ public class ChatbotAiReplyService {
                     exception.getMessage()
             );
 
-            return baseReply;
+            return ChatbotAiReplyResult.withoutAi(baseReply);
         }
     }
 }

@@ -5,6 +5,7 @@ import es.upm.api.domain.enums.ChatbotResponseMode;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
+import es.upm.api.domain.model.chatbot.reply.ChatbotAiReplyResult;
 import es.upm.api.domain.model.chatbot.reply.ChatbotReplyDecision;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.services.reply.ai.ChatbotAiReplyService;
@@ -100,7 +101,7 @@ public class ChatbotReplyOrchestrator {
     ) {
         String baseReply = this.chatbotBaseReplyBuilder.generalStartReply(profile);
 
-        String assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotAiReplyResult aiReplyResult = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 profile,
                 userMessage,
@@ -109,10 +110,11 @@ public class ChatbotReplyOrchestrator {
         );
 
         return this.replyDecision(
-                assistantReply,
+                aiReplyResult.getAssistantReply(),
                 ChatbotResponseMode.GENERAL,
                 false,
-                List.of()
+                List.of(),
+                aiReplyResult.isUsedAi()
         );
     }
 
@@ -130,7 +132,7 @@ public class ChatbotReplyOrchestrator {
                     userMessage
             );
 
-            String assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+            ChatbotAiReplyResult aiReplyResult = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                     conversation,
                     profile,
                     userMessage,
@@ -139,10 +141,11 @@ public class ChatbotReplyOrchestrator {
             );
 
             return this.replyDecision(
-                    assistantReply,
+                    aiReplyResult.getAssistantReply(),
                     ChatbotResponseMode.CONTEXTUAL_RESTRICTED,
                     false,
-                    List.of()
+                    List.of(),
+                    aiReplyResult.isUsedAi()
             );
         }
 
@@ -154,7 +157,7 @@ public class ChatbotReplyOrchestrator {
                 context
         );
 
-        String assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotAiReplyResult aiReplyResult = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 profile,
                 userMessage,
@@ -163,10 +166,11 @@ public class ChatbotReplyOrchestrator {
         );
 
         return this.replyDecision(
-                assistantReply,
+                aiReplyResult.getAssistantReply(),
                 ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA,
                 true,
-                context.getSourcesSummary()
+                context.getSourcesSummary(),
+                aiReplyResult.isUsedAi()
         );
     }
 
@@ -180,7 +184,7 @@ public class ChatbotReplyOrchestrator {
                 userMessage
         );
 
-        String assistantReply = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotAiReplyResult aiReplyResult = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 profile,
                 userMessage,
@@ -189,10 +193,11 @@ public class ChatbotReplyOrchestrator {
         );
 
         return this.replyDecision(
-                assistantReply,
+                aiReplyResult.getAssistantReply(),
                 ChatbotResponseMode.GENERAL,
                 false,
-                List.of()
+                List.of(),
+                aiReplyResult.isUsedAi()
         );
     }
 
@@ -202,9 +207,26 @@ public class ChatbotReplyOrchestrator {
             boolean usedPlatformData,
             List<String> sourcesSummary
     ) {
+        return this.replyDecision(
+                assistantReply,
+                responseMode,
+                usedPlatformData,
+                sourcesSummary,
+                false
+        );
+    }
+
+    private ChatbotReplyDecision replyDecision(
+            String assistantReply,
+            ChatbotResponseMode responseMode,
+            boolean usedPlatformData,
+            List<String> sourcesSummary,
+            boolean usedAi
+    ) {
         return ChatbotReplyDecision.builder()
                 .assistantReply(assistantReply)
                 .responseMode(responseMode)
+                .usedAi(usedAi)
                 .usedPlatformData(usedPlatformData)
                 .sourcesSummary(this.safeSourcesSummary(sourcesSummary))
                 .build();
