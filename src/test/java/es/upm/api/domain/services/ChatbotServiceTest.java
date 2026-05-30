@@ -161,7 +161,8 @@ class ChatbotServiceTest {
         ChatbotAiReplyService chatbotAiReplyService = new ChatbotAiReplyService(
                 this.chatbotAiClient,
                 this.chatbotAiSettings,
-                new ChatbotAiRequestBuilder(this.chatbotAiSettings, chatbotMessageService)
+                new ChatbotAiRequestBuilder(this.chatbotAiSettings, chatbotMessageService),
+                this.chatbotMetricsRecorder
         );
         ChatbotReplyOrchestrator chatbotReplyOrchestrator = new ChatbotReplyOrchestrator(
                 chatbotBaseReplyBuilder,
