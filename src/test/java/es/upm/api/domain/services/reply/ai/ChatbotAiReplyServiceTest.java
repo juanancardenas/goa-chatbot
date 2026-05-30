@@ -5,6 +5,7 @@ import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
 import es.upm.api.domain.model.ai.ChatbotAiResponse;
+import es.upm.api.domain.model.chatbot.reply.ChatbotAiReplyResult;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
@@ -52,7 +53,7 @@ class ChatbotAiReplyServiceTest {
     void generateConfiguredAssistantReplyShouldReturnBaseReplyWhenAiIsDisabled() {
         when(this.chatbotAiSettings.isEnabled()).thenReturn(false);
 
-        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 this.generalConversation(),
                 ConversationProfileType.PROFESSIONAL,
                 "What can you do?",
@@ -60,7 +61,8 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         );
 
-        assertThat(response).isEqualTo("Safe base reply");
+        assertThat(response.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(response.isUsedAi()).isFalse();
         verify(this.chatbotAiRequestBuilder, never()).build(
                 any(),
                 any(),
@@ -95,7 +97,7 @@ class ChatbotAiReplyServiceTest {
                 .finishReason("SUCCESS")
                 .build());
 
-        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.CLIENT,
                 "Which legal tasks are pending?",
@@ -103,7 +105,8 @@ class ChatbotAiReplyServiceTest {
                 platformContext
         );
 
-        assertThat(response).isEqualTo("AI contextual reply");
+        assertThat(response.getAssistantReply()).isEqualTo("AI contextual reply");
+        assertThat(response.isUsedAi()).isTrue();
         verify(this.chatbotAiRequestBuilder).build(
                 conversation,
                 ConversationProfileType.CLIENT,
@@ -133,34 +136,43 @@ class ChatbotAiReplyServiceTest {
                 .thenReturn(ChatbotAiResponse.builder().content(null).build())
                 .thenReturn(ChatbotAiResponse.builder().content("   ").build());
 
-        assertThat(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotAiReplyResult nullResponseResult = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.PROFESSIONAL,
                 "Question",
                 "Safe base reply",
                 Optional.empty()
-        )).isEqualTo("Safe base reply");
-        assertThat(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        );
+        ChatbotAiReplyResult errorResponseResult = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.PROFESSIONAL,
                 "Question",
                 "Safe base reply",
                 Optional.empty()
-        )).isEqualTo("Safe base reply");
-        assertThat(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        );
+        ChatbotAiReplyResult nullContentResult = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.PROFESSIONAL,
                 "Question",
                 "Safe base reply",
                 Optional.empty()
-        )).isEqualTo("Safe base reply");
-        assertThat(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        );
+        ChatbotAiReplyResult blankContentResult = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.PROFESSIONAL,
                 "Question",
                 "Safe base reply",
                 Optional.empty()
-        )).isEqualTo("Safe base reply");
+        );
+
+        assertThat(nullResponseResult.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(errorResponseResult.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(nullContentResult.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(blankContentResult.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(nullResponseResult.isUsedAi()).isFalse();
+        assertThat(errorResponseResult.isUsedAi()).isFalse();
+        assertThat(nullContentResult.isUsedAi()).isFalse();
+        assertThat(blankContentResult.isUsedAi()).isFalse();
 
         verify(this.chatbotAiRequestBuilder, times(4)).build(
                 conversation,
@@ -185,7 +197,7 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         )).thenThrow(new RuntimeException("history unavailable"));
 
-        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.PROFESSIONAL,
                 "Question",
@@ -193,7 +205,8 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         );
 
-        assertThat(response).isEqualTo("Safe base reply");
+        assertThat(response.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(response.isUsedAi()).isFalse();
         verify(this.chatbotAiClient, never()).generate(any());
     }
 
@@ -212,7 +225,7 @@ class ChatbotAiReplyServiceTest {
         )).thenReturn(aiRequest);
         when(this.chatbotAiClient.generate(aiRequest)).thenThrow(new RuntimeException("provider unavailable"));
 
-        String response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
                 conversation,
                 ConversationProfileType.PROFESSIONAL,
                 "Question",
@@ -220,7 +233,8 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         );
 
-        assertThat(response).isEqualTo("Safe base reply");
+        assertThat(response.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(response.isUsedAi()).isFalse();
     }
 
     private Conversation generalConversation() {

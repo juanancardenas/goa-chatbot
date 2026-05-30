@@ -19,6 +19,7 @@ import es.upm.api.domain.model.chatbot.command.ChatbotContextualConversationComm
 import es.upm.api.domain.model.chatbot.command.ChatbotMessageCommand;
 import es.upm.api.domain.model.chatbot.result.ChatbotConfigurationResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
+import es.upm.api.domain.model.metrics.ChatbotMessageMetric;
 import es.upm.api.domain.model.pagination.PageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
@@ -885,6 +886,10 @@ class ChatbotServiceTest {
 
         assertThat(response.getMessage()).isEqualTo("Respuesta generada por Ollama");
         verify(this.chatbotAiClient).generate(any());
+
+        ArgumentCaptor<ChatbotMessageMetric> metricCaptor = ArgumentCaptor.forClass(ChatbotMessageMetric.class);
+        verify(this.chatbotMetricsRecorder).recordMessageHandled(metricCaptor.capture());
+        assertThat(metricCaptor.getValue().isUsedAi()).isTrue();
     }
 
     @Test

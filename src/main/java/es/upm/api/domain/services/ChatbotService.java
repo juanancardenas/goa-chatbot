@@ -214,6 +214,7 @@ public class ChatbotService implements
         String messageId = null;
         ConversationType conversationType = null;
         ChatbotResponseMode responseMode = null;
+        boolean usedAi = false;
         boolean usedPlatformData = false;
         boolean success = false;
 
@@ -253,6 +254,7 @@ public class ChatbotService implements
                     userMessage
             );
             responseMode = decision.getResponseMode();
+            usedAi = decision.isUsedAi();
             usedPlatformData = decision.isUsedPlatformData();
 
             String assistantReply = this.chatbotResponseSanitizer.normalizeReplyForFrontend(
@@ -289,7 +291,7 @@ public class ChatbotService implements
                     .requestMessageId(messageId)
                     .conversationType(conversationType)
                     .responseMode(responseMode)
-                    .usedAi(false)
+                    .usedAi(usedAi)
                     .usedPlatformData(usedPlatformData)
                     .durationMs(durationMs)
                     .success(success)
