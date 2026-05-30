@@ -74,6 +74,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -594,6 +595,35 @@ class ChatbotServiceTest {
         assertThat(exception).hasMessageContaining("conversationId es obligatorio");
         verify(conversationPersistence, never()).readById(any());
         verify(messagePersistence, never()).createAndReturnId(any(Message.class));
+
+        ChatbotMessageMetric metric = this.captureMessageMetric();
+        assertThat(metric.getConversationId()).isNull();
+        assertThat(metric.getUserId()).isEqualTo("professional-1");
+        assertThat(metric.getRequestMessageId()).isNull();
+        assertThat(metric.getConversationType()).isNull();
+        assertThat(metric.getResponseMode()).isNull();
+        assertThat(metric.isUsedAi()).isFalse();
+        assertThat(metric.isUsedPlatformData()).isFalse();
+        assertThat(metric.isSuccess()).isFalse();
+        assertThat(metric.getDurationMs()).isGreaterThanOrEqualTo(0);
+        assertThat(metric.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    void sendMessageShouldPreserveOriginalExceptionWhenMetricRecorderFails() {
+        this.authenticate("professional-1", "ROLE_PROFESSIONAL");
+        ChatbotMessageCommand request = new ChatbotMessageCommand("   ", "Hola");
+        doThrow(new RuntimeException("metrics unavailable"))
+                .when(this.chatbotMetricsRecorder)
+                .recordMessageHandled(any(ChatbotMessageMetric.class));
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> chatbotService.sendMessage(this.authenticatedUser, request)
+        );
+
+        assertThat(exception).hasMessageContaining("conversationId es obligatorio");
+        verify(this.chatbotMetricsRecorder).recordMessageHandled(any(ChatbotMessageMetric.class));
     }
 
     @Test
@@ -631,6 +661,18 @@ class ChatbotServiceTest {
                 .isEqualTo(ChatbotResponseMessages.CLIENT_COURTESY_REPLY);
         assertThat(messageCaptor.getAllValues().get(1).getSequenceNumber()).isEqualTo(6);
         assertThat(messageCaptor.getAllValues().get(1).getParentMessageId()).isEqualTo("user-message-id");
+
+        ChatbotMessageMetric metric = this.captureMessageMetric();
+        assertThat(metric.getConversationId()).isEqualTo("conversation-courtesy");
+        assertThat(metric.getUserId()).isEqualTo("customer-1");
+        assertThat(metric.getRequestMessageId()).isEqualTo("user-message-id");
+        assertThat(metric.getConversationType()).isEqualTo(ConversationType.GENERAL);
+        assertThat(metric.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(metric.isUsedAi()).isFalse();
+        assertThat(metric.isUsedPlatformData()).isFalse();
+        assertThat(metric.isSuccess()).isTrue();
+        assertThat(metric.getDurationMs()).isGreaterThanOrEqualTo(0);
+        assertThat(metric.getCreatedAt()).isNotNull();
     }
 
     @Test
@@ -765,6 +807,16 @@ class ChatbotServiceTest {
         assertThat(response.getMessage()).contains("Asesoramiento jurídico");
         assertThat(response.getUsedPlatformData()).isTrue();
         assertThat(response.getSourcesSummary()).isNotEmpty();
+
+        ChatbotMessageMetric metric = this.captureMessageMetric();
+        assertThat(metric.getConversationId()).isEqualTo("conversation-contextual-legal-tasks");
+        assertThat(metric.getUserId()).isEqualTo("professional-1");
+        assertThat(metric.getRequestMessageId()).isEqualTo("user-message-id");
+        assertThat(metric.getConversationType()).isEqualTo(ConversationType.CONTEXTUAL);
+        assertThat(metric.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_PLATFORM_DATA);
+        assertThat(metric.isUsedAi()).isFalse();
+        assertThat(metric.isUsedPlatformData()).isTrue();
+        assertThat(metric.isSuccess()).isTrue();
     }
 
     @Test
@@ -1985,6 +2037,12 @@ class ChatbotServiceTest {
                 .userId(userId)
                 .profile(isCustomer ? ConversationProfileType.CLIENT : ConversationProfileType.PROFESSIONAL)
                 .build();
+    }
+
+    private ChatbotMessageMetric captureMessageMetric() {
+        ArgumentCaptor<ChatbotMessageMetric> metricCaptor = ArgumentCaptor.forClass(ChatbotMessageMetric.class);
+        verify(this.chatbotMetricsRecorder).recordMessageHandled(metricCaptor.capture());
+        return metricCaptor.getValue();
     }
 }
 

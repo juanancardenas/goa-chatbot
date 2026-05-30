@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, y la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`, y la trazabilidad de uso real de IA en respuestas mediante `ChatbotAiReplyResult`, `ChatbotReplyDecision.usedAi` y `ChatbotMessageMetric.usedAi` incorporada en la issue 41.
 
 ## Niveles de regla
 
@@ -205,6 +205,7 @@ Modelos internos de comando actuales:
 - `ChatbotContextualConversationCommand`
 
 Modelos internos de decision actuales:
+- `ChatbotAiReplyResult`
 - `ChatbotReplyDecision`
 
 Modelos internos de resultado actuales:
@@ -429,6 +430,7 @@ Deuda tecnica conocida:
 - `ChatbotMetricsRecorder` DEBE permanecer libre de detalles de Micrometer, Prometheus, MongoDB, HTTP, Feign o cualquier adaptador concreto.
 - Los modelos de metricas DEBEN representar hechos de dominio observables, no contratos HTTP ni entidades de persistencia.
 - Los servicios de dominio NO DEBEN depender de implementaciones concretas de metricas; DEBEN depender solo de `ChatbotMetricsRecorder`.
+- Los servicios de dominio DEBEN registrar metricas de forma segura: un fallo del recorder NO DEBE ocultar ni sustituir la excepcion funcional original del caso de uso.
 - La implementacion tecnica de metricas, cuando exista, DEBE vivir en `adapter.out` o en un subpaquete tecnico equivalente y mapear desde los modelos de `domain.model.metrics`.
 - La implementacion actual de metricas vive en `adapter.out.metrics.LoggingChatbotMetricsRecorder` y DEBE limitarse a registrar logs estructurados como salida tecnica inicial.
 - `LoggingChatbotMetricsRecorder` DEBE implementar `ChatbotMetricsRecorder`, estar registrado como componente Spring y no introducir dependencias de observabilidad externa, persistencia, HTTP, Feign ni MongoDB.
@@ -436,9 +438,11 @@ Deuda tecnica conocida:
 - `LoggingChatbotMetricsRecorder` NO DEBE registrar contenido completo de mensajes, respuestas de IA, prompts, documentos legales, tokens, secretos ni trazas completas de excepciones.
 - `LoggingChatbotMetricsRecorder` DEBE ignorar metricas `null` de forma controlada y capturar internamente errores de logging para no interrumpir el flujo principal del chatbot.
 - DEBERIA evitar usar identificadores de alta cardinalidad o datos sensibles como tags de sistemas de metricas agregadas; si se necesitan para trazabilidad, deben tratarse como evento/log estructurado segun el adaptador.
+- `ChatbotMessageMetric.usedAi` DEBE indicar que la respuesta final enviada al usuario uso contenido real devuelto por el proveedor IA.
+- `ChatbotMessageMetric.usedAi` NO DEBE usarse para indicar que la IA estaba habilitada o que se intento llamar al proveedor; los intentos, fallos y fallback de IA deben modelarse con `ChatbotAiMetric`.
 
 Modelos de metricas actuales:
-- `ChatbotMessageMetric`: evento de mensaje gestionado por conversacion.
+- `ChatbotMessageMetric`: evento de mensaje gestionado por conversacion; resume duracion, exito, tipo de conversacion, modo de respuesta, uso de datos de plataforma y uso real de IA en la respuesta final.
 - `ChatbotAiMetric`: evento de llamada o intento de uso de IA.
 - `ChatbotEscalationMetric`: evento de escalado a intervencion humana.
 - `ChatbotFallbackMetric`: evento de uso de fallback conversacional.
@@ -503,7 +507,12 @@ domain.ports.out.ChatbotAiSettings
 - `ChatbotAiReplyService` DEBE enriquecer la respuesta base solo cuando `chatbot.ai.enabled=true`.
 - `ChatbotAiReplyService` DEBE delegar la construccion de `ChatbotAiRequest` en `reply.ai.prompt.ChatbotAiRequestBuilder`.
 - `ChatbotAiReplyService` DEBE devolver la respuesta base si el proveedor IA falla, devuelve error, devuelve contenido vacio o lanza excepcion.
+- `ChatbotAiReplyService` DEBE devolver `ChatbotAiReplyResult`, no un `String` plano, para propagar tanto la respuesta final como si se uso IA real.
+- `ChatbotAiReplyResult.usedAi` DEBE ser `true` solo cuando se acepta contenido no vacio devuelto por el proveedor IA como respuesta final.
+- `ChatbotAiReplyResult.usedAi` DEBE ser `false` cuando la IA esta desactivada, cuando falla el proveedor, cuando la respuesta del proveedor es invalida o cuando se usa la respuesta base como fallback.
 - `ChatbotAiReplyService` NO DEBE persistir mensajes ni modificar conversaciones; esa responsabilidad pertenece a los servicios de conversacion y al orquestador.
+- `ChatbotReplyOrchestrator` DEBE propagar `ChatbotAiReplyResult.usedAi` hacia `ChatbotReplyDecision.usedAi`.
+- `ChatbotReplyDecision.usedAi` DEBE ser la fuente usada por `ChatbotService` para poblar `ChatbotMessageMetric.usedAi`.
 - `ChatbotAiRequestBuilder` DEBE construir `ChatbotAiRequest` con conversacion, perfil, respuesta base, contexto de plataforma permitido, mensajes recientes y propiedades IA.
 - `ChatbotAiRequestBuilder` DEBE depender de `ChatbotMessageService` para leer mensajes recientes; `ChatbotAiReplyService` NO DEBE acceder directamente al historial.
 - `ChatbotResponseSanitizer` DEBE normalizar la respuesta final para el frontend antes de persistirla cuando aplique.
@@ -676,6 +685,7 @@ Excepciones actuales:
 - `ChatbotHistoryService` DEBE centralizar listado de conversaciones, lectura paginada de mensajes y normalizacion de paginacion.
 - `ChatbotMessageService` DEBE centralizar persistencia de mensajes, calculo de secuencia y transformacion a historial/prompt.
 - `ChatbotReplyOrchestrator` DEBE centralizar la decision de respuesta asistente y devolver `ChatbotReplyDecision` sin persistir mensajes.
+- `ChatbotReplyDecision` DEBE incluir el modo de respuesta, uso de datos de plataforma, fuentes resumidas y si la respuesta final uso IA real.
 - `ChatbotEscalationService` DEBE centralizar escalado, archivado de conversacion y persistencia de `Escalation`.
 - `ChatbotResponseSanitizer` DEBE centralizar transformaciones de salida necesarias para que el frontend renderice respuestas de forma segura.
 - DEBE impedir envio de mensajes a conversaciones no activas.
@@ -734,6 +744,7 @@ Reglas:
 Tests actuales destacados:
 - `ChatbotServiceTest`
 - `ChatbotResourceTest`
+- `ChatbotAiReplyResultTest`
 - `ChatbotAiReplyServiceTest`
 - `ChatbotAiRequestBuilderTest`
 - `ChatbotPromptBuilderTest`
