@@ -1,6 +1,7 @@
 package es.upm.api.domain.services;
 
 import es.upm.api.domain.enums.ChatbotResponseMode;
+import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.exceptions.BadRequestException;
@@ -13,6 +14,7 @@ import es.upm.api.domain.model.chatbot.result.ChatbotContextualConversationResul
 import es.upm.api.domain.model.chatbot.result.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotConversationSummaryResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
+import es.upm.api.domain.model.metrics.ChatbotMessageMetric;
 import es.upm.api.domain.model.security.AuthenticatedUserContext;
 import es.upm.api.domain.ports.in.CloseConversationUseCase;
 import es.upm.api.domain.ports.in.DeleteConversationUseCase;
@@ -25,17 +27,20 @@ import es.upm.api.domain.ports.in.SendChatbotMessageUseCase;
 import es.upm.api.domain.ports.in.StartContextualConversationUseCase;
 import es.upm.api.domain.ports.in.StartGeneralConversationUseCase;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
+import es.upm.api.domain.ports.out.ChatbotMetricsRecorder;
 import es.upm.api.domain.services.conversation.ChatbotConversationService;
 import es.upm.api.domain.services.conversation.ChatbotEscalationService;
 import es.upm.api.domain.services.conversation.ChatbotHistoryService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.reply.ChatbotReplyOrchestrator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 public class ChatbotService implements
         ReadConversationHistoryListUseCase,
@@ -57,6 +62,7 @@ public class ChatbotService implements
     private final ChatbotEscalationService chatbotEscalationService;
     private final ChatbotReplyOrchestrator chatbotReplyOrchestrator;
     private final ChatbotAiSettings chatbotAiSettings;
+    private final ChatbotMetricsRecorder chatbotMetricsRecorder;
 
     // Constructor
     public ChatbotService(ChatbotMessageService chatbotMessageService,
@@ -65,7 +71,8 @@ public class ChatbotService implements
                           ChatbotHistoryService chatbotHistoryService,
                           ChatbotEscalationService chatbotEscalationService,
                           ChatbotReplyOrchestrator chatbotReplyOrchestrator,
-                          ChatbotAiSettings chatbotAiSettings
+                          ChatbotAiSettings chatbotAiSettings,
+                          ChatbotMetricsRecorder chatbotMetricsRecorder
     ) {
         this.chatbotMessageService = chatbotMessageService;
         this.chatbotResponseSanitizer = chatbotResponseSanitizer;
@@ -74,6 +81,7 @@ public class ChatbotService implements
         this.chatbotEscalationService = chatbotEscalationService;
         this.chatbotReplyOrchestrator = chatbotReplyOrchestrator;
         this.chatbotAiSettings = chatbotAiSettings;
+        this.chatbotMetricsRecorder = chatbotMetricsRecorder;
     }
 
     /**
@@ -199,62 +207,109 @@ public class ChatbotService implements
             AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
     ) {
-        String userId = authenticatedUser.getUserId();
-        LocalDateTime date = LocalDateTime.now();
-        String userMessage = command.getMessage();
+        long startTime = System.currentTimeMillis();
 
-        if (command.getConversationId() == null || command.getConversationId().isBlank()) {
-            throw new BadRequestException("conversationId es obligatorio para enviar mensajes");
+        String userId = null;
+        String conversationId = null;
+        String messageId = null;
+        ConversationType conversationType = null;
+        ChatbotResponseMode responseMode = null;
+        boolean usedPlatformData = false;
+        boolean success = false;
+
+        try {
+            userId = authenticatedUser.getUserId();
+            LocalDateTime date = LocalDateTime.now();
+            String userMessage = command.getMessage();
+
+            if (command.getConversationId() == null || command.getConversationId().isBlank()) {
+                throw new BadRequestException("conversationId es obligatorio para enviar mensajes");
+            }
+
+            this.validateUserMessageLength(userMessage);
+
+            Conversation conversation = this.chatbotConversationService.requireActiveOwnedConversation(
+                    command.getConversationId(),
+                    userId
+            );
+            conversationId = conversation.getId();
+            conversationType = conversation.getType();
+
+            Integer nextSequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 2);
+
+            messageId = this.chatbotMessageService.saveMessage(
+                    conversation.getId(),
+                    MessageSenderType.USER,
+                    MessageType.REQUEST,
+                    userMessage,
+                    nextSequence,
+                    null,
+                    date
+            );
+
+            ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                    conversation,
+                    authenticatedUser.getProfile(),
+                    userMessage
+            );
+            responseMode = decision.getResponseMode();
+            usedPlatformData = decision.isUsedPlatformData();
+
+            String assistantReply = this.chatbotResponseSanitizer.normalizeReplyForFrontend(
+                    decision.getAssistantReply()
+            );
+
+            this.chatbotMessageService.saveMessage(
+                    conversation.getId(),
+                    MessageSenderType.ASSISTANT,
+                    MessageType.RESPONSE,
+                    assistantReply,
+                    nextSequence + 1,
+                    messageId,
+                    date
+            );
+
+            success = true;
+
+            return buildMessageResult(
+                    conversation.getId(),
+                    assistantReply,
+                    null,
+                    date,
+                    decision.getResponseMode(),
+                    decision.isUsedPlatformData(),
+                    decision.getSourcesSummary()
+            );
+        } finally {
+            long durationMs = System.currentTimeMillis() - startTime;
+
+            ChatbotMessageMetric metric = ChatbotMessageMetric.builder()
+                    .conversationId(conversationId)
+                    .userId(userId)
+                    .requestMessageId(messageId)
+                    .conversationType(conversationType)
+                    .responseMode(responseMode)
+                    .usedAi(false)
+                    .usedPlatformData(usedPlatformData)
+                    .durationMs(durationMs)
+                    .success(success)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            this.recordMessageMetricSafely(metric);
         }
+    }
 
-        this.validateUserMessageLength(userMessage);
-
-        Conversation conversation = this.chatbotConversationService.requireActiveOwnedConversation(
-                command.getConversationId(),
-                userId
-        );
-
-        Integer nextSequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 2);
-
-        String messageId = this.chatbotMessageService.saveMessage(
-                conversation.getId(),
-                MessageSenderType.USER,
-                MessageType.REQUEST,
-                userMessage,
-                nextSequence,
-                null,
-                date
-        );
-
-        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
-                conversation,
-                authenticatedUser.getProfile(),
-                userMessage
-        );
-
-        String assistantReply = this.chatbotResponseSanitizer.normalizeReplyForFrontend(
-                decision.getAssistantReply()
-        );
-
-        this.chatbotMessageService.saveMessage(
-                conversation.getId(),
-                MessageSenderType.ASSISTANT,
-                MessageType.RESPONSE,
-                assistantReply,
-                nextSequence + 1,
-                messageId,
-                date
-        );
-
-        return buildMessageResult(
-                conversation.getId(),
-                assistantReply,
-                null,
-                date,
-                decision.getResponseMode(),
-                decision.isUsedPlatformData(),
-                decision.getSourcesSummary()
-        );
+    private void recordMessageMetricSafely(ChatbotMessageMetric metric) {
+        try {
+            this.chatbotMetricsRecorder.recordMessageHandled(metric);
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Message metric recording failed. conversationId={}, reason={}",
+                    metric != null ? metric.getConversationId() : null,
+                    exception.getClass().getSimpleName()
+            );
+        }
     }
 
     private static ChatbotMessageResult buildMessageResult(

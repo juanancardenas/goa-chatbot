@@ -35,6 +35,7 @@ import es.upm.api.domain.ports.in.StartContextualConversationUseCase;
 import es.upm.api.domain.ports.in.StartGeneralConversationUseCase;
 import es.upm.api.domain.ports.out.ChatbotAiClient;
 import es.upm.api.domain.ports.out.ChatbotAiSettings;
+import es.upm.api.domain.ports.out.ChatbotMetricsRecorder;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
@@ -98,6 +99,9 @@ class ChatbotServiceTest {
 
     @Mock
     private ChatbotAiSettings chatbotAiSettings;
+
+    @Mock
+    private ChatbotMetricsRecorder chatbotMetricsRecorder;
 
     @Mock
     private ChatbotDocumentContextService chatbotDocumentContextService;
@@ -171,7 +175,8 @@ class ChatbotServiceTest {
                 chatbotHistoryService,
                 chatbotEscalationService,
                 chatbotReplyOrchestrator,
-                this.chatbotAiSettings
+                this.chatbotAiSettings,
+                this.chatbotMetricsRecorder
         );
     }
 
