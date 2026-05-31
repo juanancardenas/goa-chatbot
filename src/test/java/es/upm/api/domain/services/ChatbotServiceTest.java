@@ -236,6 +236,18 @@ class ChatbotServiceTest {
         assertThat(response.getConversationId()).isEqualTo(savedConversation.getId());
         assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_GENERAL_START_REPLY);
         assertThat(response.getCreatedAt()).isEqualTo(savedConversation.getCreatedAt().toString());
+
+        ChatbotMessageMetric metric = this.captureMessageMetric();
+        assertThat(metric.getConversationId()).isEqualTo(savedConversation.getId());
+        assertThat(metric.getUserId()).isEqualTo("client-1");
+        assertThat(metric.getRequestMessageId()).isEqualTo("user-message-id");
+        assertThat(metric.getConversationType()).isEqualTo(ConversationType.GENERAL);
+        assertThat(metric.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(metric.isUsedAi()).isFalse();
+        assertThat(metric.isUsedPlatformData()).isFalse();
+        assertThat(metric.getDurationMs()).isGreaterThanOrEqualTo(0);
+        assertThat(metric.isSuccess()).isTrue();
+        assertThat(metric.getCreatedAt()).isNotNull();
     }
 
     @Test
@@ -1020,6 +1032,18 @@ class ChatbotServiceTest {
         assertThat(exception).hasMessageContaining("limite maximo de caracteres");
         verify(this.conversationPersistence, never()).create(any(Conversation.class));
         verify(this.messagePersistence, never()).createAndReturnId(any(Message.class));
+
+        ChatbotMessageMetric metric = this.captureMessageMetric();
+        assertThat(metric.getConversationId()).isNull();
+        assertThat(metric.getUserId()).isEqualTo("professional-1");
+        assertThat(metric.getRequestMessageId()).isNull();
+        assertThat(metric.getConversationType()).isNull();
+        assertThat(metric.getResponseMode()).isNull();
+        assertThat(metric.isUsedAi()).isFalse();
+        assertThat(metric.isUsedPlatformData()).isFalse();
+        assertThat(metric.getDurationMs()).isGreaterThanOrEqualTo(0);
+        assertThat(metric.isSuccess()).isFalse();
+        assertThat(metric.getCreatedAt()).isNotNull();
     }
 
     @Test
