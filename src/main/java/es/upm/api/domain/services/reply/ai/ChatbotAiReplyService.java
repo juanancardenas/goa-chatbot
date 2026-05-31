@@ -210,7 +210,7 @@ public class ChatbotAiReplyService {
         } catch (RuntimeException exception) {
             log.warn(
                     "AI metric recording failed. conversationId={}, reason={}",
-                    metric != null ? metric.getConversationId() : null,
+                    metric.getConversationId(),
                     exception.getClass().getSimpleName()
             );
         }
@@ -222,14 +222,14 @@ public class ChatbotAiReplyService {
         } catch (RuntimeException exception) {
             log.warn(
                     "Fallback metric recording failed. conversationId={}, reason={}",
-                    metric != null ? metric.getConversationId() : null,
+                    metric.getConversationId(),
                     exception.getClass().getSimpleName()
             );
         }
     }
 
     private String safeErrorType(String error) {
-        if (error == null || error.isBlank()) {
+        if (error.isBlank()) {
             return "AI_RESPONSE_ERROR";
         }
 
