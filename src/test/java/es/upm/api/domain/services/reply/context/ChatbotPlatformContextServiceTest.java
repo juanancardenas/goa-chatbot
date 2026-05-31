@@ -43,6 +43,16 @@ class ChatbotPlatformContextServiceTest {
     }
 
     @Test
+    void loadContextShouldReturnEmptyWhenEngagementLetterIdIsNull() {
+        ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
+
+        assertThat(service.loadContext(null)).isEmpty();
+
+        verify(this.engagementClient, never()).readById(anyString());
+        verify(this.engagementClient, never()).readEventsByEngagementLetterId(anyString(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
     void loadContextShouldReturnContextWithOwnerProceduresEventsAndSources() {
         String engagementLetterId = "eng-001";
         ChatbotPlatformContextService service = new ChatbotPlatformContextService(this.engagementClient);
@@ -100,6 +110,33 @@ class ChatbotPlatformContextServiceTest {
         assertThat(result.get().getOwnerDisplayName()).isEqualTo("usuario del encargo");
         assertThat(result.get().getProcedureTitles()).isEmpty();
         assertThat(result.get().getRecentEventSummaries()).containsExactly("Vista inicial [EVENT] - OPEN");
+    }
+
+    @Test
+    void loadContextShouldFallbackToDefaultOwnerWhenOwnerDisplayNameIsNull() {
+        String engagementLetterId = "eng-owner-null";
+        UserSummary owner = org.mockito.Mockito.mock(UserSummary.class);
+
+        when(owner.displayName()).thenReturn(null);
+        when(this.engagementClient.readById(engagementLetterId))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        owner,
+                        List.of()
+                ));
+        when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
+                .thenReturn(new EngagementEventPage(List.of()));
+
+        Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext(engagementLetterId);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getOwnerDisplayName()).isEqualTo("usuario del encargo");
+        assertThat(result.get().getProcedureTitles()).isEmpty();
+        assertThat(result.get().getLegalTaskSummaries()).isEmpty();
+        assertThat(result.get().getRecentEventSummaries()).isEmpty();
+        assertThat(result.get().getSourcesSummary()).containsExactly("Hoja de encargo " + engagementLetterId);
     }
 
     @Test
@@ -391,6 +428,68 @@ class ChatbotPlatformContextServiceTest {
         assertThat(result.get().getSourcesSummary())
                 .filteredOn(source -> source.startsWith("Legal Task:"))
                 .hasSize(3);
+    }
+
+    @Test
+    void loadContextShouldIgnoreProceduresWithoutLegalTasksAndNullLegalTasks() {
+        LegalProcedureSummary procedureWithoutTasks = new LegalProcedureSummary(
+                "Procedimiento sin tareas",
+                null,
+                null,
+                null
+        );
+        LegalProcedureSummary procedureWithNullTask = new LegalProcedureSummary(
+                "Procedimiento con tareas",
+                null,
+                null,
+                java.util.Arrays.asList(null, " Preparar recurso ")
+        );
+
+        when(this.engagementClient.readById("engagement-null-legal-tasks"))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        null,
+                        List.of(procedureWithoutTasks, procedureWithNullTask)
+                ));
+        when(this.engagementClient.readEventsByEngagementLetterId("engagement-null-legal-tasks", 0, 5))
+                .thenReturn(new EngagementEventPage(List.of()));
+
+        Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-null-legal-tasks");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getLegalTaskSummaries()).containsExactly(
+                "Procedimiento con tareas: Preparar recurso"
+        );
+    }
+
+    @Test
+    void loadContextShouldUseFallbackProcedureTitleWhenProcedureTitleIsBlank() {
+        LegalProcedureSummary procedure = new LegalProcedureSummary(
+                " ",
+                null,
+                null,
+                List.of("Asesoramiento juridico.")
+        );
+
+        when(this.engagementClient.readById("engagement-blank-procedure-title"))
+                .thenReturn(new EngagementLetterSummary(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 4, 1),
+                        null,
+                        null,
+                        List.of(procedure)
+                ));
+        when(this.engagementClient.readEventsByEngagementLetterId("engagement-blank-procedure-title", 0, 5))
+                .thenReturn(new EngagementEventPage(List.of()));
+
+        Optional<ChatbotPlatformContext> result = this.chatbotPlatformContextService.loadContext("engagement-blank-procedure-title");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getLegalTaskSummaries()).containsExactly(
+                "Procedimiento sin título: Asesoramiento juridico."
+        );
     }
 
     @Test
