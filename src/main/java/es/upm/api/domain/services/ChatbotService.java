@@ -1,7 +1,6 @@
 package es.upm.api.domain.services;
 
 import es.upm.api.domain.enums.ChatbotResponseMode;
-import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.enums.MessageSenderType;
 import es.upm.api.domain.enums.MessageType;
 import es.upm.api.domain.exceptions.BadRequestException;
@@ -39,6 +38,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.UnaryOperator;
 
 @Slf4j
 @Service
@@ -147,55 +148,42 @@ public class ChatbotService implements
             AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
     ) {
-        String userMessage = command.getMessage();
+        long startTime = System.currentTimeMillis();
+        ChatbotMessageMetric metric = ChatbotMessageMetric.builder()
+                .success(false)
+                .build();
 
-        this.validateUserMessageLength(userMessage);
+        try {
+            String userId = authenticatedUser.getUserId();
+            metric.setUserId(userId);
 
-        LocalDateTime date = LocalDateTime.now();
+            String userMessage = command.getMessage();
 
-        Conversation conversation = this.chatbotConversationService.createGeneralConversation(
-                authenticatedUser.getUserId(),
-                date
-        );
+            this.validateUserMessageLength(userMessage);
 
-        Integer firstSequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 2);
+            LocalDateTime date = LocalDateTime.now();
 
-        String messageId = this.chatbotMessageService.saveMessage(
-                conversation.getId(),
-                MessageSenderType.USER,
-                MessageType.REQUEST,
-                userMessage,
-                firstSequence,
-                null,
-                date
-        );
+            Conversation conversation = this.chatbotConversationService.createGeneralConversation(
+                    userId,
+                    date
+            );
 
-        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveGeneralStartReply(
-                conversation,
-                authenticatedUser.getProfile(),
-                userMessage
-        );
-        String assistantReply = decision.getAssistantReply();
+            return this.handleConversationMessage(
+                    userMessage,
+                    conversation,
+                    date,
+                    metric,
+                    (conversationToResolve, messageToResolve) -> this.chatbotReplyOrchestrator.resolveGeneralStartReply(
+                            conversationToResolve,
+                            authenticatedUser.getProfile(),
+                            messageToResolve
+                    ),
+                    reply -> reply
+            );
 
-        this.chatbotMessageService.saveMessage(
-                conversation.getId(),
-                MessageSenderType.ASSISTANT,
-                MessageType.RESPONSE,
-                assistantReply,
-                firstSequence + 1,
-                messageId,
-                date
-        );
-
-        return buildMessageResult(
-                conversation.getId(),
-                assistantReply,
-                null,
-                date,
-                decision.getResponseMode(),
-                decision.isUsedPlatformData(),
-                decision.getSourcesSummary()
-        );
+        } finally {
+            this.completeAndRecordMessageMetric(metric, startTime);
+        }
     }
 
     /**
@@ -208,18 +196,14 @@ public class ChatbotService implements
             ChatbotMessageCommand command
     ) {
         long startTime = System.currentTimeMillis();
-
-        String userId = null;
-        String conversationId = null;
-        String messageId = null;
-        ConversationType conversationType = null;
-        ChatbotResponseMode responseMode = null;
-        boolean usedAi = false;
-        boolean usedPlatformData = false;
-        boolean success = false;
+        ChatbotMessageMetric metric = ChatbotMessageMetric.builder()
+                .success(false)
+                .build();
 
         try {
-            userId = authenticatedUser.getUserId();
+            String userId = authenticatedUser.getUserId();
+            metric.setUserId(userId);
+
             LocalDateTime date = LocalDateTime.now();
             String userMessage = command.getMessage();
 
@@ -233,73 +217,83 @@ public class ChatbotService implements
                     command.getConversationId(),
                     userId
             );
-            conversationId = conversation.getId();
-            conversationType = conversation.getType();
 
-            Integer nextSequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 2);
-
-            messageId = this.chatbotMessageService.saveMessage(
-                    conversation.getId(),
-                    MessageSenderType.USER,
-                    MessageType.REQUEST,
+            return this.handleConversationMessage(
                     userMessage,
-                    nextSequence,
-                    null,
-                    date
-            );
-
-            ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                     conversation,
-                    authenticatedUser.getProfile(),
-                    userMessage
-            );
-            responseMode = decision.getResponseMode();
-            usedAi = decision.isUsedAi();
-            usedPlatformData = decision.isUsedPlatformData();
-
-            String assistantReply = this.chatbotResponseSanitizer.normalizeReplyForFrontend(
-                    decision.getAssistantReply()
-            );
-
-            this.chatbotMessageService.saveMessage(
-                    conversation.getId(),
-                    MessageSenderType.ASSISTANT,
-                    MessageType.RESPONSE,
-                    assistantReply,
-                    nextSequence + 1,
-                    messageId,
-                    date
-            );
-
-            success = true;
-
-            return buildMessageResult(
-                    conversation.getId(),
-                    assistantReply,
-                    null,
                     date,
-                    decision.getResponseMode(),
-                    decision.isUsedPlatformData(),
-                    decision.getSourcesSummary()
+                    metric,
+                    (conversationToResolve, messageToResolve) -> this.chatbotReplyOrchestrator.resolveReply(
+                            conversationToResolve,
+                            authenticatedUser.getProfile(),
+                            messageToResolve
+                    ),
+                    this.chatbotResponseSanitizer::normalizeReplyForFrontend
             );
+
         } finally {
-            long durationMs = System.currentTimeMillis() - startTime;
-
-            ChatbotMessageMetric metric = ChatbotMessageMetric.builder()
-                    .conversationId(conversationId)
-                    .userId(userId)
-                    .requestMessageId(messageId)
-                    .conversationType(conversationType)
-                    .responseMode(responseMode)
-                    .usedAi(usedAi)
-                    .usedPlatformData(usedPlatformData)
-                    .durationMs(durationMs)
-                    .success(success)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            this.recordMessageMetricSafely(metric);
+            this.completeAndRecordMessageMetric(metric, startTime);
         }
+    }
+
+    private ChatbotMessageResult handleConversationMessage(
+            String userMessage,
+            Conversation conversation,
+            LocalDateTime date,
+            ChatbotMessageMetric metric,
+            BiFunction<Conversation, String, ChatbotReplyDecision> replyResolver,
+            UnaryOperator<String> assistantReplyNormalizer
+    ) {
+        metric.setConversationId(conversation.getId());
+        metric.setConversationType(conversation.getType());
+
+        Integer firstSequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 2);
+
+        String messageId = this.chatbotMessageService.saveMessage(
+                conversation.getId(),
+                MessageSenderType.USER,
+                MessageType.REQUEST,
+                userMessage,
+                firstSequence,
+                null,
+                date
+        );
+        metric.setRequestMessageId(messageId);
+
+        ChatbotReplyDecision decision = replyResolver.apply(conversation, userMessage);
+        metric.setResponseMode(decision.getResponseMode());
+        metric.setUsedAi(decision.isUsedAi());
+        metric.setUsedPlatformData(decision.isUsedPlatformData());
+
+        String assistantReply = assistantReplyNormalizer.apply(decision.getAssistantReply());
+
+        this.chatbotMessageService.saveMessage(
+                conversation.getId(),
+                MessageSenderType.ASSISTANT,
+                MessageType.RESPONSE,
+                assistantReply,
+                firstSequence + 1,
+                messageId,
+                date
+        );
+
+        metric.setSuccess(true);
+
+        return buildMessageResult(
+                conversation.getId(),
+                assistantReply,
+                null,
+                date,
+                decision.getResponseMode(),
+                decision.isUsedPlatformData(),
+                decision.getSourcesSummary()
+        );
+    }
+
+    private void completeAndRecordMessageMetric(ChatbotMessageMetric metric, long startTime) {
+        metric.setDurationMs(System.currentTimeMillis() - startTime);
+        metric.setCreatedAt(LocalDateTime.now());
+        this.recordMessageMetricSafely(metric);
     }
 
     private void recordMessageMetricSafely(ChatbotMessageMetric metric) {
@@ -308,7 +302,7 @@ public class ChatbotService implements
         } catch (RuntimeException exception) {
             log.warn(
                     "Message metric recording failed. conversationId={}, reason={}",
-                    metric != null ? metric.getConversationId() : null,
+                    metric.getConversationId(),
                     exception.getClass().getSimpleName()
             );
         }

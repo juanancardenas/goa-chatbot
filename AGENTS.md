@@ -439,6 +439,7 @@ Deuda tecnica conocida:
 - Los logs de metricas DEBEN incluir el campo comun `chatbot_metric_type` con valores identificables como `message_handled`, `ai_call`, `escalation` y `fallback`.
 - `LoggingChatbotMetricsRecorder` NO DEBE registrar contenido completo de mensajes, respuestas de IA, prompts, documentos legales, tokens, secretos ni trazas completas de excepciones.
 - `LoggingChatbotMetricsRecorder` DEBE ignorar metricas `null` de forma controlada y capturar internamente errores de logging para no interrumpir el flujo principal del chatbot.
+- Las consultas operativas para AWS CloudWatch Logs Insights DEBEN mantenerse documentadas en `docs/cloudwatch-logs-insights-metrics.md` cuando cambie el formato de logs de metricas.
 - DEBERIA evitar usar identificadores de alta cardinalidad o datos sensibles como tags de sistemas de metricas agregadas; si se necesitan para trazabilidad, deben tratarse como evento/log estructurado segun el adaptador.
 - `ChatbotMessageMetric.usedAi` DEBE indicar que la respuesta final enviada al usuario uso contenido real devuelto por el proveedor IA.
 - `ChatbotMessageMetric.usedAi` NO DEBE usarse para indicar que la IA estaba habilitada o que se intento llamar al proveedor; los intentos, fallos y fallback de IA deben modelarse con `ChatbotAiMetric`.
