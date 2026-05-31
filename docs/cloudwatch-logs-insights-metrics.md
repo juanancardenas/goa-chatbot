@@ -99,3 +99,29 @@ fields @timestamp, @message
 | parse @message /errorType=(?<errorType>\S+)/
 | stats count() as total by success, errorType
 ```
+
+## 10. Ratio de fallback IA
+
+```sql
+fields @timestamp, @message
+| filter @message like /chatbot_metric_type=ai_call/
+| parse @message /fallback=(?<fallback>\w+)/
+| stats
+    count() as totalAiCalls,
+    sum(if(fallback = "true", 1, 0)) as totalFallbacks,
+    (sum(if(fallback = "true", 1, 0)) * 100.0 / count()) as fallbackRate
+  by bin(1h)
+```
+
+## 11. Tasa proxy de resolución (mensajes gestionados sin escalado / mensajes gestionados)
+
+```sql
+fields @timestamp, @message
+| filter @message like /chatbot_metric_type=message_handled/
+    or @message like /chatbot_metric_type=escalation/
+| stats
+    countif(@message like /chatbot_metric_type=message_handled/) as handledMessages,
+    countif(@message like /chatbot_metric_type=escalation/) as escalations,
+    ((handledMessages - escalations) * 100.0 / handledMessages) as proxyResolutionRate
+  by bin(1d)
+```
