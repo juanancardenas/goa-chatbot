@@ -149,6 +149,7 @@ class ChatbotServiceTest {
         ChatbotEscalationService chatbotEscalationService = new ChatbotEscalationService(
                 chatbotConversationService,
                 this.escalationPersistence,
+                this.chatbotMetricsRecorder,
                 this.userClient
         );
         ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(

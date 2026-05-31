@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`, y la trazabilidad de uso real de IA en respuestas mediante `ChatbotAiReplyResult`, `ChatbotReplyDecision.usedAi`, `ChatbotMessageMetric.usedAi`, `ChatbotAiMetric` y `ChatbotFallbackMetric` incorporada en la issue 41.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`, la trazabilidad de uso real de IA en respuestas mediante `ChatbotAiReplyResult`, `ChatbotReplyDecision.usedAi`, `ChatbotMessageMetric.usedAi`, `ChatbotAiMetric` y `ChatbotFallbackMetric` incorporada en la issue 41, y la metrica de escalado emitida desde `ChatbotEscalationService` mediante `ChatbotEscalationMetric`.
 
 ## Niveles de regla
 
@@ -400,6 +400,7 @@ conversation.ChatbotMessageService -> ConversationGateway
 conversation.ChatbotHistoryService -> ConversationGateway
 conversation.ChatbotHistoryService -> MessageGateway
 conversation.ChatbotEscalationService -> EscalationGateway
+conversation.ChatbotEscalationService -> ChatbotMetricsRecorder
 conversation.ChatbotEscalationService -> UserClient
 reply.ChatbotReplyOrchestrator -> reply.base.ChatbotBaseReplyBuilder
 reply.ChatbotReplyOrchestrator -> reply.context.ChatbotPlatformContextService
@@ -444,13 +445,17 @@ Deuda tecnica conocida:
 - `ChatbotAiMetric` DEBE registrar los intentos de uso de IA realizados por `ChatbotAiReplyService`, incluyendo `provider`, `model`, `durationMs`, `success`, `fallback`, `errorType` y `createdAt`.
 - `ChatbotAiMetric.success` DEBE ser `true` solo cuando se acepta contenido no vacio del proveedor IA como respuesta final.
 - `ChatbotAiMetric.fallback` DEBE ser `true` cuando el flujo de IA termina usando la respuesta base por respuesta nula, error del proveedor, contenido vacio o excepcion tecnica.
+- `ChatbotEscalationMetric` DEBE registrarse desde `ChatbotEscalationService` al finalizar un intento de escalado, tanto si el escalado termina correctamente como si falla con una excepcion funcional o tecnica.
+- `ChatbotEscalationMetric.success` DEBE ser `true` solo cuando se ha creado la traza de `Escalation` y se ha solicitado correctamente el archivado atomico de la conversacion mediante `EscalationGateway.createAndArchiveConversation(...)`.
+- `ChatbotEscalationMetric.errorType` DEBE ser `null` en escalados correctos y DEBE usar codigos controlados en fallos, actualmente `CONVERSATION_NOT_FOUND`, `CONVERSATION_FORBIDDEN`, `CONVERSATION_NOT_ACTIVE` o `ESCALATION_ERROR`.
+- `ChatbotEscalationService` DEBE capturar internamente fallos de `ChatbotMetricsRecorder.recordEscalation(...)` para que la trazabilidad no oculte ni sustituya `NotFoundException`, `ForbiddenException`, `ConflictException` ni errores de persistencia.
 - `ChatbotFallbackMetric` DEBE registrarse cuando un fallo de IA obliga a usar fallback; su `fallbackType` y `reason` DEBEN usar codigos controlados, no mensajes completos de usuario, prompts, respuestas IA ni trazas.
 - Los errores de registro de `ChatbotAiMetric` o `ChatbotFallbackMetric` NO DEBEN interrumpir la generacion de la respuesta del asistente.
 
 Modelos de metricas actuales:
 - `ChatbotMessageMetric`: evento de mensaje gestionado por conversacion; resume duracion, exito, tipo de conversacion, modo de respuesta, uso de datos de plataforma y uso real de IA en la respuesta final.
 - `ChatbotAiMetric`: evento de llamada o intento de uso de IA, con resultado de exito/fallback y tipo de error controlado.
-- `ChatbotEscalationMetric`: evento de escalado a intervencion humana.
+- `ChatbotEscalationMetric`: evento de intento de escalado a intervencion humana; resume conversacion, usuario, exito, tipo de error controlado y fecha de creacion.
 - `ChatbotFallbackMetric`: evento de uso de fallback conversacional o fallback de IA.
 
 Puerto actual:
@@ -695,7 +700,7 @@ Excepciones actuales:
 - `ChatbotMessageService` DEBE centralizar persistencia de mensajes, calculo de secuencia y transformacion a historial/prompt.
 - `ChatbotReplyOrchestrator` DEBE centralizar la decision de respuesta asistente y devolver `ChatbotReplyDecision` sin persistir mensajes.
 - `ChatbotReplyDecision` DEBE incluir el modo de respuesta, uso de datos de plataforma, fuentes resumidas y si la respuesta final uso IA real.
-- `ChatbotEscalationService` DEBE centralizar escalado, archivado de conversacion y persistencia de `Escalation`.
+- `ChatbotEscalationService` DEBE centralizar escalado, archivado de conversacion, persistencia de `Escalation` y registro seguro de `ChatbotEscalationMetric`.
 - `ChatbotResponseSanitizer` DEBE centralizar transformaciones de salida necesarias para que el frontend renderice respuestas de forma segura.
 - DEBE impedir envio de mensajes a conversaciones no activas.
 - DEBE impedir reapertura de conversaciones archivadas.
@@ -704,6 +709,8 @@ Excepciones actuales:
 - DEBE crear la traza de `Escalation` antes de archivar la conversacion; si falla la traza, la conversacion no debe archivarse.
 - DEBE tolerar reintentos de escalado tras fallo parcial usando una traza unica por `conversationId`; si la traza existe pero el archivado falla, debe quedar registro del intento y registrarse log de error.
 - DEBE persistir escalado en `Escalation` con datos de contacto disponibles.
+- DEBE registrar `ChatbotEscalationMetric` en cada intento de escalado, usando `success=true` solo cuando el escalado se completa y codigos controlados en `errorType` cuando falla.
+- Un fallo al registrar la metrica de escalado NO DEBE impedir el escalado ni ocultar la excepcion funcional o tecnica original.
 - DEBE usar `MessageSenderType` para distinguir `USER` y `ASSISTANT`.
 - DEBE usar `MessageType` para distinguir `REQUEST` y `RESPONSE`.
 - DEBE usar `ChatbotResponseMode` para distinguir respuestas `GENERAL`, `CONTEXTUAL_PLATFORM_DATA` y `CONTEXTUAL_RESTRICTED`.
