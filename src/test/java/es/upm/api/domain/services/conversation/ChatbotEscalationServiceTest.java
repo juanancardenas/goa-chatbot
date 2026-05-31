@@ -1,13 +1,15 @@
 package es.upm.api.domain.services.conversation;
 
 import es.upm.api.domain.enums.ConversationType;
-
 import es.upm.api.domain.enums.ConversationStatus;
 import es.upm.api.domain.exceptions.ConflictException;
 import es.upm.api.domain.exceptions.ForbiddenException;
+import es.upm.api.domain.exceptions.NotFoundException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.Escalation;
+import es.upm.api.domain.model.metrics.ChatbotEscalationMetric;
 import es.upm.api.domain.model.platform.UserSummary;
+import es.upm.api.domain.ports.out.ChatbotMetricsRecorder;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.UserClient;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +38,9 @@ class ChatbotEscalationServiceTest {
 
     @Mock
     private EscalationGateway escalationGateway;
+
+    @Mock
+    private ChatbotMetricsRecorder chatbotMetricsRecorder;
 
     @Mock
     private UserClient userClient;
@@ -74,6 +80,13 @@ class ChatbotEscalationServiceTest {
         assertThat(escalation.getCreatedAt()).isNotNull();
         assertThat(escalation.getPhone()).isEqualTo("+34600111222");
         assertThat(escalation.getEmail()).isEqualTo("customer1@example.com");
+
+        ChatbotEscalationMetric metric = this.captureEscalationMetric();
+        assertThat(metric.getConversationId()).isEqualTo("conversation-escalate");
+        assertThat(metric.getUserId()).isEqualTo("customer-1");
+        assertThat(metric.isSuccess()).isTrue();
+        assertThat(metric.getErrorType()).isNull();
+        assertThat(metric.getCreatedAt()).isNotNull();
     }
 
     @Test
@@ -97,6 +110,10 @@ class ChatbotEscalationServiceTest {
         assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(escalation.getPhone()).isNull();
         assertThat(escalation.getEmail()).isNull();
+
+        ChatbotEscalationMetric metric = this.captureEscalationMetric();
+        assertThat(metric.isSuccess()).isTrue();
+        assertThat(metric.getErrorType()).isNull();
     }
 
     @Test
@@ -120,6 +137,10 @@ class ChatbotEscalationServiceTest {
 
         assertThat(exception).hasMessageContaining("mongo unavailable");
         assertThat(existingConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+
+        ChatbotEscalationMetric metric = this.captureEscalationMetric();
+        assertThat(metric.isSuccess()).isFalse();
+        assertThat(metric.getErrorType()).isEqualTo("ESCALATION_ERROR");
     }
 
     @Test
@@ -135,6 +156,10 @@ class ChatbotEscalationServiceTest {
         assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
         verify(this.escalationGateway, never()).create(any(Escalation.class));
         verify(this.escalationGateway, never()).createAndArchiveConversation(any(Conversation.class), any(Escalation.class));
+
+        ChatbotEscalationMetric metric = this.captureEscalationMetric();
+        assertThat(metric.isSuccess()).isFalse();
+        assertThat(metric.getErrorType()).isEqualTo("CONVERSATION_FORBIDDEN");
     }
 
     @Test
@@ -150,5 +175,52 @@ class ChatbotEscalationServiceTest {
         assertThat(exception).hasMessageContaining("La conversacion no esta activa");
         verify(this.escalationGateway, never()).create(any(Escalation.class));
         verify(this.escalationGateway, never()).createAndArchiveConversation(any(Conversation.class), any(Escalation.class));
+
+        ChatbotEscalationMetric metric = this.captureEscalationMetric();
+        assertThat(metric.isSuccess()).isFalse();
+        assertThat(metric.getErrorType()).isEqualTo("CONVERSATION_NOT_ACTIVE");
+    }
+
+    @Test
+    void escalateConversationShouldRecordNotFoundMetricWhenConversationDoesNotExist() {
+        when(this.chatbotConversationService.requireActiveOwnedConversation("conversation-missing", "customer-1"))
+                .thenThrow(new NotFoundException("conversationId no corresponde a una conversacion existente"));
+
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> this.chatbotEscalationService.escalateConversation("conversation-missing", "customer-1")
+        );
+
+        assertThat(exception).hasMessageContaining("conversationId no corresponde a una conversacion existente");
+        verify(this.escalationGateway, never()).createAndArchiveConversation(any(Conversation.class), any(Escalation.class));
+
+        ChatbotEscalationMetric metric = this.captureEscalationMetric();
+        assertThat(metric.getConversationId()).isEqualTo("conversation-missing");
+        assertThat(metric.getUserId()).isEqualTo("customer-1");
+        assertThat(metric.isSuccess()).isFalse();
+        assertThat(metric.getErrorType()).isEqualTo("CONVERSATION_NOT_FOUND");
+    }
+
+    @Test
+    void escalateConversationShouldKeepOriginalExceptionWhenMetricsRecorderFails() {
+        when(this.chatbotConversationService.requireActiveOwnedConversation("conversation-escalate", "customer-1"))
+                .thenThrow(new ForbiddenException("No tienes permisos sobre esta conversacion"));
+        doThrow(new RuntimeException("metrics unavailable"))
+                .when(this.chatbotMetricsRecorder)
+                .recordEscalation(any(ChatbotEscalationMetric.class));
+
+        ForbiddenException exception = assertThrows(
+                ForbiddenException.class,
+                () -> this.chatbotEscalationService.escalateConversation("conversation-escalate", "customer-1")
+        );
+
+        assertThat(exception).hasMessageContaining("No tienes permisos sobre esta conversacion");
+        verify(this.chatbotMetricsRecorder).recordEscalation(any(ChatbotEscalationMetric.class));
+    }
+
+    private ChatbotEscalationMetric captureEscalationMetric() {
+        ArgumentCaptor<ChatbotEscalationMetric> metricCaptor = ArgumentCaptor.forClass(ChatbotEscalationMetric.class);
+        verify(this.chatbotMetricsRecorder).recordEscalation(metricCaptor.capture());
+        return metricCaptor.getValue();
     }
 }
