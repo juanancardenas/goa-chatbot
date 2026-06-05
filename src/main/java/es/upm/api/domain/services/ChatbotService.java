@@ -14,6 +14,7 @@ import es.upm.api.domain.model.chatbot.result.ChatbotConversationHistoryResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotConversationSummaryResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
 import es.upm.api.domain.model.metrics.ChatbotMessageMetric;
+import es.upm.api.domain.model.safety.ChatbotModerationDecision;
 import es.upm.api.domain.model.security.AuthenticatedUserContext;
 import es.upm.api.domain.ports.in.CloseConversationUseCase;
 import es.upm.api.domain.ports.in.DeleteConversationUseCase;
@@ -33,6 +34,7 @@ import es.upm.api.domain.services.conversation.ChatbotHistoryService;
 import es.upm.api.domain.services.conversation.ChatbotMessageService;
 import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.reply.ChatbotReplyOrchestrator;
+import es.upm.api.domain.services.safety.ChatbotModerationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -62,6 +64,7 @@ public class ChatbotService implements
     private final ChatbotHistoryService chatbotHistoryService;
     private final ChatbotEscalationService chatbotEscalationService;
     private final ChatbotReplyOrchestrator chatbotReplyOrchestrator;
+    private final ChatbotModerationService chatbotModerationService;
     private final ChatbotAiSettings chatbotAiSettings;
     private final ChatbotMetricsRecorder chatbotMetricsRecorder;
 
@@ -72,6 +75,7 @@ public class ChatbotService implements
                           ChatbotHistoryService chatbotHistoryService,
                           ChatbotEscalationService chatbotEscalationService,
                           ChatbotReplyOrchestrator chatbotReplyOrchestrator,
+                          ChatbotModerationService chatbotModerationService,
                           ChatbotAiSettings chatbotAiSettings,
                           ChatbotMetricsRecorder chatbotMetricsRecorder
     ) {
@@ -81,6 +85,7 @@ public class ChatbotService implements
         this.chatbotHistoryService = chatbotHistoryService;
         this.chatbotEscalationService = chatbotEscalationService;
         this.chatbotReplyOrchestrator = chatbotReplyOrchestrator;
+        this.chatbotModerationService = chatbotModerationService;
         this.chatbotAiSettings = chatbotAiSettings;
         this.chatbotMetricsRecorder = chatbotMetricsRecorder;
     }
@@ -247,6 +252,18 @@ public class ChatbotService implements
         metric.setConversationId(conversation.getId());
         metric.setConversationType(conversation.getType());
 
+        ChatbotModerationDecision moderationDecision = this.chatbotModerationService.moderate(userMessage);
+
+        if (moderationDecision.isBlocked()) {
+            return this.handleBlockedMessage(
+                    conversation,
+                    date,
+                    metric,
+                    moderationDecision,
+                    assistantReplyNormalizer
+            );
+        }
+
         Integer firstSequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 2);
 
         String messageId = this.chatbotMessageService.saveMessage(
@@ -288,6 +305,63 @@ public class ChatbotService implements
                 decision.isUsedPlatformData(),
                 decision.getSourcesSummary()
         );
+    }
+
+    private ChatbotMessageResult handleBlockedMessage(
+            Conversation conversation,
+            LocalDateTime date,
+            ChatbotMessageMetric metric,
+            ChatbotModerationDecision moderationDecision,
+            UnaryOperator<String> assistantReplyNormalizer
+    ) {
+        metric.setResponseMode(this.moderationResponseMode(conversation));
+        metric.setUsedAi(false);
+        metric.setUsedPlatformData(false);
+
+        String assistantReply = assistantReplyNormalizer.apply(
+                this.safeModerationReply(moderationDecision)
+        );
+
+        Integer sequence = this.chatbotMessageService.reserveSequenceNumbers(conversation.getId(), 1);
+
+        this.chatbotMessageService.saveMessage(
+                conversation.getId(),
+                MessageSenderType.ASSISTANT,
+                MessageType.RESPONSE,
+                assistantReply,
+                sequence,
+                null,
+                date
+        );
+
+        metric.setSuccess(true);
+
+        return buildMessageResult(
+                conversation.getId(),
+                assistantReply,
+                null,
+                date,
+                this.moderationResponseMode(conversation),
+                false,
+                List.of()
+        );
+    }
+
+    private String safeModerationReply(ChatbotModerationDecision moderationDecision) {
+        if (moderationDecision.getSafeReply() == null || moderationDecision.getSafeReply().isBlank()) {
+            return "No puedo procesar este mensaje porque puede contener información sensible "
+                    + "o una solicitud no permitida. Por favor, revisa el contenido y vuelve a intentarlo.";
+        }
+
+        return moderationDecision.getSafeReply();
+    }
+
+    private ChatbotResponseMode moderationResponseMode(Conversation conversation) {
+        if (conversation.getType() != null && conversation.getEngagementLetterId() != null) {
+            return ChatbotResponseMode.CONTEXTUAL_RESTRICTED;
+        }
+
+        return ChatbotResponseMode.GENERAL;
     }
 
     private void completeAndRecordMessageMetric(ChatbotMessageMetric metric, long startTime) {

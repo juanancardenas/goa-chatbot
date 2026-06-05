@@ -59,6 +59,9 @@ import es.upm.api.domain.services.conversation.ChatbotResponseSanitizer;
 import es.upm.api.domain.services.policies.ChatbotScopeDecision;
 import es.upm.api.domain.services.policies.ChatbotScopePolicy;
 import es.upm.api.domain.services.reply.ChatbotReplyOrchestrator;
+import es.upm.api.domain.services.safety.ChatbotModerationPolicy;
+import es.upm.api.domain.services.safety.ChatbotModerationService;
+import es.upm.api.domain.services.safety.ChatbotPiiDetector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -179,6 +182,10 @@ class ChatbotServiceTest {
                 chatbotHistoryService,
                 chatbotEscalationService,
                 chatbotReplyOrchestrator,
+                new ChatbotModerationService(
+                        new ChatbotPiiDetector(),
+                        new ChatbotModerationPolicy()
+                ),
                 this.chatbotAiSettings,
                 this.chatbotMetricsRecorder
         );
@@ -1785,6 +1792,159 @@ class ChatbotServiceTest {
         assertThat(response.getMessage()).contains("Documentos visibles preparados");
         assertThat(response.getMessage()).contains("Contrato");
         assertThat(response.getMessage()).contains("Poder");
+    }
+
+    @Test
+    void sendMessageShouldBlockCardMessageWithoutPersistingUserMessageOrCallingAi() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-general")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.GENERAL)
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-general", 1)).thenReturn(5);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("assistant-message-id");
+
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
+                "conversation-general",
+                "Mi tarjeta es 4111 1111 1111 1111"
+        );
+
+        ChatbotMessageResult response = this.chatbotService.sendMessage(
+                this.authenticatedUser,
+                request
+        );
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-general");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getSourcesSummary()).isEmpty();
+        assertThat(response.getMessage()).contains("No puedo procesar mensajes que contengan datos bancarios sensibles");
+        assertThat(response.getMessage()).doesNotContain("4111 1111 1111 1111");
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messagePersistence, times(1)).createAndReturnId(messageCaptor.capture());
+
+        Message savedMessage = messageCaptor.getValue();
+
+        assertThat(savedMessage.getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
+        assertThat(savedMessage.getMessageType()).isEqualTo(MessageType.RESPONSE);
+        assertThat(savedMessage.getSequenceNumber()).isEqualTo(5);
+        assertThat(savedMessage.getParentMessageId()).isNull();
+        assertThat(savedMessage.getContent()).contains("No puedo procesar mensajes que contengan datos bancarios sensibles");
+        assertThat(savedMessage.getContent()).doesNotContain("4111 1111 1111 1111");
+
+        verify(conversationPersistence).reserveSequenceNumbers("conversation-general", 1);
+        verify(conversationPersistence, never()).reserveSequenceNumbers("conversation-general", 2);
+        verify(chatbotAiClient, never()).generate(any());
+        verify(chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
+    void sendMessageShouldBlockContextualCardMessageWithoutLoadingPlatformContextOrCallingAi() {
+        this.authenticate("client-1", "ROLE_CUSTOMER");
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-contextual")
+                .userId("client-1")
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.CONTEXTUAL)
+                .engagementLetterId("EL-200")
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-contextual")).thenReturn(existingConversation);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-contextual", 1)).thenReturn(3);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("assistant-message-id");
+
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
+                "conversation-contextual",
+                "Estos son los datos de mi tarjeta 5500-0000-0000-0004"
+        );
+
+        ChatbotMessageResult response = this.chatbotService.sendMessage(
+                this.authenticatedUser,
+                request
+        );
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-contextual");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getSourcesSummary()).isEmpty();
+        assertThat(response.getMessage()).contains("No puedo procesar mensajes que contengan datos bancarios sensibles");
+        assertThat(response.getMessage()).doesNotContain("5500-0000-0000-0004");
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messagePersistence, times(1)).createAndReturnId(messageCaptor.capture());
+
+        Message savedMessage = messageCaptor.getValue();
+
+        assertThat(savedMessage.getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
+        assertThat(savedMessage.getMessageType()).isEqualTo(MessageType.RESPONSE);
+        assertThat(savedMessage.getSequenceNumber()).isEqualTo(3);
+        assertThat(savedMessage.getParentMessageId()).isNull();
+        assertThat(savedMessage.getContent()).doesNotContain("5500-0000-0000-0004");
+
+        verify(conversationPersistence).reserveSequenceNumbers("conversation-contextual", 1);
+        verify(conversationPersistence, never()).reserveSequenceNumbers("conversation-contextual", 2);
+        verify(chatbotPlatformContextService, never()).loadContext(any());
+        verify(chatbotAiClient, never()).generate(any());
+    }
+
+    @Test
+    void sendMessageShouldContinueNormalFlowWhenModerationWarns() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        String userMessage = "Mi email es usuario@example.com y quiero revisar mi encargo";
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-general")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.GENERAL)
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
+        when(conversationPersistence.reserveSequenceNumbers("conversation-general", 2)).thenReturn(7);
+        when(messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+        when(chatbotQuestionClassifier.classify(userMessage))
+                .thenReturn(PlatformQuestionType.GENERAL_CONTEXT);
+
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
+                "conversation-general",
+                userMessage
+        );
+
+        ChatbotMessageResult response = this.chatbotService.sendMessage(
+                this.authenticatedUser,
+                request
+        );
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-general");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_GENERAL_CONTEXT_REPLY);
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
+
+        List<Message> savedMessages = messageCaptor.getAllValues();
+
+        assertThat(savedMessages).hasSize(2);
+        assertThat(savedMessages.get(0).getSenderType()).isEqualTo(MessageSenderType.USER);
+        assertThat(savedMessages.get(0).getContent()).isEqualTo(userMessage);
+        assertThat(savedMessages.get(1).getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
+
+        verify(conversationPersistence).reserveSequenceNumbers("conversation-general", 2);
     }
 
     @Test
