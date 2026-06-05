@@ -219,6 +219,34 @@ class ChatbotPromptBuilderTest {
         assertThat(prompt).doesNotContain("contextual.");
     }
 
+    @Test
+    void shouldIncludeSensitiveIdentifierRulesInHistorySection() {
+        ChatbotAiRequest request = ChatbotAiRequest.builder()
+                .basePrompt("Prompt base")
+                .roleProfile("CLIENT")
+                .conversationType("CONTEXTUAL")
+                .documentsAvailable(false)
+                .platformContext("EngagementLetterId: engagement-123")
+                .recentMessages(List.of(
+                        "USER: Mi IBAN es ES91 2100 0418 4502 0005 1332",
+                        "USER: Mi DNI es 12345678Z"
+                ))
+                .build();
+
+        String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
+
+        assertThat(prompt)
+                .contains("[HISTORIAL RECIENTE]")
+                .contains("No uses identificadores personales o financieros del historial")
+                .contains("un IBAN del historial no debe usarse como DNI/NIE")
+                .contains("un DNI/NIE del historial no debe usarse como IBAN")
+                .contains("Si el historial contiene un IBAN y la pregunta actual habla de un DNI/NIE");
+
+        assertThat(prompt)
+                .contains("Mi IBAN es ES91 2100 0418 4502 0005 1332")
+                .contains("Mi DNI es 12345678Z");
+    }
+
     private static class TestChatbotAiSettings implements ChatbotAiSettings {
 
         @Override

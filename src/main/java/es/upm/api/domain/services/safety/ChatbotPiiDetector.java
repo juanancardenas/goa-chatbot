@@ -32,12 +32,15 @@ public class ChatbotPiiDetector {
             return ChatbotPiiDetectionResult.empty();
         }
 
+        boolean containsIban = this.containsIban(message);
+        String messageWithoutIban = this.removeSpanishIban(message);
+
         return ChatbotPiiDetectionResult.of(
                 this.containsEmail(message),
                 this.containsPhone(message),
                 this.containsDniNie(message),
-                this.containsCard(message),
-                this.containsIban(message)
+                this.containsCard(messageWithoutIban),
+                containsIban
         );
     }
 
@@ -59,5 +62,9 @@ public class ChatbotPiiDetector {
 
     private boolean containsIban(String message) {
         return SPANISH_IBAN_PATTERN.matcher(message).find();
+    }
+
+    private String removeSpanishIban(String message) {
+        return SPANISH_IBAN_PATTERN.matcher(message).replaceAll(" ");
     }
 }

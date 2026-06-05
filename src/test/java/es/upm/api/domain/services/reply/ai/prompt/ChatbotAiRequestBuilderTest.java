@@ -294,6 +294,35 @@ class ChatbotAiRequestBuilderTest {
         verify(this.chatbotMessageService).readRecentMessagesForPrompt("conversation-general", 4);
     }
 
+    @Test
+    void buildShouldIncludeSensitiveIdentifierRulesInUserMessage() {
+        Conversation conversation = this.contextualConversation("conversation-sensitive-identifiers", "EL-555");
+
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-sensitive-identifiers", 2))
+                .thenReturn(List.of(
+                        "USER: Mi IBAN es ES91 2100 0418 4502 0005 1332",
+                        "USER: Mi DNI es 12345678Z"
+                ));
+
+        ChatbotAiRequest aiRequest = this.chatbotAiRequestBuilder.build(
+                conversation,
+                ConversationProfileType.CLIENT,
+                "Mi DNI es 12345678Z",
+                "Safe contextual base reply",
+                Optional.empty()
+        );
+
+        assertThat(aiRequest.getUserMessage())
+                .contains("La pregunta actual del usuario tiene prioridad")
+                .contains("un IBAN nunca debe tratarse como DNI/NIE")
+                .contains("un DNI/NIE nunca debe tratarse como IBAN")
+                .contains("Si la pregunta actual contiene un DNI/NIE")
+                .contains("no lo sustituyas por IBAN");
+
+        assertThat(aiRequest.getUserMessage())
+                .contains("Mi DNI es 12345678Z");
+    }
+
     private Conversation generalConversation() {
         return Conversation.builder()
                 .id("conversation-general")
