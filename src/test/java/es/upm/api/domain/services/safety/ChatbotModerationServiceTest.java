@@ -214,4 +214,17 @@ class ChatbotModerationServiceTest {
         assertThat(decision.isBlocked()).isTrue();
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_CARD);
     }
+
+    @Test
+    void moderateShouldWarnWhenSpanishIbanIsDetectedWithoutBlockingAsCard() {
+        ChatbotModerationDecision decision = this.chatbotModerationService.moderate(
+                "Mi IBAN es ES91 2100 0418 4502 0005 1332"
+        );
+
+        assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.WARN);
+        assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_IBAN);
+        assertThat(decision.isWarning()).isTrue();
+        assertThat(decision.isBlocked()).isFalse();
+        assertThat(decision.isContainsPii()).isTrue();
+    }
 }

@@ -7,7 +7,6 @@ import es.upm.api.domain.model.safety.ChatbotPiiDetectionResult;
 import es.upm.api.domain.ports.out.ChatbotMetricsRecorder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;

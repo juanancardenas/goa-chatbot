@@ -252,4 +252,32 @@ class ChatbotPiiDetectorTest {
         assertThat(result.toString()).doesNotContain(message);
         assertThat(result.toString()).doesNotContain("4111 1111 1111 1111");
     }
+
+    @Test
+    void detectShouldNotClassifySpanishIbanAsCard() {
+        ChatbotPiiDetectionResult result = this.detector.detect(
+                "Mi IBAN es ES91 2100 0418 4502 0005 1332"
+        );
+
+        assertThat(result.containsPii()).isTrue();
+        assertThat(result.isContainsIban()).isTrue();
+        assertThat(result.isContainsCard()).isFalse();
+        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_IBAN);
+        assertThat(result.getReasons()).doesNotContain(ChatbotModerationReason.PII_CARD);
+    }
+
+    @Test
+    void detectShouldStillFindCardWhenMessageContainsIbanAndCard() {
+        ChatbotPiiDetectionResult result = this.detector.detect(
+                "Mi IBAN es ES91 2100 0418 4502 0005 1332 y mi tarjeta es 4111 1111 1111 1111"
+        );
+
+        assertThat(result.containsPii()).isTrue();
+        assertThat(result.isContainsIban()).isTrue();
+        assertThat(result.isContainsCard()).isTrue();
+        assertThat(result.getReasons()).contains(
+                ChatbotModerationReason.PII_IBAN,
+                ChatbotModerationReason.PII_CARD
+        );
+    }
 }
