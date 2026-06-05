@@ -6,6 +6,9 @@ import es.upm.api.domain.model.metrics.ChatbotAiMetric;
 import es.upm.api.domain.model.metrics.ChatbotEscalationMetric;
 import es.upm.api.domain.model.metrics.ChatbotFallbackMetric;
 import es.upm.api.domain.model.metrics.ChatbotMessageMetric;
+import es.upm.api.domain.model.metrics.ChatbotModerationMetric;
+import es.upm.api.domain.model.safety.ChatbotModerationAction;
+import es.upm.api.domain.model.safety.ChatbotModerationReason;
 import es.upm.api.domain.ports.out.ChatbotMetricsRecorder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -127,17 +130,51 @@ class LoggingChatbotMetricsRecorderTest {
     }
 
     @Test
+    void recordModerationShouldLogModerationMetricFieldsWithoutSensitiveContent(CapturedOutput output) {
+        ChatbotModerationMetric metric = ChatbotModerationMetric.builder()
+                .conversationId("conversation-1")
+                .userId("user-1")
+                .action(ChatbotModerationAction.BLOCK)
+                .reason(ChatbotModerationReason.PII_CARD)
+                .containsPii(true)
+                .blocked(true)
+                .usedAi(false)
+                .createdAt(CREATED_AT)
+                .build();
+
+        this.recorder.recordModeration(metric);
+
+        assertThat(output)
+                .contains("chatbot_metric_type=moderation")
+                .contains("conversationId=conversation-1")
+                .contains("userId=user-1")
+                .contains("action=BLOCK")
+                .contains("reason=PII_CARD")
+                .contains("containsPii=true")
+                .contains("blocked=true")
+                .contains("usedAi=false")
+                .contains("createdAt=2026-05-26T13:45")
+                .doesNotContain("4111 1111 1111 1111")
+                .doesNotContain("usuario@example.com")
+                .doesNotContain("612345678")
+                .doesNotContain("12345678Z")
+                .doesNotContain("ES9121000418450200051332");
+    }
+
+    @Test
     void recordMethodsShouldIgnoreNullMetrics(CapturedOutput output) {
         this.recorder.recordMessageHandled(null);
         this.recorder.recordAiCall(null);
         this.recorder.recordEscalation(null);
         this.recorder.recordFallback(null);
+        this.recorder.recordModeration(null);
 
         assertThat(output)
                 .contains("chatbot_metric_type=message_handled status=ignored reason=null_metric")
                 .contains("chatbot_metric_type=ai_call status=ignored reason=null_metric")
                 .contains("chatbot_metric_type=escalation status=ignored reason=null_metric")
-                .contains("chatbot_metric_type=fallback status=ignored reason=null_metric");
+                .contains("chatbot_metric_type=fallback status=ignored reason=null_metric")
+                .contains("chatbot_metric_type=moderation status=ignored reason=null_metric");
     }
 
     @Test
@@ -198,5 +235,20 @@ class LoggingChatbotMetricsRecorderTest {
 
         assertThat(output)
                 .contains("chatbot_metric_type=fallback status=failed reason=IllegalStateException");
+    }
+
+    @Test
+    void recordModerationShouldCatchLoggingFailures(CapturedOutput output) {
+        ChatbotModerationMetric metric = new ChatbotModerationMetric() {
+            @Override
+            public String getConversationId() {
+                throw new IllegalStateException("metric failure");
+            }
+        };
+
+        this.recorder.recordModeration(metric);
+
+        assertThat(output)
+                .contains("chatbot_metric_type=moderation status=failed reason=IllegalStateException");
     }
 }
