@@ -6,6 +6,9 @@ import es.upm.api.domain.model.metrics.ChatbotAiMetric;
 import es.upm.api.domain.model.metrics.ChatbotEscalationMetric;
 import es.upm.api.domain.model.metrics.ChatbotFallbackMetric;
 import es.upm.api.domain.model.metrics.ChatbotMessageMetric;
+import es.upm.api.domain.model.metrics.ChatbotModerationMetric;
+import es.upm.api.domain.model.safety.ChatbotModerationAction;
+import es.upm.api.domain.model.safety.ChatbotModerationReason;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -50,16 +53,28 @@ class ChatbotMetricsRecorderTest {
                 .reason("Provider error")
                 .createdAt(CREATED_AT)
                 .build();
+        ChatbotModerationMetric moderationMetric = ChatbotModerationMetric.builder()
+                .conversationId("conversation-1")
+                .userId("user-1")
+                .action(ChatbotModerationAction.BLOCK)
+                .reason(ChatbotModerationReason.PII_CARD)
+                .containsPii(true)
+                .blocked(true)
+                .usedAi(false)
+                .createdAt(CREATED_AT)
+                .build();
 
         recorder.recordMessageHandled(messageMetric);
         recorder.recordAiCall(aiMetric);
         recorder.recordEscalation(escalationMetric);
         recorder.recordFallback(fallbackMetric);
+        recorder.recordModeration(moderationMetric);
 
         assertThat(recorder.messageMetric).isSameAs(messageMetric);
         assertThat(recorder.aiMetric).isSameAs(aiMetric);
         assertThat(recorder.escalationMetric).isSameAs(escalationMetric);
         assertThat(recorder.fallbackMetric).isSameAs(fallbackMetric);
+        assertThat(recorder.moderationMetric).isSameAs(moderationMetric);
     }
 
     private static class InMemoryChatbotMetricsRecorder implements ChatbotMetricsRecorder {
@@ -68,6 +83,7 @@ class ChatbotMetricsRecorderTest {
         private ChatbotAiMetric aiMetric;
         private ChatbotEscalationMetric escalationMetric;
         private ChatbotFallbackMetric fallbackMetric;
+        private ChatbotModerationMetric moderationMetric;
 
         @Override
         public void recordMessageHandled(ChatbotMessageMetric metric) {
@@ -87,6 +103,11 @@ class ChatbotMetricsRecorderTest {
         @Override
         public void recordFallback(ChatbotFallbackMetric metric) {
             this.fallbackMetric = metric;
+        }
+
+        @Override
+        public void recordModeration(ChatbotModerationMetric metric) {
+            this.moderationMetric = metric;
         }
     }
 }

@@ -252,7 +252,11 @@ public class ChatbotService implements
         metric.setConversationId(conversation.getId());
         metric.setConversationType(conversation.getType());
 
-        ChatbotModerationDecision moderationDecision = this.chatbotModerationService.moderate(userMessage);
+        ChatbotModerationDecision moderationDecision = this.chatbotModerationService.moderate(
+                userMessage,
+                conversation.getId(),
+                metric.getUserId()
+        );
 
         if (moderationDecision.isBlocked()) {
             return this.handleBlockedMessage(

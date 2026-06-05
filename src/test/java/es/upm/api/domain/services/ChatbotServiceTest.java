@@ -20,9 +20,12 @@ import es.upm.api.domain.model.chatbot.command.ChatbotMessageCommand;
 import es.upm.api.domain.model.chatbot.result.ChatbotConfigurationResult;
 import es.upm.api.domain.model.chatbot.result.ChatbotMessageResult;
 import es.upm.api.domain.model.metrics.ChatbotMessageMetric;
+import es.upm.api.domain.model.metrics.ChatbotModerationMetric;
 import es.upm.api.domain.model.pagination.PageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
+import es.upm.api.domain.model.safety.ChatbotModerationAction;
+import es.upm.api.domain.model.safety.ChatbotModerationReason;
 import es.upm.api.domain.model.security.AuthenticatedUserContext;
 import es.upm.api.domain.ports.in.CloseConversationUseCase;
 import es.upm.api.domain.ports.in.DeleteConversationUseCase;
@@ -184,7 +187,8 @@ class ChatbotServiceTest {
                 chatbotReplyOrchestrator,
                 new ChatbotModerationService(
                         new ChatbotPiiDetector(),
-                        new ChatbotModerationPolicy()
+                        new ChatbotModerationPolicy(),
+                        this.chatbotMetricsRecorder
                 ),
                 this.chatbotAiSettings,
                 this.chatbotMetricsRecorder
@@ -1844,6 +1848,22 @@ class ChatbotServiceTest {
         verify(conversationPersistence, never()).reserveSequenceNumbers("conversation-general", 2);
         verify(chatbotAiClient, never()).generate(any());
         verify(chatbotPlatformContextService, never()).loadContext(any());
+
+        ArgumentCaptor<ChatbotModerationMetric> moderationMetricCaptor =
+                ArgumentCaptor.forClass(ChatbotModerationMetric.class);
+
+        verify(this.chatbotMetricsRecorder).recordModeration(moderationMetricCaptor.capture());
+
+        ChatbotModerationMetric moderationMetric = moderationMetricCaptor.getValue();
+
+        assertThat(moderationMetric.getConversationId()).isEqualTo("conversation-general");
+        assertThat(moderationMetric.getUserId()).isEqualTo("professional-1");
+        assertThat(moderationMetric.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
+        assertThat(moderationMetric.getReason()).isEqualTo(ChatbotModerationReason.PII_CARD);
+        assertThat(moderationMetric.isContainsPii()).isTrue();
+        assertThat(moderationMetric.isBlocked()).isTrue();
+        assertThat(moderationMetric.getUsedAi()).isFalse();
+        assertThat(moderationMetric.toString()).doesNotContain("4111 1111 1111 1111");
     }
 
     @Test
@@ -1896,6 +1916,22 @@ class ChatbotServiceTest {
         verify(conversationPersistence, never()).reserveSequenceNumbers("conversation-contextual", 2);
         verify(chatbotPlatformContextService, never()).loadContext(any());
         verify(chatbotAiClient, never()).generate(any());
+
+        ArgumentCaptor<ChatbotModerationMetric> moderationMetricCaptor =
+                ArgumentCaptor.forClass(ChatbotModerationMetric.class);
+
+        verify(this.chatbotMetricsRecorder).recordModeration(moderationMetricCaptor.capture());
+
+        ChatbotModerationMetric moderationMetric = moderationMetricCaptor.getValue();
+
+        assertThat(moderationMetric.getConversationId()).isEqualTo("conversation-contextual");
+        assertThat(moderationMetric.getUserId()).isEqualTo("client-1");
+        assertThat(moderationMetric.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
+        assertThat(moderationMetric.getReason()).isEqualTo(ChatbotModerationReason.PII_CARD);
+        assertThat(moderationMetric.isContainsPii()).isTrue();
+        assertThat(moderationMetric.isBlocked()).isTrue();
+        assertThat(moderationMetric.getUsedAi()).isFalse();
+        assertThat(moderationMetric.toString()).doesNotContain("5500-0000-0000-0004");
     }
 
     @Test
@@ -1945,6 +1981,22 @@ class ChatbotServiceTest {
         assertThat(savedMessages.get(1).getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
 
         verify(conversationPersistence).reserveSequenceNumbers("conversation-general", 2);
+
+        ArgumentCaptor<ChatbotModerationMetric> moderationMetricCaptor =
+                ArgumentCaptor.forClass(ChatbotModerationMetric.class);
+
+        verify(this.chatbotMetricsRecorder).recordModeration(moderationMetricCaptor.capture());
+
+        ChatbotModerationMetric moderationMetric = moderationMetricCaptor.getValue();
+
+        assertThat(moderationMetric.getConversationId()).isEqualTo("conversation-general");
+        assertThat(moderationMetric.getUserId()).isEqualTo("professional-1");
+        assertThat(moderationMetric.getAction()).isEqualTo(ChatbotModerationAction.WARN);
+        assertThat(moderationMetric.getReason()).isEqualTo(ChatbotModerationReason.PII_EMAIL);
+        assertThat(moderationMetric.isContainsPii()).isTrue();
+        assertThat(moderationMetric.isBlocked()).isFalse();
+        assertThat(moderationMetric.getUsedAi()).isNull();
+        assertThat(moderationMetric.toString()).doesNotContain("usuario@example.com");
     }
 
     @Test
