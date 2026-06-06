@@ -97,6 +97,11 @@ public class ChatbotAiRequestBuilder {
             Si el usuario pide una tabla, gráfico, diagrama o formato que dependa de Markdown/renderizado especial, indica brevemente que en esta versión de la interfaz aún no está disponible.
             Después, ofrece la alternativa en forma de lista clara y útil.
             Responde únicamente a la pregunta actual del usuario.
+            La pregunta actual del usuario tiene prioridad sobre cualquier identificador personal o financiero del historial.
+            No mezcles identificadores sensibles: un IBAN nunca debe tratarse como DNI/NIE y un DNI/NIE nunca debe tratarse como IBAN.
+            Si la pregunta actual contiene un DNI/NIE, no lo sustituyas por IBAN aunque el historial contenga datos bancarios.
+            Si el usuario solo comparte un dato personal o financiero y no formula una pregunta concreta, acusa recibo de forma breve y pregunta qué quiere hacer con ese dato.
+            En ese caso, no respondas con un resumen del encargo, tareas legales, eventos ni documentos salvo que el usuario lo solicite.
             No repitas respuestas anteriores salvo que el usuario lo pida explícitamente.
             No arrastres contexto anterior si no es relevante para la pregunta actual.
             Si generas listas, usa saltos de línea y viñetas simples.
