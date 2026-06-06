@@ -140,6 +140,9 @@ public class ChatbotPromptBuilder {
                 El historial sirve solo para continuidad conversacional.
                 No repitas información anterior si la pregunta actual no la solicita.
                 No uses el historial para responder sobre datos del encargo si el contexto de plataforma no está disponible.
+                No uses identificadores personales o financieros del historial para completar, sustituir o corregir identificadores de la pregunta actual.
+                En particular, un IBAN del historial no debe usarse como DNI/NIE y un DNI/NIE del historial no debe usarse como IBAN.
+                Si el historial contiene un IBAN y la pregunta actual habla de un DNI/NIE, mantén separados ambos identificadores.
         
                 %s
                 """.formatted(history);
