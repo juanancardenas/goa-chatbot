@@ -1,7 +1,7 @@
 # Guia de estilo y arquitectura - GOA Chatbot (v2)
 
 Documento normativo para contribuir en `goa-chatbot`.
-Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`, la trazabilidad de uso real de IA en respuestas mediante `ChatbotAiReplyResult`, `ChatbotReplyDecision.usedAi`, `ChatbotMessageMetric.usedAi`, `ChatbotAiMetric` y `ChatbotFallbackMetric` incorporada en la issue 41, y la metrica de escalado emitida desde `ChatbotEscalationService` mediante `ChatbotEscalationMetric`.
+Esta version refleja el estado real del codigo tras el refactor de servicios de conversacion, respuestas base, contexto de respuesta e IA bajo `domain.services.reply`, la unificacion del resumen de usuario en `UserSummary`, la tipificacion de modos de respuesta con `ChatbotResponseMode`, el refuerzo de consistencia conversacional de **2026-05-17**, la introduccion de puertos de entrada `domain.ports.in` para los casos de uso HTTP de **2026-05-18**, el refactor de adaptadores bajo `adapter` y configuracion bajo `configuration`, la introduccion de modelos de metricas conversacionales bajo `domain.model.metrics` con el puerto de salida `ChatbotMetricsRecorder` y el adaptador inicial `LoggingChatbotMetricsRecorder`, la trazabilidad de uso real de IA en respuestas mediante `ChatbotAiReplyResult`, `ChatbotReplyDecision.usedAi`, `ChatbotMessageMetric.usedAi`, `ChatbotAiMetric` y `ChatbotFallbackMetric` incorporada en la issue 41, la metrica de escalado emitida desde `ChatbotEscalationService` mediante `ChatbotEscalationMetric`, y la capa de seguridad conversacional bajo `domain.model.safety` y `domain.services.safety` con deteccion PII, moderacion previa a persistencia y `ChatbotModerationMetric`.
 
 ## Niveles de regla
 
@@ -79,6 +79,7 @@ es.upm.api/
       metrics/
       pagination/
       platform/
+      safety/
       security/
     ports/
       in/
@@ -93,6 +94,7 @@ es.upm.api/
           prompt/
         base/
         context/
+      safety/
 ```
 
 Notas:
@@ -103,6 +105,7 @@ Notas:
 - La resolucion del usuario autenticado vive en `adapter.in.rest.security` y entrega `AuthenticatedUserContext` al dominio.
 - Los comandos/resultados internos usados para desacoplar DTOs viven actualmente en `domain.model.chatbot.command`, `domain.model.chatbot.reply` y `domain.model.chatbot.result`.
 - Los modelos internos de metricas conversacionales viven actualmente en `domain.model.metrics`.
+- Los modelos internos de seguridad conversacional y moderacion viven actualmente en `domain.model.safety`.
 - El contexto de usuario autenticado vive en `domain.model.security`.
 - Los modelos auxiliares de paginacion viven en `domain.model.pagination`.
 - Los puertos de entrada de casos de uso viven en `domain.ports.in`; `ChatbotResource` depende de ellos y `ChatbotService` los implementa.
@@ -181,6 +184,7 @@ adapter.in.rest -> domain.services                          EVITAR
 - DEBE ubicar decisiones internas de respuesta en `domain.model.chatbot.reply`.
 - DEBE ubicar resultados internos de chatbot en `domain.model.chatbot.result`.
 - DEBE ubicar modelos internos de metricas conversacionales en `domain.model.metrics`.
+- DEBE ubicar modelos internos de seguridad conversacional, moderacion y deteccion PII en `domain.model.safety`.
 - DEBE ubicar modelos auxiliares de paginacion en `domain.model.pagination`.
 - DEBE ubicar contexto de usuario autenticado en `domain.model.security`.
 - DEBE ubicar snapshots/contexto de otros microservicios en `domain.model.platform`.
@@ -221,6 +225,13 @@ Modelos internos de metricas actuales:
 - `ChatbotAiMetric`
 - `ChatbotEscalationMetric`
 - `ChatbotFallbackMetric`
+- `ChatbotModerationMetric`
+
+Modelos internos de seguridad conversacional actuales:
+- `ChatbotModerationAction`
+- `ChatbotModerationDecision`
+- `ChatbotModerationReason`
+- `ChatbotPiiDetectionResult`
 
 Puertos de entrada actuales:
 - `CloseConversationUseCase`
@@ -302,6 +313,9 @@ Servicios actuales:
 - `conversation.ChatbotResponseSanitizer`
 - `policies.ChatbotScopePolicy`
 - `prompt.ChatbotPromptBuilder`
+- `safety.ChatbotModerationService`
+- `safety.ChatbotPiiDetector`
+- `safety.ChatbotModerationPolicy`
 
 Reglas de organizacion:
 - `ChatbotService` DEBE actuar como orquestador fino de caso de uso HTTP/dominio e implementar los puertos de entrada de `domain.ports.in`; NO DEBE concentrar reglas que ya pertenezcan a servicios especializados.
@@ -315,6 +329,7 @@ Reglas de organizacion:
 - `reply.ChatbotReplyOrchestrator` DEBE decidir la respuesta asistente para un mensaje ya validado: cortesia, restricciones de scope, cambio de encargo, contexto de plataforma, fallback contextual y respuesta general. NO DEBE persistir mensajes ni modificar conversaciones.
 - `policies` DEBE contener decisiones de permisos, alcance o restricciones funcionales.
 - `prompt` DEBE contener construccion de prompts e instrucciones para la IA.
+- `safety` DEBE contener deteccion PII, politica de moderacion, decisiones de seguridad conversacional y registro seguro de metricas de moderacion.
 - Los servicios especializados PUEDEN depender entre si dentro de `domain.services` cuando la responsabilidad sea clara; DEBEN seguir dependiendo de adaptadores solo mediante puertos.
 
 ## Puertos de entrada (`domain.ports.in`)
@@ -390,6 +405,7 @@ ChatbotService -> conversation.ChatbotHistoryService
 ChatbotService -> conversation.ChatbotEscalationService
 ChatbotService -> conversation.ChatbotResponseSanitizer
 ChatbotService -> reply.ChatbotReplyOrchestrator
+ChatbotService -> safety.ChatbotModerationService
 ChatbotService -> ChatbotAiSettings
 ChatbotService -> ChatbotMetricsRecorder
 
@@ -420,6 +436,9 @@ reply.ai.ChatbotAiReplyService -> reply.ai.prompt.ChatbotAiRequestBuilder
 reply.ai.prompt.ChatbotAiRequestBuilder -> ChatbotAiSettings
 reply.ai.prompt.ChatbotAiRequestBuilder -> conversation.ChatbotMessageService
 prompt.ChatbotPromptBuilder -> ChatbotAiSettings
+safety.ChatbotModerationService -> safety.ChatbotPiiDetector
+safety.ChatbotModerationService -> safety.ChatbotModerationPolicy
+safety.ChatbotModerationService -> ChatbotMetricsRecorder
 ```
 
 Deuda tecnica conocida:
@@ -436,7 +455,7 @@ Deuda tecnica conocida:
 - La implementacion tecnica de metricas, cuando exista, DEBE vivir en `adapter.out` o en un subpaquete tecnico equivalente y mapear desde los modelos de `domain.model.metrics`.
 - La implementacion actual de metricas vive en `adapter.out.metrics.LoggingChatbotMetricsRecorder` y DEBE limitarse a registrar logs estructurados como salida tecnica inicial.
 - `LoggingChatbotMetricsRecorder` DEBE implementar `ChatbotMetricsRecorder`, estar registrado como componente Spring y no introducir dependencias de observabilidad externa, persistencia, HTTP, Feign ni MongoDB.
-- Los logs de metricas DEBEN incluir el campo comun `chatbot_metric_type` con valores identificables como `message_handled`, `ai_call`, `escalation` y `fallback`.
+- Los logs de metricas DEBEN incluir el campo comun `chatbot_metric_type` con valores identificables como `message_handled`, `ai_call`, `escalation`, `fallback` y `moderation`.
 - `LoggingChatbotMetricsRecorder` NO DEBE registrar contenido completo de mensajes, respuestas de IA, prompts, documentos legales, tokens, secretos ni trazas completas de excepciones.
 - `LoggingChatbotMetricsRecorder` DEBE ignorar metricas `null` de forma controlada y capturar internamente errores de logging para no interrumpir el flujo principal del chatbot.
 - Las consultas operativas para AWS CloudWatch Logs Insights DEBEN mantenerse documentadas en `docs/cloudwatch-logs-insights-metrics.md` cuando cambie el formato de logs de metricas.
@@ -452,12 +471,19 @@ Deuda tecnica conocida:
 - `ChatbotEscalationService` DEBE capturar internamente fallos de `ChatbotMetricsRecorder.recordEscalation(...)` para que la trazabilidad no oculte ni sustituya `NotFoundException`, `ForbiddenException`, `ConflictException` ni errores de persistencia.
 - `ChatbotFallbackMetric` DEBE registrarse cuando un fallo de IA obliga a usar fallback; su `fallbackType` y `reason` DEBEN usar codigos controlados, no mensajes completos de usuario, prompts, respuestas IA ni trazas.
 - Los errores de registro de `ChatbotAiMetric` o `ChatbotFallbackMetric` NO DEBEN interrumpir la generacion de la respuesta del asistente.
+- `ChatbotModerationMetric` DEBE registrarse desde `ChatbotModerationService` al evaluar un mensaje, tanto si se permite, se advierte o se bloquea.
+- `ChatbotModerationMetric` DEBE incluir `conversationId`, `userId`, `action`, `reason`, `containsPii`, `blocked`, `usedAi` y `createdAt`.
+- `ChatbotModerationMetric.action` DEBE usar `ChatbotModerationAction` con valores controlados `ALLOW`, `WARN` o `BLOCK`.
+- `ChatbotModerationMetric.reason` DEBE usar `ChatbotModerationReason` con valores controlados; NO DEBE contener mensajes completos de usuario, prompts, respuestas IA, documentos, identificadores personales o trazas.
+- `ChatbotModerationMetric.usedAi` DEBE ser `false` cuando la moderacion bloquea el mensaje antes de invocar IA; DEBE ser `null` cuando la moderacion solo advierte o permite continuar y el uso final de IA aun no esta decidido por ese evento.
+- Los errores de registro de `ChatbotModerationMetric` NO DEBEN interrumpir la moderacion ni el flujo conversacional.
 
 Modelos de metricas actuales:
 - `ChatbotMessageMetric`: evento de mensaje gestionado por conversacion; resume duracion, exito, tipo de conversacion, modo de respuesta, uso de datos de plataforma y uso real de IA en la respuesta final.
 - `ChatbotAiMetric`: evento de llamada o intento de uso de IA, con resultado de exito/fallback y tipo de error controlado.
 - `ChatbotEscalationMetric`: evento de intento de escalado a intervencion humana; resume conversacion, usuario, exito, tipo de error controlado y fecha de creacion.
 - `ChatbotFallbackMetric`: evento de uso de fallback conversacional o fallback de IA.
+- `ChatbotModerationMetric`: evento de moderacion de mensaje; resume accion, razon controlada, presencia de PII, bloqueo, uso de IA cuando sea determinable y fecha de creacion.
 
 Puerto actual:
 - `ChatbotMetricsRecorder`
@@ -506,6 +532,12 @@ domain.ports.out.ChatbotAiSettings
 - DEBE construir instrucciones de sistema a partir de `ChatbotAiRequest`, propiedades IA y contexto permitido.
 - DEBE preservar restricciones funcionales: no inventar datos, no dar asesoramiento legal vinculante, respetar el contexto del encargo y fuentes disponibles.
 - DEBE mantener separadas las instrucciones del sistema y el mensaje del usuario. `ChatbotPromptBuilder` NO DEBE construir el mensaje de usuario para IA.
+- `ChatbotPromptBuilder` DEBE componer secciones explicitas para prompt base, tipo de conversacion, perfil del usuario, restriccion de ambito, disponibilidad documental, contexto de plataforma e historial reciente.
+- `ChatbotPromptBuilder` DEBE diferenciar instrucciones de conversaciones `GENERAL` y `CONTEXTUAL`.
+- En conversaciones contextuales, `ChatbotPromptBuilder` DEBE reforzar que solo se respondan datos del encargo activo y que no se inventen tareas legales, estados, hitos, documentos, eventos ni fechas.
+- En conversaciones generales, `ChatbotPromptBuilder` DEBE indicar que no se asuma un encargo concreto y que los datos reales de un encargo especifico deben consultarse desde el asistente del encargo.
+- `ChatbotPromptBuilder` DEBE tratar el historial reciente solo como continuidad conversacional; NO DEBE permitir que el historial sustituya el contexto de plataforma ni que mezcle identificadores personales o financieros de preguntas anteriores.
+- `ChatbotPromptBuilder` DEBE usar `ChatbotAiSettings.maxContextMessages()` para limitar los mensajes recientes incluidos en el prompt.
 - NO DEBE realizar llamadas al proveedor de IA.
 - NO DEBE acceder a MongoDB, Feign ni recursos HTTP.
 
@@ -530,7 +562,33 @@ domain.ports.out.ChatbotAiSettings
 - `ChatbotReplyDecision.usedAi` DEBE ser la fuente usada por `ChatbotService` para poblar `ChatbotMessageMetric.usedAi`.
 - `ChatbotAiRequestBuilder` DEBE construir `ChatbotAiRequest` con conversacion, perfil, respuesta base, contexto de plataforma permitido, mensajes recientes y propiedades IA.
 - `ChatbotAiRequestBuilder` DEBE depender de `ChatbotMessageService` para leer mensajes recientes; `ChatbotAiReplyService` NO DEBE acceder directamente al historial.
+- `ChatbotAiRequestBuilder` DEBE construir el mensaje de usuario para IA con la pregunta actual, la respuesta base segura como guardrail y reglas adicionales contextuales cuando la conversacion sea `CONTEXTUAL`.
+- `ChatbotAiRequestBuilder` DEBE serializar el contexto de plataforma permitido con `engagementLetterId`, propietario visible, procedimientos, tareas legales, eventos recientes y fuentes internas disponibles.
+- `ChatbotAiRequestBuilder` DEBE usar textos de no disponibilidad cuando falte contexto y NO DEBE fabricar valores ausentes.
+- `ChatbotAiRequestBuilder` DEBE indicar que la pregunta actual prevalece sobre identificadores personales o financieros del historial y que no se mezclen IBAN, DNI/NIE u otros identificadores sensibles.
+- `ChatbotAiRequestBuilder` DEBE evitar pedir a la IA tablas Markdown, pseudo-graficos, sintaxis `**texto**` o formatos que la interfaz no soporte; debe preferir listas claras.
 - `ChatbotResponseSanitizer` DEBE normalizar la respuesta final para el frontend antes de persistirla cuando aplique.
+
+## Seguridad conversacional y moderacion (`domain.model.safety` y `domain.services.safety`)
+
+- `ChatbotModerationService` DEBE moderar el mensaje de usuario antes de persistirlo y antes de invocar `ChatbotReplyOrchestrator` o IA.
+- `ChatbotModerationService` DEBE devolver `ChatbotModerationDecision` con `action`, `reason`, `safeReply` y `containsPii`.
+- `ChatbotModerationAction` DEBE limitarse a `ALLOW`, `WARN` y `BLOCK`.
+- `ChatbotModerationReason` DEBE limitar las razones a codigos controlados como `NONE`, razones PII (`PII_EMAIL`, `PII_PHONE`, `PII_DNI_NIE`, `PII_CARD`, `PII_IBAN`) y razones de seguridad (`UNSAFE_REQUEST`, `OUT_OF_POLICY`).
+- `ChatbotPiiDetector` DEBE encapsular los patrones de deteccion PII y devolver `ChatbotPiiDetectionResult`; NO DEBE decidir si el mensaje se bloquea o continua.
+- `ChatbotPiiDetectionResult` DEBE exponer flags de deteccion y un conjunto inmutable de `ChatbotModerationReason`.
+- `ChatbotPiiDetector` DEBE tratar mensajes `null`, vacios o blank como resultado sin PII.
+- `ChatbotPiiDetector` DEBE detectar email, telefono espanol, DNI/NIE, tarjeta y IBAN espanol; para evitar falsos positivos, DEBE excluir IBAN espanol antes de evaluar patron de tarjeta.
+- `ChatbotModerationPolicy` DEBE centralizar la decision de permitir, advertir o bloquear a partir del resultado PII y senales de seguridad.
+- `ChatbotModerationPolicy` DEBE bloquear tarjeta (`PII_CARD`) y solicitudes inseguras o fuera de politica cuando se indiquen.
+- `ChatbotModerationPolicy` DEBE advertir, sin bloquear, ante IBAN, DNI/NIE, telefono o email cuando no haya una condicion de bloqueo.
+- `ChatbotModerationService` DEBE degradar de forma segura ante errores de deteccion o politica, devolviendo `BLOCK` con `OUT_OF_POLICY` y una respuesta segura.
+- `ChatbotModerationService` DEBE registrar `ChatbotModerationMetric` de forma segura mediante `ChatbotMetricsRecorder.recordModeration(...)` sin propagar errores del recorder.
+- `ChatbotModerationService` y `LoggingChatbotMetricsRecorder` NO DEBEN registrar contenido completo de mensajes, emails, telefonos, DNI/NIE, tarjetas, IBAN, prompts ni respuestas completas.
+- `ChatbotService` DEBE aplicar la moderacion dentro de `handleConversationMessage(...)` despues de validar longitud y ownership/estado de la conversacion, y antes de reservar secuencias para el flujo normal.
+- Si la moderacion devuelve `BLOCK`, `ChatbotService` DEBE persistir solo una respuesta segura del asistente, con `usedAi=false`, `usedPlatformData=false`, `sourcesSummary` vacio y `responseMode` `GENERAL` o `CONTEXTUAL_RESTRICTED` segun la conversacion.
+- Si la moderacion devuelve `BLOCK`, `ChatbotService` NO DEBE persistir el mensaje original del usuario ni invocar `ChatbotReplyOrchestrator`, `ChatbotAiReplyService` o proveedores externos.
+- Si la moderacion devuelve `WARN`, el flujo conversacional PUEDE continuar; la advertencia queda trazada como metrica de moderacion y el uso final de IA se decide posteriormente en el flujo de respuesta.
 
 ## Clasificacion y scope conversacional
 
@@ -699,11 +757,15 @@ Excepciones actuales:
 - `ChatbotConversationService` DEBE centralizar creacion, ownership, cierre, borrado y reapertura de conversaciones.
 - `ChatbotHistoryService` DEBE centralizar listado de conversaciones, lectura paginada de mensajes y normalizacion de paginacion.
 - `ChatbotMessageService` DEBE centralizar persistencia de mensajes, calculo de secuencia y transformacion a historial/prompt.
+- `ChatbotModerationService` DEBE centralizar la moderacion previa de mensajes de usuario, deteccion PII y registro seguro de `ChatbotModerationMetric`.
 - `ChatbotReplyOrchestrator` DEBE centralizar la decision de respuesta asistente y devolver `ChatbotReplyDecision` sin persistir mensajes.
 - `ChatbotReplyDecision` DEBE incluir el modo de respuesta, uso de datos de plataforma, fuentes resumidas y si la respuesta final uso IA real.
 - `ChatbotEscalationService` DEBE centralizar escalado, archivado de conversacion, persistencia de `Escalation` y registro seguro de `ChatbotEscalationMetric`.
 - `ChatbotResponseSanitizer` DEBE centralizar transformaciones de salida necesarias para que el frontend renderice respuestas de forma segura.
 - DEBE impedir envio de mensajes a conversaciones no activas.
+- DEBE moderar mensajes de usuario antes de persistirlos o invocar IA.
+- DEBE permitir que advertencias de moderacion continuen el flujo conversacional normal sin asumir uso de IA en la metrica de moderacion.
+- DEBE bloquear mensajes con accion `BLOCK` mediante respuesta segura del asistente, sin guardar el mensaje original del usuario ni llamar a IA.
 - DEBE impedir reapertura de conversaciones archivadas.
 - DEBE borrar mensajes asociados al borrar una conversacion.
 - DEBE archivar conversacion cuando se escala.
@@ -718,6 +780,7 @@ Excepciones actuales:
 - DEBE conservar orden conversacional con `sequenceNumber`.
 - DEBE impedir duplicados de mensajes mediante indice unico por `conversationId` y `sequenceNumber`.
 - DEBE enlazar respuesta con peticion mediante `parentMessageId` cuando aplique.
+- En respuestas bloqueadas por moderacion, `parentMessageId` PUEDE ser `null` porque no se persiste peticion de usuario asociada.
 
 ## Contexto de plataforma
 
@@ -752,6 +815,7 @@ Reglas:
 - DEBE cubrir casos felices y casos de error.
 - DEBE cubrir seguridad/autorizacion en endpoints sensibles.
 - DEBE probar reglas de scope conversacional.
+- DEBE probar deteccion PII, decisiones de moderacion, bloqueo sin persistir mensaje de usuario y registro seguro de metricas de moderacion.
 - DEBE probar persistencia y mapeos `Entity <-> Domain`.
 - DEBE probar configuracion critica de IA.
 - DEBERIA mockear proveedores externos y clientes Feign en tests de servicio/resource.
@@ -765,6 +829,13 @@ Tests actuales destacados:
 - `ChatbotAiReplyServiceTest`
 - `ChatbotAiRequestBuilderTest`
 - `ChatbotPromptBuilderTest`
+- `ChatbotModerationDecisionTest`
+- `ChatbotPiiDetectionResultTest`
+- `ChatbotModerationMetricTest`
+- `ChatbotMetricsRecorderTest`
+- `ChatbotModerationPolicyTest`
+- `ChatbotModerationServiceTest`
+- `ChatbotPiiDetectorTest`
 - `ChatbotBaseReplyBuilderTest`
 - `ChatbotContextualFallbackReplyBuilderTest`
 - `ChatbotCourtesyReplyBuilderTest`
@@ -820,6 +891,8 @@ Reglas:
 - Mezclar contratos HTTP externos con reglas de dominio sin modelo intermedio.
 - Inventar datos de plataforma, documentos o encargo cuando no hay fuente disponible.
 - Permitir que una conversacion contextual responda sobre otro encargo.
+- Saltarse `ChatbotModerationService` antes de persistir mensajes de usuario o invocar IA.
+- Registrar en metricas o logs contenido completo de mensajes moderados, emails, telefonos, DNI/NIE, tarjetas, IBAN o prompts.
 - Registrar en logs tokens, secretos, prompts con datos sensibles o respuestas completas con informacion confidencial en produccion.
 - Crear rutas publicas sin revisar seguridad en filtro y en metodo.
 
@@ -837,9 +910,12 @@ Reglas:
 - Si se toca un caso de uso, trabajar con comandos/resultados internos, no DTOs HTTP.
 - Si se crea un caso de uso HTTP nuevo, definir su `*UseCase` en `domain.ports.in`, implementarlo en un servicio de dominio y cubrir la llamada desde el resource con test.
 - Si se toca el flujo conversacional, ubicar la regla en `conversation`, `reply`, `classification` o `policies` antes de ampliar `ChatbotService`.
+- Si se toca moderacion, ubicar modelos en `domain.model.safety`, reglas en `domain.services.safety` y registrar solo codigos controlados mediante `ChatbotModerationMetric`.
+- Si se toca deteccion PII, cubrir patrones positivos, negativos y falsos positivos relevantes, especialmente IBAN frente a tarjeta.
 - Si se toca persistencia, mapear entre entidad y dominio dentro de `adapter.out.mongodb`.
 - Si se toca IA de dominio, usar `domain.services.reply.ai`; si se toca proveedor real, mantener Spring AI dentro de `adapter.out.ai`.
 - Si se toca la preparacion de `ChatbotAiRequest`, usar `domain.services.reply.ai.prompt.ChatbotAiRequestBuilder`; si se toca el system prompt, usar `domain.services.prompt.ChatbotPromptBuilder`.
+- Si se toca el formato de metricas de `LoggingChatbotMetricsRecorder`, actualizar `docs/cloudwatch-logs-insights-metrics.md`.
 - Si se toca contexto de plataforma, usar puertos (`EngagementClient`, `UserClient`) y no Feign directo.
 - Si se toca seguridad, revisar `ResourceServerConfig` y `Security`.
 - Si se introduce una excepcion funcional, mapearla en `ApiExceptionHandler`.
