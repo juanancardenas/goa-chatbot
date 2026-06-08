@@ -146,6 +146,26 @@ class ChatbotModerationPolicyTest {
     }
 
     @Test
+    void evaluateShouldBlockUnsafeRequestAndPreservePiiFlagWhenPiiIsDetected() {
+        ChatbotModerationDecision decision = this.policy.evaluate(
+                ChatbotPiiDetectionResult.of(
+                        true,
+                        false,
+                        false,
+                        false,
+                        false
+                ),
+                true,
+                false
+        );
+
+        assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
+        assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.UNSAFE_REQUEST);
+        assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isBlocked()).isTrue();
+    }
+
+    @Test
     void evaluateShouldBlockWhenOutOfPolicyIsDetected() {
         ChatbotModerationDecision decision = this.policy.evaluate(
                 ChatbotPiiDetectionResult.empty(),
@@ -157,6 +177,26 @@ class ChatbotModerationPolicyTest {
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.OUT_OF_POLICY);
         assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isFalse();
+        assertThat(decision.isBlocked()).isTrue();
+    }
+
+    @Test
+    void evaluateShouldBlockOutOfPolicyRequestAndPreservePiiFlagWhenPiiIsDetected() {
+        ChatbotModerationDecision decision = this.policy.evaluate(
+                ChatbotPiiDetectionResult.of(
+                        false,
+                        true,
+                        false,
+                        false,
+                        false
+                ),
+                false,
+                true
+        );
+
+        assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
+        assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.OUT_OF_POLICY);
+        assertThat(decision.isContainsPii()).isTrue();
         assertThat(decision.isBlocked()).isTrue();
     }
 

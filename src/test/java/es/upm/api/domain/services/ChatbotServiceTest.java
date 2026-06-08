@@ -25,6 +25,7 @@ import es.upm.api.domain.model.pagination.PageResult;
 import es.upm.api.domain.model.platform.ChatbotDocumentContext;
 import es.upm.api.domain.model.platform.ChatbotPlatformContext;
 import es.upm.api.domain.model.safety.ChatbotModerationAction;
+import es.upm.api.domain.model.safety.ChatbotModerationDecision;
 import es.upm.api.domain.model.safety.ChatbotModerationReason;
 import es.upm.api.domain.model.security.AuthenticatedUserContext;
 import es.upm.api.domain.ports.in.CloseConversationUseCase;
@@ -82,6 +83,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -1867,6 +1869,75 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void sendMessageShouldUseDefaultSafeReplyWhenModerationBlockReplyIsBlank() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        ChatbotModerationService moderationService = mock(ChatbotModerationService.class);
+        ChatbotService service = this.buildChatbotService(moderationService);
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-moderation-blank-reply")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.GENERAL)
+                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-moderation-blank-reply"))
+                .thenReturn(existingConversation);
+        when(moderationService.moderate(
+                "mensaje bloqueado",
+                "conversation-moderation-blank-reply",
+                "professional-1"
+        )).thenReturn(ChatbotModerationDecision.block(
+                ChatbotModerationReason.OUT_OF_POLICY,
+                "   ",
+                false
+        ));
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-moderation-blank-reply", 1))
+                .thenReturn(11);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("assistant-message-id");
+
+        ChatbotMessageResult response = service.sendMessage(
+                this.authenticatedUser,
+                new ChatbotMessageCommand("conversation-moderation-blank-reply", "mensaje bloqueado")
+        );
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-moderation-blank-reply");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(response.getUsedPlatformData()).isFalse();
+        assertThat(response.getSourcesSummary()).isEmpty();
+        assertThat(response.getMessage()).contains("No puedo procesar este mensaje");
+        assertThat(response.getMessage()).contains("solicitud no permitida");
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(this.messagePersistence).createAndReturnId(messageCaptor.capture());
+
+        Message savedMessage = messageCaptor.getValue();
+
+        assertThat(savedMessage.getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
+        assertThat(savedMessage.getMessageType()).isEqualTo(MessageType.RESPONSE);
+        assertThat(savedMessage.getSequenceNumber()).isEqualTo(11);
+        assertThat(savedMessage.getParentMessageId()).isNull();
+        assertThat(savedMessage.getContent()).isEqualTo(response.getMessage());
+
+        verify(this.conversationPersistence).reserveSequenceNumbers("conversation-moderation-blank-reply", 1);
+        verify(this.conversationPersistence, never()).reserveSequenceNumbers("conversation-moderation-blank-reply", 2);
+        verify(this.chatbotQuestionClassifier, never()).classify(any());
+        verify(this.chatbotAiClient, never()).generate(any());
+
+        ChatbotMessageMetric metric = this.captureMessageMetric();
+
+        assertThat(metric.getConversationId()).isEqualTo("conversation-moderation-blank-reply");
+        assertThat(metric.getUserId()).isEqualTo("professional-1");
+        assertThat(metric.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(metric.isUsedAi()).isFalse();
+        assertThat(metric.isUsedPlatformData()).isFalse();
+        assertThat(metric.isSuccess()).isTrue();
+    }
+
+    @Test
     void sendMessageShouldBlockContextualCardMessageWithoutLoadingPlatformContextOrCallingAi() {
         this.authenticate("client-1", "ROLE_CUSTOMER");
 
@@ -2265,6 +2336,60 @@ class ChatbotServiceTest {
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(this.messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
         assertThat(messageCaptor.getAllValues().get(1).getContent()).isEqualTo(response.getMessage());
+    }
+
+    private ChatbotService buildChatbotService(ChatbotModerationService chatbotModerationService) {
+        ChatbotMessageService chatbotMessageService = new ChatbotMessageService(
+                this.messagePersistence,
+                this.conversationPersistence
+        );
+        ChatbotConversationService chatbotConversationService = new ChatbotConversationService(
+                this.conversationPersistence,
+                this.messagePersistence
+        );
+        ChatbotHistoryService chatbotHistoryService = new ChatbotHistoryService(
+                this.conversationPersistence,
+                this.messagePersistence,
+                chatbotConversationService,
+                chatbotMessageService
+        );
+        ChatbotEscalationService chatbotEscalationService = new ChatbotEscalationService(
+                chatbotConversationService,
+                this.escalationPersistence,
+                this.chatbotMetricsRecorder,
+                this.userClient
+        );
+        ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
+                new ChatbotCourtesyReplyBuilder(),
+                new ChatbotGeneralReplyBuilder(this.chatbotQuestionClassifier),
+                new ChatbotContextualFallbackReplyBuilder(this.chatbotQuestionClassifier),
+                new ChatbotPlatformReplyBuilder(this.chatbotDocumentContextService),
+                this.chatbotQuestionClassifier
+        );
+        ChatbotAiReplyService chatbotAiReplyService = new ChatbotAiReplyService(
+                this.chatbotAiClient,
+                this.chatbotAiSettings,
+                new ChatbotAiRequestBuilder(this.chatbotAiSettings, chatbotMessageService),
+                this.chatbotMetricsRecorder
+        );
+        ChatbotReplyOrchestrator chatbotReplyOrchestrator = new ChatbotReplyOrchestrator(
+                chatbotBaseReplyBuilder,
+                chatbotAiReplyService,
+                this.chatbotPlatformContextService,
+                this.chatbotScopePolicy
+        );
+
+        return new ChatbotService(
+                chatbotMessageService,
+                new ChatbotResponseSanitizer(),
+                chatbotConversationService,
+                chatbotHistoryService,
+                chatbotEscalationService,
+                chatbotReplyOrchestrator,
+                chatbotModerationService,
+                this.chatbotAiSettings,
+                this.chatbotMetricsRecorder
+        );
     }
 
     private void authenticate(String userId, String... authorities) {
