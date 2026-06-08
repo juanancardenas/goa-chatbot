@@ -92,6 +92,73 @@ class ChatbotModerationServiceTest {
         assertThat(decision.getSafeReply()).isNotBlank();
     }
 
+    @Test
+    void moderateShouldRecordSafeBlockMetricWhenDetectorFails() {
+        ChatbotPiiDetector failingDetector = new ChatbotPiiDetector() {
+            @Override
+            public es.upm.api.domain.model.safety.ChatbotPiiDetectionResult detect(String message) {
+                throw new IllegalStateException("Forced detector failure");
+            }
+        };
+        CapturingChatbotMetricsRecorder recorder = new CapturingChatbotMetricsRecorder();
+
+        ChatbotModerationService service = new ChatbotModerationService(
+                failingDetector,
+                new ChatbotModerationPolicy(),
+                recorder
+        );
+
+        ChatbotModerationDecision decision = service.moderate(
+                "mensaje cualquiera",
+                "conversation-error",
+                "user-error"
+        );
+
+        assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
+        assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.OUT_OF_POLICY);
+        assertThat(decision.isContainsPii()).isFalse();
+
+        assertThat(recorder.moderationMetrics).hasSize(1);
+
+        ChatbotModerationMetric metric = recorder.moderationMetrics.get(0);
+
+        assertThat(metric.getConversationId()).isEqualTo("conversation-error");
+        assertThat(metric.getUserId()).isEqualTo("user-error");
+        assertThat(metric.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
+        assertThat(metric.getReason()).isEqualTo(ChatbotModerationReason.OUT_OF_POLICY);
+        assertThat(metric.isContainsPii()).isFalse();
+        assertThat(metric.isBlocked()).isTrue();
+        assertThat(metric.getUsedAi()).isFalse();
+        assertThat(metric.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    void moderateShouldUseAutowiredConstructorAndRecordAllowedMetric() {
+        CapturingChatbotMetricsRecorder recorder = new CapturingChatbotMetricsRecorder();
+        ChatbotModerationService service = new ChatbotModerationService(recorder);
+
+        ChatbotModerationDecision decision = service.moderate(
+                "Quiero revisar mi encargo",
+                "conversation-allowed",
+                "user-allowed"
+        );
+
+        assertThat(decision.isAllowed()).isTrue();
+
+        assertThat(recorder.moderationMetrics).hasSize(1);
+
+        ChatbotModerationMetric metric = recorder.moderationMetrics.get(0);
+
+        assertThat(metric.getConversationId()).isEqualTo("conversation-allowed");
+        assertThat(metric.getUserId()).isEqualTo("user-allowed");
+        assertThat(metric.getAction()).isEqualTo(ChatbotModerationAction.ALLOW);
+        assertThat(metric.getReason()).isEqualTo(ChatbotModerationReason.NONE);
+        assertThat(metric.isContainsPii()).isFalse();
+        assertThat(metric.isBlocked()).isFalse();
+        assertThat(metric.getUsedAi()).isNull();
+        assertThat(metric.getCreatedAt()).isNotNull();
+    }
+
     private static class CapturingChatbotMetricsRecorder implements ChatbotMetricsRecorder {
 
         private final List<ChatbotModerationMetric> moderationMetrics = new ArrayList<>();

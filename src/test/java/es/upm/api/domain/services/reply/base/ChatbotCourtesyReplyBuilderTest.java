@@ -47,8 +47,10 @@ class ChatbotCourtesyReplyBuilderTest {
                 "te quiero ayudar",
                 "te amo por ayudar",
                 "buen dia",
+                "buen d\u00eda",
                 "BUENAS tardes",
                 "buenas tardes",
+                "hola",
                 "hasta luego",
                 "nos vemos"
         );

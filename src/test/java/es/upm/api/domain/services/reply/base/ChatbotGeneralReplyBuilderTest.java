@@ -171,7 +171,13 @@ class ChatbotGeneralReplyBuilderTest {
         return Stream.of(
                 "Dame el estado de este encargo",
                 "Dame el estado de mi hoja de encargo",
+                "Dame el estado del encargo",
+                "Dame el estado de un encargo",
+                "Dame el estado de este caso",
+                "Dame el estado del caso",
+                "Dame el estado de esta hoja de encargo",
                 "Dame el estado del expediente",
+                "Dame el estado de mi expediente",
                 "Dame el estado de este expediente"
         );
     }

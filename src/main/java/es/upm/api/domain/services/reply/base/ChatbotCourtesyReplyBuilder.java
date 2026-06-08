@@ -17,13 +17,13 @@ public class ChatbotCourtesyReplyBuilder {
         String normalized = message.toLowerCase(Locale.ROOT);
 
         return normalized.contains("gracias")
-                || normalized.contains("muchas gracias")
                 || normalized.contains("por favor")
                 || normalized.contains("te quiero")
                 || normalized.contains("te amo")
                 || normalized.contains("buen dia")
                 || normalized.contains("buen día")
                 || normalized.contains("buenas")
+                || normalized.contains("hola")
                 || normalized.contains("hasta luego")
                 || normalized.contains("nos vemos");
     }
