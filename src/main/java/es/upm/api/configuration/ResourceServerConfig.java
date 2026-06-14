@@ -10,7 +10,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -45,9 +44,15 @@ public class ResourceServerConfig {  // validate tokens y security APIs con SCOP
     public SecurityFilterChain systemPublic(HttpSecurity http) throws Exception {
         return http
                 .securityMatcher(SystemResource.SYSTEM + "/**")
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a.anyRequest().permitAll())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(STATELESS))
+                .authorizeHttpRequests(a -> a
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                SystemResource.SYSTEM,
+                                SystemResource.SYSTEM + "/**"
+                        ).permitAll()
+                        .anyRequest().denyAll()
+                )
                 .build();
     }
 
@@ -55,6 +60,8 @@ public class ResourceServerConfig {  // validate tokens y security APIs con SCOP
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
+                // CSRF protection is not required for this stateless resource server: authentication uses
+                // Authorization Bearer JWTs, not cookies or server-side sessions.
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> {})
                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
