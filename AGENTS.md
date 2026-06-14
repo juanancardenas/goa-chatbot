@@ -672,12 +672,15 @@ domain.ports.out -> adapter.out.webclient.*  PROHIBIDO
 - DEBE mantener `@EnableMethodSecurity` activo.
 - DEBE mantener coherencia entre `SecurityFilterChain` y `@PreAuthorize`.
 - DEBE permitir publicamente solo endpoints explicitamente definidos:
-  - `/system/**`
+  - `GET /system/**`
   - `/actuator/health`
   - `/v3/api-docs/**`
   - `/swagger-ui/**`
   - `/swagger-ui.html`
   - `OPTIONS /**`
+- DEBE limitar los endpoints publicos al metodo HTTP minimo necesario; `SystemResource` solo DEBE exponerse publicamente mediante `GET`.
+- DEBE mantener CSRF activado por defecto en cadenas publicas o de endpoints que no necesiten desactivarlo.
+- PUEDE desactivar CSRF solo en cadenas stateless autenticadas mediante `Authorization Bearer` JWT, sin cookies ni sesiones server-side, y DEBE dejar justificacion explicita junto a la configuracion.
 - DEBE usar constantes de `adapter.in.rest.Security` para autorizacion de metodos.
 - NO DEBE introducir rutas publicas sin revisar `ResourceServerConfig` y el metodo resource correspondiente.
 - DEBE propagar JWT en llamadas Feign cuando exista autenticacion de usuario.
