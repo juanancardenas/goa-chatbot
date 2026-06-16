@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -100,7 +101,7 @@ class MessageAdapterTest {
                 .senderType(MessageSenderType.USER)
                 .messageType(MessageType.REQUEST)
                 .content("content")
-                .timestamp(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .timestamp(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .sequenceNumber(sequence)
                 .build();
     }
@@ -112,7 +113,7 @@ class MessageAdapterTest {
                 .senderType(MessageSenderType.USER)
                 .messageType(MessageType.REQUEST)
                 .content("content")
-                .timestamp(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .timestamp(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .sequenceNumber(sequence)
                 .build();
     }

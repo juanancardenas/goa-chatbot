@@ -51,6 +51,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +68,7 @@ import static org.springframework.http.HttpStatus.OK;
 class ChatbotResourceFT {
 
     private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
-    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, Month.JANUARY, 1, 10, 0);
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -1411,7 +1412,7 @@ class ChatbotResourceFT {
         when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.fromString(engagementLetterId),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         new UserSummary(
                                 UUID.fromString("bbbbbbb0-bbbb-cccc-dddd-eeeeffff0000"),
@@ -1422,7 +1423,7 @@ class ChatbotResourceFT {
                         ),
                         List.of(new LegalProcedureSummary(
                                 "Reclamación civil",
-                                LocalDate.of(2026, 4, 2),
+                                LocalDate.of(2026, Month.APRIL, 2),
                                 null,
                                 List.of("Revisión documental")
                         ))
@@ -1434,14 +1435,14 @@ class ChatbotResourceFT {
                                 "OPEN",
                                 "Se registró escrito",
                                 "Escrito de demanda",
-                                LocalDate.of(2026, 4, 10)
+                                LocalDate.of(2026, Month.APRIL, 10)
                         ),
                         new EngagementEventSummary(
                                 "EVENT",
                                 "SCHEDULED",
                                 "Vista programada",
                                 "Vista inicial",
-                                LocalDate.of(2026, 4, 15)
+                                LocalDate.of(2026, Month.APRIL, 15)
                         )
                 )));
         HttpHeaders headers = this.authHeaders("fake-token-context-success", "customer-1", List.of("customer"));

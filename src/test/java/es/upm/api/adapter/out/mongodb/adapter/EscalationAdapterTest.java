@@ -22,6 +22,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +51,7 @@ class EscalationAdapterTest {
                 .id(UUID.fromString("33333333-3333-3333-3333-333333333333"))
                 .conversationId("conversation-3")
                 .userId("user-3")
-                .createdAt(LocalDateTime.of(2026, 5, 2, 12, 15))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 2, 12, 15))
                 .phone("+34600999888")
                 .email("user3@example.com")
                 .build();
@@ -64,7 +65,7 @@ class EscalationAdapterTest {
         assertThat(saved.getId()).isEqualTo(UUID.fromString("33333333-3333-3333-3333-333333333333"));
         assertThat(saved.getConversationId()).isEqualTo("conversation-3");
         assertThat(saved.getUserId()).isEqualTo("user-3");
-        assertThat(saved.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 2, 12, 15));
+        assertThat(saved.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 2, 12, 15));
         assertThat(saved.getPhone()).isEqualTo("+34600999888");
         assertThat(saved.getEmail()).isEqualTo("user3@example.com");
     }
@@ -146,7 +147,7 @@ class EscalationAdapterTest {
                 .userId("user-3")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 2, 12, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 2, 12, 0))
                 .build();
     }
 
@@ -155,7 +156,7 @@ class EscalationAdapterTest {
                 .id(UUID.fromString("33333333-3333-3333-3333-333333333333"))
                 .conversationId("conversation-3")
                 .userId("user-3")
-                .createdAt(LocalDateTime.of(2026, 5, 2, 12, 15))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 2, 12, 15))
                 .phone("+34600999888")
                 .email("user3@example.com")
                 .build();

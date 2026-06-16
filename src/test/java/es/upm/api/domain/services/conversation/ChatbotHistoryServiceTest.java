@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -56,14 +57,14 @@ class ChatbotHistoryServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 9, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 9, 0))
                 .build();
         Conversation olderConversation = Conversation.builder()
                 .id("conversation-2")
                 .userId("professional-1")
                 .status(ConversationStatus.CLOSED)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 14, 9, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 14, 9, 0))
                 .build();
 
         when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
@@ -74,7 +75,7 @@ class ChatbotHistoryServiceTest {
                                 .id("message-1")
                                 .conversationId("conversation-1")
                                 .content("Resumen reciente")
-                                .timestamp(LocalDateTime.of(2026, 5, 15, 10, 15))
+                                .timestamp(LocalDateTime.of(2026, Month.MAY, 15, 10, 15))
                                 .build()
                 ));
         when(this.messageGateway.findLatestByConversationId("conversation-2")).thenReturn(Optional.empty());
@@ -100,7 +101,7 @@ class ChatbotHistoryServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 9, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 9, 0))
                 .build();
 
         when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
@@ -126,7 +127,7 @@ class ChatbotHistoryServiceTest {
                 .engagementLetterId("EL-9")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 12, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 12, 0))
                 .build();
 
         when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", ConversationType.CONTEXTUAL))
@@ -154,7 +155,7 @@ class ChatbotHistoryServiceTest {
                 .engagementLetterId("EL-9")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 12, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 12, 0))
                 .build();
 
         when(this.conversationGateway.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
@@ -193,7 +194,7 @@ class ChatbotHistoryServiceTest {
                 .engagementLetterId("EL-10")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 8, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 8, 0))
                 .build();
 
         Message newestInPage = Message.builder()
@@ -202,7 +203,7 @@ class ChatbotHistoryServiceTest {
                 .senderType(MessageSenderType.ASSISTANT)
                 .messageType(MessageType.RESPONSE)
                 .content("Segundo")
-                .timestamp(LocalDateTime.of(2026, 5, 15, 9, 30))
+                .timestamp(LocalDateTime.of(2026, Month.MAY, 15, 9, 30))
                 .sequenceNumber(2)
                 .parentMessageId("message-1")
                 .build();
@@ -212,7 +213,7 @@ class ChatbotHistoryServiceTest {
                 .senderType(MessageSenderType.USER)
                 .messageType(MessageType.REQUEST)
                 .content("Primero")
-                .timestamp(LocalDateTime.of(2026, 5, 15, 9, 0))
+                .timestamp(LocalDateTime.of(2026, Month.MAY, 15, 9, 0))
                 .sequenceNumber(1)
                 .build();
 
@@ -264,7 +265,7 @@ class ChatbotHistoryServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 8, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 8, 0))
                 .build();
 
         when(this.chatbotConversationService.requireOwnedConversation("conversation-history", "customer-1"))
@@ -297,7 +298,7 @@ class ChatbotHistoryServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 8, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 8, 0))
                 .build();
 
         when(this.chatbotConversationService.requireOwnedConversation("conversation-history", "customer-1"))
@@ -330,7 +331,7 @@ class ChatbotHistoryServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 8, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 8, 0))
                 .build();
 
         when(this.chatbotConversationService.requireOwnedConversation("conversation-history", "customer-1"))
@@ -363,7 +364,7 @@ class ChatbotHistoryServiceTest {
                 .userId("professional-1")
                 .status(null)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 9, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 9, 0))
                 .build();
 
         when(this.conversationGateway.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))

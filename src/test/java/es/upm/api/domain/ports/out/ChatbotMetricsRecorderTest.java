@@ -12,12 +12,13 @@ import es.upm.api.domain.model.safety.ChatbotModerationReason;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ChatbotMetricsRecorderTest {
 
-    private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, 5, 26, 14, 15);
+    private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, Month.MAY, 26, 14, 15);
 
     @Test
     void recorderContractShouldAcceptEveryMetricType() {

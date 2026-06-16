@@ -6,6 +6,7 @@ import es.upm.api.domain.model.Conversation;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,7 +20,7 @@ class ChatbotDocumentContextServiceTest {
                 .userId("user-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 30, 11, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 30, 11, 0))
                 .build();
 
         var context = service.loadDocumentContext(conversation);

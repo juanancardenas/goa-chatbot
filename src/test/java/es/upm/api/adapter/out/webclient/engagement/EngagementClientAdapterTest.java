@@ -11,6 +11,7 @@ import es.upm.api.adapter.out.webclient.user.dto.UserResponseDto;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,8 +30,8 @@ class EngagementClientAdapterTest {
         String engagementLetterId = "engagement-123";
         EngagementLetterResponseDto expected = new EngagementLetterResponseDto(
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
-                LocalDate.of(2026, 5, 1),
-                LocalDate.of(2026, 5, 30),
+                LocalDate.of(2026, Month.MAY, 1),
+                LocalDate.of(2026, Month.MAY, 30),
                 new UserResponseDto(
                         UUID.fromString("22222222-2222-2222-2222-222222222222"),
                         "Ana",
@@ -40,7 +41,7 @@ class EngagementClientAdapterTest {
                 ),
                 List.of(new EngagementLetterResponseDto.LegalProcedureResponseDto(
                         "Procedimiento laboral",
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         List.of("Preparar demanda")
                 ))
@@ -51,8 +52,8 @@ class EngagementClientAdapterTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(expected.getId());
-        assertThat(result.getCreationDate()).isEqualTo(LocalDate.of(2026, 5, 1));
-        assertThat(result.getClosingDate()).isEqualTo(LocalDate.of(2026, 5, 30));
+        assertThat(result.getCreationDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 1));
+        assertThat(result.getClosingDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 30));
         assertThat(result.getOwner().getId()).isEqualTo(expected.getOwner().getId());
         assertThat(result.getOwner().getFirstName()).isEqualTo("Ana");
         assertThat(result.getLegalProcedures()).hasSize(1);
@@ -69,7 +70,7 @@ class EngagementClientAdapterTest {
         int page = 2;
         int size = 10;
         EngagementEventPageResponseDto expected = new EngagementEventPageResponseDto(List.of(
-                new EngagementEventResponseDto("EVENT", "OPEN", "Vista senalada", null, LocalDate.of(2026, 5, 12))
+                new EngagementEventResponseDto("EVENT", "OPEN", "Vista senalada", null, LocalDate.of(2026, Month.MAY, 12))
         ));
         when(engagementFeignClient.readEventsByEngagementLetterId(engagementLetterId, page, size)).thenReturn(expected);
 
@@ -81,7 +82,7 @@ class EngagementClientAdapterTest {
         assertThat(event.getType()).isEqualTo("EVENT");
         assertThat(event.getState()).isEqualTo("OPEN");
         assertThat(event.getTitle()).isEqualTo("Vista senalada");
-        assertThat(event.getDate()).isEqualTo(LocalDate.of(2026, 5, 12));
+        assertThat(event.getDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 12));
         verify(engagementFeignClient).readEventsByEngagementLetterId(engagementLetterId, page, size);
     }
 

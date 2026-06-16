@@ -6,6 +6,7 @@ import es.upm.api.domain.model.Message;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,7 +23,7 @@ class MessageEntityTest {
         assertThat(entity.getSenderType()).isEqualTo(MessageSenderType.USER);
         assertThat(entity.getMessageType()).isEqualTo(MessageType.REQUEST);
         assertThat(entity.getContent()).isEqualTo("content");
-        assertThat(entity.getTimestamp()).isEqualTo(LocalDateTime.of(2026, 4, 30, 10, 0));
+        assertThat(entity.getTimestamp()).isEqualTo(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0));
         assertThat(entity.getSequenceNumber()).isEqualTo(7);
         assertThat(entity.getParentMessageId()).isEqualTo("parent-1");
     }
@@ -38,7 +39,7 @@ class MessageEntityTest {
         assertThat(entity.getSenderType()).isEqualTo(MessageSenderType.USER);
         assertThat(entity.getMessageType()).isEqualTo(MessageType.REQUEST);
         assertThat(entity.getContent()).isEqualTo("content");
-        assertThat(entity.getTimestamp()).isEqualTo(LocalDateTime.of(2026, 4, 30, 10, 0));
+        assertThat(entity.getTimestamp()).isEqualTo(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0));
         assertThat(entity.getSequenceNumber()).isEqualTo(7);
         assertThat(entity.getParentMessageId()).isEqualTo("parent-1");
     }
@@ -51,7 +52,7 @@ class MessageEntityTest {
                 .senderType(MessageSenderType.ASSISTANT)
                 .messageType(MessageType.RESPONSE)
                 .content("reply")
-                .timestamp(LocalDateTime.of(2026, 5, 1, 9, 0))
+                .timestamp(LocalDateTime.of(2026, Month.MAY, 1, 9, 0))
                 .sequenceNumber(8)
                 .parentMessageId("message-0")
                 .build();
@@ -63,7 +64,7 @@ class MessageEntityTest {
         assertThat(message.getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
         assertThat(message.getMessageType()).isEqualTo(MessageType.RESPONSE);
         assertThat(message.getContent()).isEqualTo("reply");
-        assertThat(message.getTimestamp()).isEqualTo(LocalDateTime.of(2026, 5, 1, 9, 0));
+        assertThat(message.getTimestamp()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 1, 9, 0));
         assertThat(message.getSequenceNumber()).isEqualTo(8);
         assertThat(message.getParentMessageId()).isEqualTo("message-0");
     }
@@ -75,7 +76,7 @@ class MessageEntityTest {
                 .senderType(MessageSenderType.USER)
                 .messageType(MessageType.REQUEST)
                 .content("content")
-                .timestamp(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .timestamp(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .sequenceNumber(7)
                 .parentMessageId("parent-1")
                 .build();

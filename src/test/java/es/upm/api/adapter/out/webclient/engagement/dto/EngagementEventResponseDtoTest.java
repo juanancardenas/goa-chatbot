@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,7 +13,7 @@ class EngagementEventResponseDtoTest {
 
     @Test
     void allArgsConstructorShouldSetFields() {
-        LocalDate date = LocalDate.of(2026, 5, 12);
+        LocalDate date = LocalDate.of(2026, Month.MAY, 12);
 
         EngagementEventResponseDto dto = new EngagementEventResponseDto(
                 "EVENT",
@@ -37,13 +38,13 @@ class EngagementEventResponseDtoTest {
         dto.setState("DONE");
         dto.setTitle("Tarea completada");
         dto.setComment("Sin incidencias");
-        dto.setDate(LocalDate.of(2026, 5, 13));
+        dto.setDate(LocalDate.of(2026, Month.MAY, 13));
 
         assertThat(dto.getType()).isEqualTo("TASK");
         assertThat(dto.getState()).isEqualTo("DONE");
         assertThat(dto.getTitle()).isEqualTo("Tarea completada");
         assertThat(dto.getComment()).isEqualTo("Sin incidencias");
-        assertThat(dto.getDate()).isEqualTo(LocalDate.of(2026, 5, 13));
+        assertThat(dto.getDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 13));
     }
 
     @Test
@@ -65,6 +66,6 @@ class EngagementEventResponseDtoTest {
         assertThat(dto.getState()).isEqualTo("OPEN");
         assertThat(dto.getTitle()).isEqualTo("Vista senalada");
         assertThat(dto.getComment()).isEqualTo("Comentario");
-        assertThat(dto.getDate()).isEqualTo(LocalDate.of(2026, 5, 12));
+        assertThat(dto.getDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 12));
     }
 }

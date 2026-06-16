@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -195,7 +196,7 @@ class ChatbotScopePolicyTest {
                 .userId("user-id")
                 .engagementLetterId("engagement-letter-id")
                 .type(ConversationType.valueOf(type))
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
     }
 }

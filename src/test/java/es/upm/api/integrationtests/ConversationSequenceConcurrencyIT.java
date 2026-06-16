@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
@@ -75,7 +76,7 @@ class ConversationSequenceConcurrencyIT {
                 .userId("user-concurrency")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL.name())
-                .createdAt(LocalDateTime.of(2026, 5, 16, 12, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 16, 12, 0))
                 .lastSequenceNumber(0)
                 .build());
         int concurrentReservations = 20;
@@ -133,7 +134,7 @@ class ConversationSequenceConcurrencyIT {
                 .senderType(MessageSenderType.USER)
                 .messageType(MessageType.REQUEST)
                 .content("content")
-                .timestamp(LocalDateTime.of(2026, 5, 16, 12, 30))
+                .timestamp(LocalDateTime.of(2026, Month.MAY, 16, 12, 30))
                 .sequenceNumber(sequenceNumber)
                 .build();
     }

@@ -5,11 +5,12 @@ import es.upm.api.domain.model.safety.ChatbotModerationReason;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ChatbotModerationMetricTest {
-    private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, 6, 5, 12, 30);
+    private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, Month.JUNE, 5, 12, 30);
 
     @Test
     void builderShouldPopulateAllFields() {

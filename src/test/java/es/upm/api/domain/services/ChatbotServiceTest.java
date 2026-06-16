@@ -76,6 +76,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -305,7 +306,7 @@ class ChatbotServiceTest {
                 .engagementLetterId("EL-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.findActiveContextualConversation("customer-42", "EL-1", ConversationType.CONTEXTUAL))
                 .thenReturn(Optional.of(existingConversation));
@@ -353,14 +354,14 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 9, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 9, 0))
                 .build();
         Conversation olderConversation = Conversation.builder()
                 .id("conversation-2")
                 .userId("professional-1")
                 .status(ConversationStatus.CLOSED)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 20, 9, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 20, 9, 0))
                 .build();
 
         when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
@@ -371,7 +372,7 @@ class ChatbotServiceTest {
                                 .id("message-1")
                                 .conversationId("conversation-1")
                                 .content("Resumen reciente")
-                                .timestamp(LocalDateTime.of(2026, 4, 21, 10, 15))
+                                .timestamp(LocalDateTime.of(2026, Month.APRIL, 21, 10, 15))
                                 .build()
                 ));
         when(messagePersistence.findLatestByConversationId("conversation-2"))
@@ -398,7 +399,7 @@ class ChatbotServiceTest {
                 .engagementLetterId("EL-9")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 12, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 12, 0))
                 .build();
 
         when(conversationPersistence.findByUserIdAndEngagementLetterIdAndTypeOrderByCreatedAtDesc(
@@ -440,7 +441,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 9, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 9, 0))
                 .build();
 
         when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("professional-1", ConversationType.GENERAL))
@@ -464,7 +465,7 @@ class ChatbotServiceTest {
                 .engagementLetterId("EL-33")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 12, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 12, 0))
                 .build();
 
         when(conversationPersistence.findByUserIdAndTypeOrderByCreatedAtDesc("customer-1", ConversationType.CONTEXTUAL))
@@ -490,7 +491,7 @@ class ChatbotServiceTest {
                 .engagementLetterId("EL-10")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 8, 0))
                 .build();
 
         Message newestInPage = Message.builder()
@@ -499,7 +500,7 @@ class ChatbotServiceTest {
                 .senderType(MessageSenderType.ASSISTANT)
                 .messageType(MessageType.RESPONSE)
                 .content("Segundo")
-                .timestamp(LocalDateTime.of(2026, 4, 21, 9, 30))
+                .timestamp(LocalDateTime.of(2026, Month.APRIL, 21, 9, 30))
                 .sequenceNumber(2)
                 .parentMessageId("message-1")
                 .build();
@@ -509,7 +510,7 @@ class ChatbotServiceTest {
                 .senderType(MessageSenderType.USER)
                 .messageType(MessageType.REQUEST)
                 .content("Primero")
-                .timestamp(LocalDateTime.of(2026, 4, 21, 9, 0))
+                .timestamp(LocalDateTime.of(2026, Month.APRIL, 21, 9, 0))
                 .sequenceNumber(1)
                 .build();
 
@@ -547,7 +548,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
         when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 10))
@@ -575,7 +576,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
         when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 100))
@@ -603,7 +604,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 8, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 8, 0))
                 .build();
         when(conversationPersistence.readById("conversation-history")).thenReturn(conversation);
         when(messagePersistence.findByConversationIdOrderedDesc("conversation-history", 0, 20))
@@ -675,7 +676,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .build();
 
         when(this.conversationPersistence.readById("conversation-courtesy")).thenReturn(conversation);
@@ -725,7 +726,7 @@ class ChatbotServiceTest {
                 .engagementLetterId("engagement-001")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .build();
 
         when(this.conversationPersistence.readById("conversation-contextual-unavailable"))
@@ -762,7 +763,7 @@ class ChatbotServiceTest {
                 .engagementLetterId("engagement-001")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .build();
 
         ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
@@ -808,7 +809,7 @@ class ChatbotServiceTest {
                 .engagementLetterId("engagement-001")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .build();
 
         ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
@@ -869,7 +870,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
@@ -904,7 +905,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
         when(conversationPersistence.readById("conversation-99")).thenReturn(existingConversation);
         when(conversationPersistence.reserveSequenceNumbers("conversation-99", 2)).thenReturn(5);
@@ -949,7 +950,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
@@ -993,7 +994,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(this.conversationPersistence.readById("conversation-restricted")).thenReturn(existingConversation);
@@ -1082,7 +1083,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         ChatbotPlatformContext context = ChatbotPlatformContext.builder()
@@ -1129,7 +1130,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
@@ -1178,7 +1179,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
@@ -1209,7 +1210,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
@@ -1239,7 +1240,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
@@ -1269,7 +1270,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
@@ -1299,7 +1300,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx")).thenReturn(existingConversation);
@@ -1329,7 +1330,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         ChatbotPlatformContext context = ChatbotPlatformContext.builder()
@@ -1368,7 +1369,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         ChatbotPlatformContext context = ChatbotPlatformContext.builder()
@@ -1409,7 +1410,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         ChatbotPlatformContext context = ChatbotPlatformContext.builder()
@@ -1446,7 +1447,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         ChatbotPlatformContext context = ChatbotPlatformContext.builder()
@@ -1484,7 +1485,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-100")
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         ChatbotPlatformContext context = ChatbotPlatformContext.builder()
@@ -1521,7 +1522,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
@@ -1554,7 +1555,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
@@ -1587,7 +1588,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
@@ -1620,7 +1621,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
@@ -1653,7 +1654,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-200")
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx-events")).thenReturn(existingConversation);
@@ -1692,7 +1693,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-201")
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 30))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx-empty-events")).thenReturn(existingConversation);
@@ -1732,7 +1733,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-300")
-                .createdAt(LocalDateTime.of(2026, 4, 21, 11, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 11, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx-docs")).thenReturn(existingConversation);
@@ -1773,7 +1774,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-301")
-                .createdAt(LocalDateTime.of(2026, 4, 21, 11, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 11, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-ctx-docs-visible")).thenReturn(existingConversation);
@@ -1822,7 +1823,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
@@ -1893,7 +1894,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
                 .build();
 
         when(this.conversationPersistence.readById("conversation-moderation-blank-reply"))
@@ -1960,7 +1961,7 @@ class ChatbotServiceTest {
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
                 .engagementLetterId("EL-200")
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-contextual")).thenReturn(existingConversation);
@@ -2029,7 +2030,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
                 .build();
 
         when(conversationPersistence.readById("conversation-general")).thenReturn(existingConversation);
@@ -2091,7 +2092,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
 
@@ -2110,7 +2111,7 @@ class ChatbotServiceTest {
                 .userId("customer-2")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
 
@@ -2131,7 +2132,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.CLOSED)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-1")).thenReturn(existingConversation);
 
@@ -2150,7 +2151,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(this.conversationPersistence.readById("conversation-escalate")).thenReturn(existingConversation);
 
@@ -2169,7 +2170,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.CLOSED)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-delete")).thenReturn(existingConversation);
 
@@ -2187,7 +2188,7 @@ class ChatbotServiceTest {
                 .userId("customer-2")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-delete")).thenReturn(existingConversation);
 
@@ -2210,7 +2211,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.CLOSED)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 21, 11, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 11, 30))
                 .build();
         when(conversationPersistence.readById("conversation-closed")).thenReturn(existingConversation);
 
@@ -2232,7 +2233,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.CLOSED)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-closed")).thenReturn(existingConversation);
 
@@ -2250,7 +2251,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-active")).thenReturn(existingConversation);
 
@@ -2267,7 +2268,7 @@ class ChatbotServiceTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ARCHIVED)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 13, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 13, 0))
                 .build();
         when(conversationPersistence.readById("conversation-archived")).thenReturn(existingConversation);
 
@@ -2310,7 +2311,7 @@ class ChatbotServiceTest {
                 .userId("professional-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
 
         when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
