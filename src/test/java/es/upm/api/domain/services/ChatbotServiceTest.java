@@ -73,7 +73,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -91,6 +94,11 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ChatbotServiceTest {
+
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-01-01T10:00:00Z"),
+            ZoneOffset.UTC
+    );
 
     @Mock
     private ConversationGateway conversationPersistence;
@@ -146,7 +154,8 @@ class ChatbotServiceTest {
         ChatbotMessageService chatbotMessageService = new ChatbotMessageService(this.messagePersistence, this.conversationPersistence);
         ChatbotConversationService chatbotConversationService = new ChatbotConversationService(
                 this.conversationPersistence,
-                this.messagePersistence
+                this.messagePersistence,
+                FIXED_CLOCK
         );
         ChatbotHistoryService chatbotHistoryService = new ChatbotHistoryService(
                 this.conversationPersistence,
@@ -158,7 +167,8 @@ class ChatbotServiceTest {
                 chatbotConversationService,
                 this.escalationPersistence,
                 this.chatbotMetricsRecorder,
-                this.userClient
+                this.userClient,
+                FIXED_CLOCK
         );
         ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
                 new ChatbotCourtesyReplyBuilder(),
@@ -171,7 +181,8 @@ class ChatbotServiceTest {
                 this.chatbotAiClient,
                 this.chatbotAiSettings,
                 new ChatbotAiRequestBuilder(this.chatbotAiSettings, chatbotMessageService),
-                this.chatbotMetricsRecorder
+                this.chatbotMetricsRecorder,
+                FIXED_CLOCK
         );
         ChatbotReplyOrchestrator chatbotReplyOrchestrator = new ChatbotReplyOrchestrator(
                 chatbotBaseReplyBuilder,
@@ -190,10 +201,12 @@ class ChatbotServiceTest {
                 new ChatbotModerationService(
                         new ChatbotPiiDetector(),
                         new ChatbotModerationPolicy(),
-                        this.chatbotMetricsRecorder
+                        this.chatbotMetricsRecorder,
+                        FIXED_CLOCK
                 ),
                 this.chatbotAiSettings,
-                this.chatbotMetricsRecorder
+                this.chatbotMetricsRecorder,
+                FIXED_CLOCK
         );
     }
 
@@ -2345,7 +2358,8 @@ class ChatbotServiceTest {
         );
         ChatbotConversationService chatbotConversationService = new ChatbotConversationService(
                 this.conversationPersistence,
-                this.messagePersistence
+                this.messagePersistence,
+                FIXED_CLOCK
         );
         ChatbotHistoryService chatbotHistoryService = new ChatbotHistoryService(
                 this.conversationPersistence,
@@ -2357,7 +2371,8 @@ class ChatbotServiceTest {
                 chatbotConversationService,
                 this.escalationPersistence,
                 this.chatbotMetricsRecorder,
-                this.userClient
+                this.userClient,
+                FIXED_CLOCK
         );
         ChatbotBaseReplyBuilder chatbotBaseReplyBuilder = new ChatbotBaseReplyBuilder(
                 new ChatbotCourtesyReplyBuilder(),
@@ -2370,7 +2385,8 @@ class ChatbotServiceTest {
                 this.chatbotAiClient,
                 this.chatbotAiSettings,
                 new ChatbotAiRequestBuilder(this.chatbotAiSettings, chatbotMessageService),
-                this.chatbotMetricsRecorder
+                this.chatbotMetricsRecorder,
+                FIXED_CLOCK
         );
         ChatbotReplyOrchestrator chatbotReplyOrchestrator = new ChatbotReplyOrchestrator(
                 chatbotBaseReplyBuilder,
@@ -2388,7 +2404,8 @@ class ChatbotServiceTest {
                 chatbotReplyOrchestrator,
                 chatbotModerationService,
                 this.chatbotAiSettings,
-                this.chatbotMetricsRecorder
+                this.chatbotMetricsRecorder,
+                FIXED_CLOCK
         );
     }
 

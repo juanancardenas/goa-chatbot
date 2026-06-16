@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -25,15 +26,18 @@ public class DatabaseSeederDev {
     private final ConversationRepository conversationRepository;
     private final EscalationRepository escalationRepository;
     private final MessageRepository messageRepository;
+    private final Clock clock;
 
     public DatabaseSeederDev(
             ConversationRepository conversationRepository,
             EscalationRepository escalationRepository,
-            MessageRepository messageRepository
+            MessageRepository messageRepository,
+            Clock clock
     ) {
         this.conversationRepository = conversationRepository;
         this.escalationRepository = escalationRepository;
         this.messageRepository = messageRepository;
+        this.clock = clock;
         this.deleteAllAndInitializeAndSeedDataBase();
     }
 
@@ -52,7 +56,7 @@ public class DatabaseSeederDev {
     private void seedDataBaseJava() {
         log.warn("------- Initial Load from JAVA ---------------------------------------------------------------");
 
-        LocalDateTime baseTime = LocalDateTime.now().minusDays(1);
+        LocalDateTime baseTime = LocalDateTime.now(this.clock).minusDays(1);
 
         ConversationEntity conversation1 = new ConversationEntity(
                 "conversation-dev-001",

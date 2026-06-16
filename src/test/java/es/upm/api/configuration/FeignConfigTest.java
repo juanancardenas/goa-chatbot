@@ -20,6 +20,8 @@ import static org.mockito.Mockito.when;
 
 class FeignConfigTest {
 
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
+
     @AfterEach
     void clearSecurityContext() {
         SecurityContextHolder.clearContext();
@@ -34,8 +36,8 @@ class FeignConfigTest {
 
         Jwt jwt = new Jwt(
                 "jwt-token",
-                Instant.now(),
-                Instant.now().plusSeconds(300),
+                FIXED_INSTANT,
+                FIXED_INSTANT.plusSeconds(300),
                 Map.of("alg", "none"),
                 Map.of("sub", "user-1")
         );

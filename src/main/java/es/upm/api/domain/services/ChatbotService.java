@@ -38,6 +38,7 @@ import es.upm.api.domain.services.safety.ChatbotModerationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -67,6 +68,7 @@ public class ChatbotService implements
     private final ChatbotModerationService chatbotModerationService;
     private final ChatbotAiSettings chatbotAiSettings;
     private final ChatbotMetricsRecorder chatbotMetricsRecorder;
+    private final Clock clock;
 
     // Constructor
     public ChatbotService(ChatbotMessageService chatbotMessageService,
@@ -77,7 +79,8 @@ public class ChatbotService implements
                           ChatbotReplyOrchestrator chatbotReplyOrchestrator,
                           ChatbotModerationService chatbotModerationService,
                           ChatbotAiSettings chatbotAiSettings,
-                          ChatbotMetricsRecorder chatbotMetricsRecorder
+                          ChatbotMetricsRecorder chatbotMetricsRecorder,
+                          Clock clock
     ) {
         this.chatbotMessageService = chatbotMessageService;
         this.chatbotResponseSanitizer = chatbotResponseSanitizer;
@@ -88,6 +91,7 @@ public class ChatbotService implements
         this.chatbotModerationService = chatbotModerationService;
         this.chatbotAiSettings = chatbotAiSettings;
         this.chatbotMetricsRecorder = chatbotMetricsRecorder;
+        this.clock = clock;
     }
 
     /**
@@ -153,7 +157,7 @@ public class ChatbotService implements
             AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
     ) {
-        long startTime = System.currentTimeMillis();
+        long startTime = this.clock.millis();
         ChatbotMessageMetric metric = ChatbotMessageMetric.builder()
                 .success(false)
                 .build();
@@ -166,7 +170,7 @@ public class ChatbotService implements
 
             this.validateUserMessageLength(userMessage);
 
-            LocalDateTime date = LocalDateTime.now();
+            LocalDateTime date = LocalDateTime.now(this.clock);
 
             Conversation conversation = this.chatbotConversationService.createGeneralConversation(
                     userId,
@@ -200,7 +204,7 @@ public class ChatbotService implements
             AuthenticatedUserContext authenticatedUser,
             ChatbotMessageCommand command
     ) {
-        long startTime = System.currentTimeMillis();
+        long startTime = this.clock.millis();
         ChatbotMessageMetric metric = ChatbotMessageMetric.builder()
                 .success(false)
                 .build();
@@ -209,7 +213,7 @@ public class ChatbotService implements
             String userId = authenticatedUser.getUserId();
             metric.setUserId(userId);
 
-            LocalDateTime date = LocalDateTime.now();
+            LocalDateTime date = LocalDateTime.now(this.clock);
             String userMessage = command.getMessage();
 
             if (command.getConversationId() == null || command.getConversationId().isBlank()) {
@@ -369,8 +373,8 @@ public class ChatbotService implements
     }
 
     private void completeAndRecordMessageMetric(ChatbotMessageMetric metric, long startTime) {
-        metric.setDurationMs(System.currentTimeMillis() - startTime);
-        metric.setCreatedAt(LocalDateTime.now());
+        metric.setDurationMs(this.clock.millis() - startTime);
+        metric.setCreatedAt(LocalDateTime.now(this.clock));
         this.recordMessageMetricSafely(metric);
     }
 

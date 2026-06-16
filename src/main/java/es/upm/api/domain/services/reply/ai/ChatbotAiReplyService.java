@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -28,17 +29,20 @@ public class ChatbotAiReplyService {
     private final ChatbotAiSettings chatbotAiSettings;
     private final ChatbotAiRequestBuilder chatbotAiRequestBuilder;
     private final ChatbotMetricsRecorder chatbotMetricsRecorder;
+    private final Clock clock;
 
     public ChatbotAiReplyService(
             ChatbotAiClient chatbotAiClient,
             ChatbotAiSettings chatbotAiSettings,
             ChatbotAiRequestBuilder chatbotAiRequestBuilder,
-            ChatbotMetricsRecorder chatbotMetricsRecorder
+            ChatbotMetricsRecorder chatbotMetricsRecorder,
+            Clock clock
     ) {
         this.chatbotAiClient = chatbotAiClient;
         this.chatbotAiSettings = chatbotAiSettings;
         this.chatbotAiRequestBuilder = chatbotAiRequestBuilder;
         this.chatbotMetricsRecorder = chatbotMetricsRecorder;
+        this.clock = clock;
     }
 
     public ChatbotAiReplyResult generateConfiguredAssistantReply(
@@ -52,7 +56,7 @@ public class ChatbotAiReplyService {
             return ChatbotAiReplyResult.withoutAi(baseReply);
         }
 
-        long startTime = System.currentTimeMillis();
+        long startTime = this.clock.millis();
         String conversationId = conversation.getId();
         String provider = this.chatbotAiSettings.provider();
         String model = this.chatbotAiSettings.model();
@@ -67,7 +71,7 @@ public class ChatbotAiReplyService {
             );
 
             ChatbotAiResponse aiResponse = this.chatbotAiClient.generate(aiRequest);
-            long durationMs = System.currentTimeMillis() - startTime;
+            long durationMs = this.clock.millis() - startTime;
 
             if (aiResponse == null) {
                 log.warn(
@@ -129,7 +133,7 @@ public class ChatbotAiReplyService {
             return ChatbotAiReplyResult.withAi(aiResponse.getContent().trim());
 
         } catch (RuntimeException exception) {
-            long durationMs = System.currentTimeMillis() - startTime;
+            long durationMs = this.clock.millis() - startTime;
             String errorType = exception.getClass().getSimpleName();
 
             log.warn(
@@ -187,7 +191,7 @@ public class ChatbotAiReplyService {
                 .success(success)
                 .fallback(fallback)
                 .errorType(errorType)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(this.clock))
                 .build();
     }
 
@@ -200,7 +204,7 @@ public class ChatbotAiReplyService {
                 .conversationId(conversationId)
                 .fallbackType(fallbackType)
                 .reason(reason)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(this.clock))
                 .build();
     }
 

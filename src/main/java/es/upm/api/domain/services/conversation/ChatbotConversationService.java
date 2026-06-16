@@ -9,6 +9,7 @@ import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,13 +18,16 @@ public class ChatbotConversationService {
 
     private final ConversationGateway conversationGateway;
     private final MessageGateway messageGateway;
+    private final Clock clock;
 
     public ChatbotConversationService(
             ConversationGateway conversationGateway,
-            MessageGateway messageGateway
+            MessageGateway messageGateway,
+            Clock clock
     ) {
         this.conversationGateway = conversationGateway;
         this.messageGateway = messageGateway;
+        this.clock = clock;
     }
 
     public Conversation createGeneralConversation(
@@ -56,7 +60,7 @@ public class ChatbotConversationService {
                             .engagementLetterId(engagementLetterId)
                             .status(ConversationStatus.ACTIVE)
                             .type(ConversationType.CONTEXTUAL)
-                            .createdAt(LocalDateTime.now())
+                            .createdAt(LocalDateTime.now(this.clock))
                             .build();
 
                     this.conversationGateway.create(conversation);
