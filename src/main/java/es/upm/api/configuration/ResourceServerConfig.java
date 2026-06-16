@@ -58,6 +58,7 @@ public class ResourceServerConfig {  // validate tokens y security APIs con SCOP
 
     @Bean
     @Order(2)
+    @SuppressWarnings("java:S4502")
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
                 // CSRF protection is not required for this stateless resource server: authentication uses
