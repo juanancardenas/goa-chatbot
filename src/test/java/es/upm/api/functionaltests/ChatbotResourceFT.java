@@ -30,9 +30,12 @@ import es.upm.api.adapter.in.rest.ChatbotResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -44,9 +47,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -60,6 +65,9 @@ import static org.springframework.http.HttpStatus.OK;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class ChatbotResourceFT {
+
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -87,6 +95,16 @@ class ChatbotResourceFT {
 
     @MockitoBean
     private UserClient userClient;
+
+    @TestConfiguration
+    static class FixedClockConfiguration {
+
+        @Bean
+        @Primary
+        Clock fixedClock() {
+            return Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC);
+        }
+    }
 
     @BeforeEach
     void setUp() {
@@ -309,7 +327,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.CLOSED,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now().minusHours(5)
+                FIXED_NOW.minusHours(5)
         );
         ConversationEntity generalActive = new ConversationEntity(
                 "general-active-001",
@@ -317,7 +335,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now().minusHours(1)
+                FIXED_NOW.minusHours(1)
         );
         ConversationEntity contextual = new ConversationEntity(
                 "contextual-001",
@@ -325,7 +343,7 @@ class ChatbotResourceFT {
                 "eng-001",
                 ConversationStatus.ACTIVE,
                 ConversationType.CONTEXTUAL.name(),
-                LocalDateTime.now().minusMinutes(30)
+                FIXED_NOW.minusMinutes(30)
         );
         ConversationEntity anotherUserGeneral = new ConversationEntity(
                 "general-other-user-001",
@@ -333,7 +351,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now().minusMinutes(10)
+                FIXED_NOW.minusMinutes(10)
         );
 
         this.conversationRepository.saveAll(List.of(generalClosed, generalActive, contextual, anotherUserGeneral));
@@ -345,7 +363,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.USER)
                         .messageType(MessageType.REQUEST)
                         .content("Consulta antigua general")
-                        .timestamp(LocalDateTime.now().minusHours(4))
+                        .timestamp(FIXED_NOW.minusHours(4))
                         .sequenceNumber(1)
                         .build(),
                 MessageEntity.builder()
@@ -354,7 +372,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.USER)
                         .messageType(MessageType.REQUEST)
                         .content("Consulta reciente general")
-                        .timestamp(LocalDateTime.now().minusMinutes(50))
+                        .timestamp(FIXED_NOW.minusMinutes(50))
                         .sequenceNumber(1)
                         .build(),
                 MessageEntity.builder()
@@ -363,7 +381,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.USER)
                         .messageType(MessageType.REQUEST)
                         .content("Consulta contextual")
-                        .timestamp(LocalDateTime.now().minusMinutes(20))
+                        .timestamp(FIXED_NOW.minusMinutes(20))
                         .sequenceNumber(1)
                         .build()
         ));
@@ -450,7 +468,7 @@ class ChatbotResourceFT {
                 "eng-001",
                 ConversationStatus.ACTIVE,
                 ConversationType.CONTEXTUAL.name(),
-                LocalDateTime.now().minusHours(3)
+                FIXED_NOW.minusHours(3)
         );
         ConversationEntity contextualB = new ConversationEntity(
                 "contextual-b-001",
@@ -458,7 +476,7 @@ class ChatbotResourceFT {
                 "eng-001",
                 ConversationStatus.CLOSED,
                 ConversationType.CONTEXTUAL.name(),
-                LocalDateTime.now().minusHours(1)
+                FIXED_NOW.minusHours(1)
         );
         ConversationEntity contextualOtherEngagement = new ConversationEntity(
                 "contextual-other-engagement-001",
@@ -466,7 +484,7 @@ class ChatbotResourceFT {
                 "eng-002",
                 ConversationStatus.ACTIVE,
                 ConversationType.CONTEXTUAL.name(),
-                LocalDateTime.now().minusMinutes(20)
+                FIXED_NOW.minusMinutes(20)
         );
         ConversationEntity general = new ConversationEntity(
                 "general-001",
@@ -474,7 +492,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now().minusMinutes(10)
+                FIXED_NOW.minusMinutes(10)
         );
 
         this.conversationRepository.saveAll(List.of(contextualA, contextualB, contextualOtherEngagement, general));
@@ -486,7 +504,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.USER)
                         .messageType(MessageType.REQUEST)
                         .content("Contextual antigua")
-                        .timestamp(LocalDateTime.now().minusHours(2))
+                        .timestamp(FIXED_NOW.minusHours(2))
                         .sequenceNumber(1)
                         .build(),
                 MessageEntity.builder()
@@ -495,7 +513,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.USER)
                         .messageType(MessageType.REQUEST)
                         .content("Contextual más reciente")
-                        .timestamp(LocalDateTime.now().minusMinutes(40))
+                        .timestamp(FIXED_NOW.minusMinutes(40))
                         .sequenceNumber(1)
                         .build()
         ));
@@ -538,7 +556,7 @@ class ChatbotResourceFT {
                 "eng-001",
                 ConversationStatus.CLOSED,
                 ConversationType.CONTEXTUAL.name(),
-                LocalDateTime.now().minusHours(1)
+                FIXED_NOW.minusHours(1)
         ));
 
         this.messageRepository.saveAll(List.of(
@@ -548,7 +566,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.ASSISTANT)
                         .messageType(MessageType.RESPONSE)
                         .content("Respuesta del asistente")
-                        .timestamp(LocalDateTime.now().minusMinutes(9))
+                        .timestamp(FIXED_NOW.minusMinutes(9))
                         .sequenceNumber(2)
                         .parentMessageId("history-msg-1")
                         .build(),
@@ -558,7 +576,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.USER)
                         .messageType(MessageType.REQUEST)
                         .content("Consulta inicial")
-                        .timestamp(LocalDateTime.now().minusMinutes(10))
+                        .timestamp(FIXED_NOW.minusMinutes(10))
                         .sequenceNumber(1)
                         .build()
         ));
@@ -630,7 +648,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.CLOSED,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-reopen-owner", "customer-1", List.of("customer"));
@@ -657,7 +675,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.CLOSED,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-reopen-forbidden", "customer-1", List.of("customer"));
@@ -681,7 +699,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.CLOSED,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = new HttpHeaders();
@@ -706,7 +724,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ARCHIVED,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-reopen-archived", "customer-1", List.of("customer"));
@@ -997,7 +1015,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-forbidden", "customer-1", List.of("customer"));
@@ -1023,7 +1041,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.CLOSED,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-conflict", "customer-1", List.of("customer"));
@@ -1049,7 +1067,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-close", "customer-1", List.of("customer"));
@@ -1076,7 +1094,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.CLOSED,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-close-closed", "customer-1", List.of("customer"));
@@ -1103,7 +1121,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-escalate", "customer-1", List.of("customer"));
@@ -1137,7 +1155,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.CLOSED,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
         this.messageRepository.saveAll(List.of(
                 MessageEntity.builder()
@@ -1146,7 +1164,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.USER)
                         .messageType(MessageType.REQUEST)
                         .content("Hola")
-                        .timestamp(LocalDateTime.now().minusMinutes(2))
+                        .timestamp(FIXED_NOW.minusMinutes(2))
                         .sequenceNumber(1)
                         .build(),
                 MessageEntity.builder()
@@ -1155,7 +1173,7 @@ class ChatbotResourceFT {
                         .senderType(MessageSenderType.ASSISTANT)
                         .messageType(MessageType.RESPONSE)
                         .content("Respuesta")
-                        .timestamp(LocalDateTime.now().minusMinutes(1))
+                        .timestamp(FIXED_NOW.minusMinutes(1))
                         .sequenceNumber(2)
                         .build()
         ));
@@ -1184,7 +1202,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-delete-forbidden", "customer-1", List.of("customer"));
@@ -1211,7 +1229,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = new HttpHeaders();
@@ -1238,7 +1256,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-close-forbidden", "customer-1", List.of("customer"));
@@ -1264,7 +1282,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = this.authHeaders("fake-token-escalate-forbidden", "customer-1", List.of("customer"));
@@ -1291,7 +1309,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = new HttpHeaders();
@@ -1317,7 +1335,7 @@ class ChatbotResourceFT {
                 null,
                 ConversationStatus.ACTIVE,
                 ConversationType.GENERAL.name(),
-                LocalDateTime.now()
+                FIXED_NOW
         )).getId();
 
         HttpHeaders headers = new HttpHeaders();
@@ -1699,8 +1717,8 @@ class ChatbotResourceFT {
     private HttpHeaders authHeaders(String token, String subject, List<String> roles) {
         Jwt jwt = new Jwt(
                 token,
-                Instant.now(),
-                Instant.now().plusSeconds(300),
+                FIXED_INSTANT,
+                FIXED_INSTANT.plusSeconds(300),
                 Map.of("alg", "none"),
                 Map.of(
                         "sub", subject,

@@ -10,7 +10,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.lang.reflect.Field;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Map;
 
@@ -22,9 +24,12 @@ import static org.mockito.Mockito.when;
 
 class TokenManagerTest {
 
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
+    private static final Clock FIXED_CLOCK = Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC);
+
     @Test
     void getTokenShouldObtainAccessTokenWhenCacheIsEmpty() {
-        TokenManager tokenManager = new TokenManager("client-id", "client-secret", "https://issuer/token");
+        TokenManager tokenManager = this.tokenManager();
 
         try (MockedConstruction<RestTemplate> ignored = mockConstruction(RestTemplate.class, (mock, context) ->
                 when(mock.postForEntity(eq("https://issuer/token"), any(HttpEntity.class), eq(Map.class)))
@@ -37,15 +42,15 @@ class TokenManagerTest {
 
             assertThat(token).isEqualTo("token-1");
             assertThat(this.readField(tokenManager, "token")).isEqualTo("token-1");
-            assertThat((Instant) this.readField(tokenManager, "expiry")).isAfter(Instant.now().plusSeconds(3000));
+            assertThat((Instant) this.readField(tokenManager, "expiry")).isEqualTo(FIXED_INSTANT.plusSeconds(3600));
         }
     }
 
     @Test
     void getTokenShouldReuseCachedTokenWhenItIsNotNearExpiry() {
-        TokenManager tokenManager = new TokenManager("client-id", "client-secret", "https://issuer/token");
+        TokenManager tokenManager = this.tokenManager();
         this.writeField(tokenManager, "token", "cached-token");
-        this.writeField(tokenManager, "expiry", Instant.now().plusSeconds(600));
+        this.writeField(tokenManager, "expiry", FIXED_INSTANT.plusSeconds(600));
 
         try (MockedConstruction<RestTemplate> ignored = mockConstruction(RestTemplate.class)) {
             String token = tokenManager.getToken();
@@ -57,9 +62,9 @@ class TokenManagerTest {
 
     @Test
     void getTokenShouldRefreshTokenWhenExpiryIsWithinOneMinute() {
-        TokenManager tokenManager = new TokenManager("client-id", "client-secret", "https://issuer/token");
+        TokenManager tokenManager = this.tokenManager();
         this.writeField(tokenManager, "token", "stale-token");
-        this.writeField(tokenManager, "expiry", Instant.now().plusSeconds(30));
+        this.writeField(tokenManager, "expiry", FIXED_INSTANT.plusSeconds(30));
 
         try (MockedConstruction<RestTemplate> ignored = mockConstruction(RestTemplate.class, (mock, context) ->
                 when(mock.postForEntity(eq("https://issuer/token"), any(HttpEntity.class), eq(Map.class)))
@@ -77,21 +82,19 @@ class TokenManagerTest {
 
     @Test
     void invalidateTokenShouldClearCachedTokenAndSetExpiryToNowOrEarlier() {
-        TokenManager tokenManager = new TokenManager("client-id", "client-secret", "https://issuer/token");
+        TokenManager tokenManager = this.tokenManager();
         this.writeField(tokenManager, "token", "cached-token");
-        this.writeField(tokenManager, "expiry", Instant.now().plusSeconds(600));
+        this.writeField(tokenManager, "expiry", FIXED_INSTANT.plusSeconds(600));
 
-        Instant beforeInvalidate = Instant.now();
         tokenManager.invalidateToken();
 
         assertThat(this.readField(tokenManager, "token")).isNull();
-        assertThat((Instant) this.readField(tokenManager, "expiry")).isBeforeOrEqualTo(Instant.now());
-        assertThat((Instant) this.readField(tokenManager, "expiry")).isAfterOrEqualTo(beforeInvalidate);
+        assertThat((Instant) this.readField(tokenManager, "expiry")).isEqualTo(FIXED_INSTANT);
     }
 
     @Test
     void getTokenShouldSendExpectedAuthorizationHeaderAndFormBody() {
-        TokenManager tokenManager = new TokenManager("client-id", "client-secret", "https://issuer/token");
+        TokenManager tokenManager = this.tokenManager();
 
         try (MockedConstruction<RestTemplate> ignored = mockConstruction(RestTemplate.class, (mock, context) ->
                 when(mock.postForEntity(eq("https://issuer/token"), any(HttpEntity.class), eq(Map.class)))
@@ -124,6 +127,10 @@ class TokenManagerTest {
             assertThat(request.getBody().getFirst("scope")).isEqualTo(TokenManager.SCOPE_PROFILE);
             assertThat(request.getBody().getFirst("role")).isEqualTo(TokenManager.ROLE_URL_TOKEN);
         }
+    }
+
+    private TokenManager tokenManager() {
+        return new TokenManager("client-id", "client-secret", "https://issuer/token", FIXED_CLOCK);
     }
 
     private Object readField(Object target, String name) {

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -22,13 +23,15 @@ public class ChatbotModerationService {
     private final ChatbotPiiDetector chatbotPiiDetector;
     private final ChatbotModerationPolicy chatbotModerationPolicy;
     private final ChatbotMetricsRecorder chatbotMetricsRecorder;
+    private final Clock clock;
 
     @Autowired
-    public ChatbotModerationService(ChatbotMetricsRecorder chatbotMetricsRecorder) {
+    public ChatbotModerationService(ChatbotMetricsRecorder chatbotMetricsRecorder, Clock clock) {
         this(
                 new ChatbotPiiDetector(),
                 new ChatbotModerationPolicy(),
-                chatbotMetricsRecorder
+                chatbotMetricsRecorder,
+                clock
         );
     }
 
@@ -39,18 +42,21 @@ public class ChatbotModerationService {
         this(
                 chatbotPiiDetector,
                 chatbotModerationPolicy,
-                null
+                null,
+                Clock.systemUTC()
         );
     }
 
     public ChatbotModerationService(
             ChatbotPiiDetector chatbotPiiDetector,
             ChatbotModerationPolicy chatbotModerationPolicy,
-            ChatbotMetricsRecorder chatbotMetricsRecorder
+            ChatbotMetricsRecorder chatbotMetricsRecorder,
+            Clock clock
     ) {
         this.chatbotPiiDetector = chatbotPiiDetector;
         this.chatbotModerationPolicy = chatbotModerationPolicy;
         this.chatbotMetricsRecorder = chatbotMetricsRecorder;
+        this.clock = clock;
     }
 
     public ChatbotModerationDecision moderate(String message) {
@@ -112,7 +118,7 @@ public class ChatbotModerationService {
                             .containsPii(decision.isContainsPii())
                             .blocked(decision.isBlocked())
                             .usedAi(usedAi)
-                            .createdAt(LocalDateTime.now())
+                            .createdAt(LocalDateTime.now(this.clock))
                             .build()
             );
         } catch (RuntimeException exception) {

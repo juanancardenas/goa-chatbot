@@ -12,13 +12,17 @@ import es.upm.api.domain.model.platform.UserSummary;
 import es.upm.api.domain.ports.out.ChatbotMetricsRecorder;
 import es.upm.api.domain.ports.out.EscalationGateway;
 import es.upm.api.domain.ports.out.UserClient;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,6 +37,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ChatbotEscalationServiceTest {
 
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
+
     @Mock
     private ChatbotConversationService chatbotConversationService;
 
@@ -45,8 +52,18 @@ class ChatbotEscalationServiceTest {
     @Mock
     private UserClient userClient;
 
-    @InjectMocks
     private ChatbotEscalationService chatbotEscalationService;
+
+    @BeforeEach
+    void setUp() {
+        this.chatbotEscalationService = new ChatbotEscalationService(
+                this.chatbotConversationService,
+                this.escalationGateway,
+                this.chatbotMetricsRecorder,
+                this.userClient,
+                Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC)
+        );
+    }
 
     @Test
     void escalateConversationShouldArchiveOwnedActiveConversationAndCreateEscalation() {
@@ -77,7 +94,7 @@ class ChatbotEscalationServiceTest {
         assertThat(escalation.getId()).isNotNull();
         assertThat(escalation.getConversationId()).isEqualTo("conversation-escalate");
         assertThat(escalation.getUserId()).isEqualTo("customer-1");
-        assertThat(escalation.getCreatedAt()).isNotNull();
+        assertThat(escalation.getCreatedAt()).isEqualTo(FIXED_NOW);
         assertThat(escalation.getPhone()).isEqualTo("+34600111222");
         assertThat(escalation.getEmail()).isEqualTo("customer1@example.com");
 
@@ -86,7 +103,7 @@ class ChatbotEscalationServiceTest {
         assertThat(metric.getUserId()).isEqualTo("customer-1");
         assertThat(metric.isSuccess()).isTrue();
         assertThat(metric.getErrorType()).isNull();
-        assertThat(metric.getCreatedAt()).isNotNull();
+        assertThat(metric.getCreatedAt()).isEqualTo(FIXED_NOW);
     }
 
     @Test

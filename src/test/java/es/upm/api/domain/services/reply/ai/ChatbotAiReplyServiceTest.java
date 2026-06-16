@@ -20,7 +20,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,6 +36,11 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ChatbotAiReplyServiceTest {
+
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-01-01T10:00:00Z"),
+            ZoneOffset.UTC
+    );
 
     @Mock
     private ChatbotAiClient chatbotAiClient;
@@ -54,7 +62,8 @@ class ChatbotAiReplyServiceTest {
                 this.chatbotAiClient,
                 this.chatbotAiSettings,
                 this.chatbotAiRequestBuilder,
-                this.chatbotMetricsRecorder
+                this.chatbotMetricsRecorder,
+                FIXED_CLOCK
         );
     }
 

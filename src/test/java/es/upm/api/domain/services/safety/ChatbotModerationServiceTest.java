@@ -9,10 +9,18 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
 class ChatbotModerationServiceTest {
+
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-01-01T10:00:00Z"),
+            ZoneOffset.UTC
+    );
 
     private final ChatbotModerationService chatbotModerationService = new ChatbotModerationService(
             new ChatbotPiiDetector(),
@@ -105,7 +113,8 @@ class ChatbotModerationServiceTest {
         ChatbotModerationService service = new ChatbotModerationService(
                 failingDetector,
                 new ChatbotModerationPolicy(),
-                recorder
+                recorder,
+                FIXED_CLOCK
         );
 
         ChatbotModerationDecision decision = service.moderate(
@@ -135,7 +144,7 @@ class ChatbotModerationServiceTest {
     @Test
     void moderateShouldUseAutowiredConstructorAndRecordAllowedMetric() {
         CapturingChatbotMetricsRecorder recorder = new CapturingChatbotMetricsRecorder();
-        ChatbotModerationService service = new ChatbotModerationService(recorder);
+        ChatbotModerationService service = new ChatbotModerationService(recorder, FIXED_CLOCK);
 
         ChatbotModerationDecision decision = service.moderate(
                 "Quiero revisar mi encargo",
@@ -196,7 +205,8 @@ class ChatbotModerationServiceTest {
         ChatbotModerationService service = new ChatbotModerationService(
                 new ChatbotPiiDetector(),
                 new ChatbotModerationPolicy(),
-                recorder
+                recorder,
+                FIXED_CLOCK
         );
 
         ChatbotModerationDecision decision = service.moderate(
@@ -230,7 +240,8 @@ class ChatbotModerationServiceTest {
         ChatbotModerationService service = new ChatbotModerationService(
                 new ChatbotPiiDetector(),
                 new ChatbotModerationPolicy(),
-                recorder
+                recorder,
+                FIXED_CLOCK
         );
 
         ChatbotModerationDecision decision = service.moderate(
@@ -269,7 +280,8 @@ class ChatbotModerationServiceTest {
         ChatbotModerationService service = new ChatbotModerationService(
                 new ChatbotPiiDetector(),
                 new ChatbotModerationPolicy(),
-                failingRecorder
+                failingRecorder,
+                FIXED_CLOCK
         );
 
         ChatbotModerationDecision decision = service.moderate(

@@ -18,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ResourceServerConfigTest {
 
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
+
     @Test
     void jwtAuthenticationConverterShouldUseRolesClaimWithRolePrefix() {
         ResourceServerConfig config = new ResourceServerConfig();
@@ -26,8 +28,8 @@ class ResourceServerConfigTest {
                 .header("alg", "none")
                 .claim(ResourceServerConfig.CLAIM_NAME, List.of("admin", "customer"))
                 .subject("user-1")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(300))
+                .issuedAt(FIXED_INSTANT)
+                .expiresAt(FIXED_INSTANT.plusSeconds(300))
                 .build();
 
         Collection<GrantedAuthority> authorities = converter.convert(jwt).getAuthorities();
@@ -45,8 +47,8 @@ class ResourceServerConfigTest {
                 .header("alg", "none")
                 .claim(ResourceServerConfig.AWS_CLAIM_NAME, List.of("manager", "operator"))
                 .subject("user-2")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(300))
+                .issuedAt(FIXED_INSTANT)
+                .expiresAt(FIXED_INSTANT.plusSeconds(300))
                 .build();
 
         Collection<GrantedAuthority> authorities = converter.convert(jwt).getAuthorities();
@@ -63,8 +65,8 @@ class ResourceServerConfigTest {
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "none")
                 .subject("user-3")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(300))
+                .issuedAt(FIXED_INSTANT)
+                .expiresAt(FIXED_INSTANT.plusSeconds(300))
                 .build();
 
         Collection<GrantedAuthority> authorities = converter.convert(jwt).getAuthorities();

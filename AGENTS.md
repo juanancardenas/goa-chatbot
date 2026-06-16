@@ -706,6 +706,8 @@ Deuda tecnica conocida:
 - DEBE usar perfiles separados para `dev`, `test` y `prod`.
 - DEBE mantener `LoggingFilter` limitado a `dev`.
 - DEBE mantener `DatabaseSeederDev` limitado a perfiles no productivos si se usa para datos iniciales.
+- DEBE exponer un `Clock` comun desde `configuration` usando UTC para fechas tecnicas internas.
+- DEBE inyectar `Clock` en servicios y componentes que generen timestamps; NO DEBE usar `LocalDateTime.now()`, `Instant.now()` o equivalentes sin `Clock` o `ZoneId` explicito.
 
 Configuraciones actuales:
 - `ChatbotAiProperties`
@@ -823,7 +825,7 @@ Reglas:
 - DEBE probar persistencia y mapeos `Entity <-> Domain`.
 - DEBE probar configuracion critica de IA.
 - DEBERIA mockear proveedores externos y clientes Feign en tests de servicio/resource.
-- DEBERIA evitar dependencias fragiles de `LocalDateTime.now()` salvo que el comportamiento temporal sea parte del caso probado.
+- DEBERIA usar fechas fijas, `Clock.fixed(...)` o fixtures temporales controladas en tests; DEBERIA evitar dependencias fragiles de `LocalDateTime.now()` salvo que el comportamiento temporal sea parte del caso probado.
 - DEBERIA actualizar paquetes de test cuando se muevan clases en `main`; los tests de servicios de respuesta deben seguir la estructura fisica de `domain.services.reply`.
 
 Tests actuales destacados:

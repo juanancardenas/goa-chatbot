@@ -8,14 +8,17 @@ import es.upm.api.domain.exceptions.ForbiddenException;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.ports.out.ConversationGateway;
 import es.upm.api.domain.ports.out.MessageGateway;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,14 +31,25 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ChatbotConversationServiceTest {
 
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
+
     @Mock
     private ConversationGateway conversationGateway;
 
     @Mock
     private MessageGateway messageGateway;
 
-    @InjectMocks
     private ChatbotConversationService chatbotConversationService;
+
+    @BeforeEach
+    void setUp() {
+        this.chatbotConversationService = new ChatbotConversationService(
+                this.conversationGateway,
+                this.messageGateway,
+                Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC)
+        );
+    }
 
     @Test
     void createGeneralConversationShouldPersistActiveGeneralConversation() {
@@ -90,7 +104,7 @@ class ChatbotConversationServiceTest {
         assertThat(conversation.getEngagementLetterId()).isEqualTo("EL-8");
         assertThat(conversation.getType()).isEqualTo(ConversationType.CONTEXTUAL);
         assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversation.getCreatedAt()).isNotNull();
+        assertThat(conversation.getCreatedAt()).isEqualTo(FIXED_NOW);
         assertThat(savedConversation).usingRecursiveComparison().isEqualTo(conversation);
     }
 
