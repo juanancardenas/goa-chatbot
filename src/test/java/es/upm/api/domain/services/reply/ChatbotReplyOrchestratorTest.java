@@ -28,7 +28,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -377,11 +376,11 @@ class ChatbotReplyOrchestratorTest {
         when(this.chatbotBaseReplyBuilder.generalFaqReply(ConversationProfileType.PROFESSIONAL, "pregunta"))
                 .thenReturn("Base general");
         when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
-                eq(conversation),
-                eq(ConversationProfileType.PROFESSIONAL),
-                eq("pregunta"),
-                eq("Base general"),
-                eq(Optional.empty())
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "pregunta",
+                "Base general",
+                Optional.empty()
         )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta general"));
 
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(

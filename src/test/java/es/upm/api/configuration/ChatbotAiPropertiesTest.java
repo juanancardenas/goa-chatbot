@@ -3,7 +3,7 @@ package es.upm.api.configuration;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ChatbotAiPropertiesTest {
@@ -31,13 +31,13 @@ class ChatbotAiPropertiesTest {
         properties.setBasePrompt("Prompt base de pruebas");
 
         properties.setProvider("ollama");
-        assertDoesNotThrow(properties::validateProvider);
+        assertThatCode(properties::validateProvider).doesNotThrowAnyException();
 
         properties.setProvider("openai");
-        assertDoesNotThrow(properties::validateProvider);
+        assertThatCode(properties::validateProvider).doesNotThrowAnyException();
 
         properties.setProvider("gemini");
-        assertDoesNotThrow(properties::validateProvider);
+        assertThatCode(properties::validateProvider).doesNotThrowAnyException();
     }
 
     @Test
@@ -46,7 +46,7 @@ class ChatbotAiPropertiesTest {
         properties.setBasePrompt("Prompt base de pruebas");
         properties.setProvider("  OpenAI  ");
 
-        assertDoesNotThrow(properties::validateProvider);
+        assertThatCode(properties::validateProvider).doesNotThrowAnyException();
         assertThat(properties.normalizedProvider()).isEqualTo("openai");
     }
 

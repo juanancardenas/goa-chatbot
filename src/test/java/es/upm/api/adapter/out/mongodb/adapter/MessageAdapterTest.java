@@ -80,7 +80,7 @@ class MessageAdapterTest {
 
         assertThat(latestMessage).isPresent();
         assertThat(latestMessage.orElseThrow().getId()).isEqualTo("message-10");
-        assertThat(page.getPage()).isEqualTo(0);
+        assertThat(page.getPage()).isZero();
         assertThat(page.getSize()).isEqualTo(5);
         assertThat(page.isHasNext()).isFalse();
         assertThat(page.getTotalElements()).isEqualTo(1);

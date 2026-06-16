@@ -247,7 +247,7 @@ class ChatbotHistoryServiceTest {
 
         assertThat(response.getConversationId()).isEqualTo("conversation-history");
         assertThat(response.getEngagementLetterId()).isEqualTo("EL-10");
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(20);
         assertThat(response.getHasMore()).isTrue();
         assertThat(response.getTotalMessages()).isEqualTo(12);
@@ -286,7 +286,7 @@ class ChatbotHistoryServiceTest {
                 10
         );
 
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(10);
         verify(this.messageGateway).findByConversationIdOrderedDesc("conversation-history", 0, 10);
     }
@@ -319,7 +319,7 @@ class ChatbotHistoryServiceTest {
                 101
         );
 
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(100);
         verify(this.messageGateway).findByConversationIdOrderedDesc("conversation-history", 0, 100);
     }
@@ -352,7 +352,7 @@ class ChatbotHistoryServiceTest {
                 0
         );
 
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(20);
         verify(this.messageGateway).findByConversationIdOrderedDesc("conversation-history", 0, 20);
     }

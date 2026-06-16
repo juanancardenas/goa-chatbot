@@ -12,16 +12,19 @@ class ErrorMessageTest {
 
         ErrorMessage errorMessage = new ErrorMessage(exception, 400);
 
-        assertThat(errorMessage.getError()).isEqualTo("IllegalArgumentException");
-        assertThat(errorMessage.getMessage()).isEqualTo("invalid value");
-        assertThat(errorMessage.getCode()).isEqualTo(400);
+        assertThat(errorMessage)
+                .satisfies(message -> {
+                    assertThat(message.getError()).isEqualTo("IllegalArgumentException");
+                    assertThat(message.getMessage()).isEqualTo("invalid value");
+                    assertThat(message.getCode()).isEqualTo(400);
+                });
     }
 
     @Test
     void toStringShouldIncludeAllFields() {
         ErrorMessage errorMessage = new ErrorMessage(new IllegalStateException("boom"), 500);
 
-        assertThat(errorMessage.toString()).isEqualTo(
+        assertThat(errorMessage).hasToString(
                 "ErrorMessage{error='IllegalStateException', message='boom', code=500}"
         );
     }

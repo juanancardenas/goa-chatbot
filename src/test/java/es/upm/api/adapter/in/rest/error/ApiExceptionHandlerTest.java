@@ -15,6 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -26,7 +27,9 @@ class ApiExceptionHandlerTest {
     void unauthorizedRequestShouldAcceptExceptionWithoutThrowing() {
         ApiExceptionHandler handler = new ApiExceptionHandler(Mockito.mock(Environment.class));
 
-        handler.unauthorizedRequest(new org.springframework.security.access.AccessDeniedException("denied"));
+        assertThatCode(() -> handler.unauthorizedRequest(
+                new org.springframework.security.access.AccessDeniedException("denied")
+        )).doesNotThrowAnyException();
     }
 
     @Test

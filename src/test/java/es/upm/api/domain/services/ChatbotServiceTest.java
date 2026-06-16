@@ -82,6 +82,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -239,42 +240,59 @@ class ChatbotServiceTest {
         ArgumentCaptor<Conversation> conversationCaptor = ArgumentCaptor.forClass(Conversation.class);
         verify(conversationPersistence).create(conversationCaptor.capture());
         Conversation savedConversation = conversationCaptor.getValue();
-        assertThat(savedConversation.getUserId()).isEqualTo("client-1");
-        assertThat(savedConversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(savedConversation.getType()).isEqualTo(ConversationType.GENERAL);
-        assertThat(savedConversation.getCreatedAt()).isNotNull();
+        assertThat(savedConversation)
+                .satisfies(conversation -> {
+                    assertThat(conversation.getUserId()).isEqualTo("client-1");
+                    assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
+                    assertThat(conversation.getType()).isEqualTo(ConversationType.GENERAL);
+                    assertThat(conversation.getCreatedAt()).isNotNull();
+                });
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
         List<Message> savedMessages = messageCaptor.getAllValues();
 
-        assertThat(savedMessages).hasSize(2);
-        assertThat(savedMessages.get(0).getSenderType()).isEqualTo(MessageSenderType.USER);
-        assertThat(savedMessages.get(0).getMessageType()).isEqualTo(MessageType.REQUEST);
-        assertThat(savedMessages.get(0).getSequenceNumber()).isEqualTo(1);
-        assertThat(savedMessages.get(0).getContent()).isEqualTo("Necesito ayuda");
+        assertThat(savedMessages)
+                .hasSize(2)
+                .extracting(
+                        Message::getSenderType,
+                        Message::getMessageType,
+                        Message::getSequenceNumber,
+                        Message::getParentMessageId,
+                        Message::getContent
+                )
+                .containsExactly(
+                        tuple(MessageSenderType.USER, MessageType.REQUEST, 1, null, "Necesito ayuda"),
+                        tuple(
+                                MessageSenderType.ASSISTANT,
+                                MessageType.RESPONSE,
+                                2,
+                                "user-message-id",
+                                ChatbotResponseMessages.CLIENT_GENERAL_START_REPLY
+                        )
+                );
 
-        assertThat(savedMessages.get(1).getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
-        assertThat(savedMessages.get(1).getMessageType()).isEqualTo(MessageType.RESPONSE);
-        assertThat(savedMessages.get(1).getSequenceNumber()).isEqualTo(2);
-        assertThat(savedMessages.get(1).getParentMessageId()).isEqualTo("user-message-id");
-        assertThat(savedMessages.get(1).getContent()).isEqualTo(ChatbotResponseMessages.CLIENT_GENERAL_START_REPLY);
-
-        assertThat(response.getConversationId()).isEqualTo(savedConversation.getId());
-        assertThat(response.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_GENERAL_START_REPLY);
-        assertThat(response.getCreatedAt()).isEqualTo(savedConversation.getCreatedAt().toString());
+        assertThat(response)
+                .satisfies(result -> {
+                    assertThat(result.getConversationId()).isEqualTo(savedConversation.getId());
+                    assertThat(result.getMessage()).isEqualTo(ChatbotResponseMessages.CLIENT_GENERAL_START_REPLY);
+                    assertThat(result.getCreatedAt()).isEqualTo(savedConversation.getCreatedAt().toString());
+                });
 
         ChatbotMessageMetric metric = this.captureMessageMetric();
-        assertThat(metric.getConversationId()).isEqualTo(savedConversation.getId());
-        assertThat(metric.getUserId()).isEqualTo("client-1");
-        assertThat(metric.getRequestMessageId()).isEqualTo("user-message-id");
-        assertThat(metric.getConversationType()).isEqualTo(ConversationType.GENERAL);
-        assertThat(metric.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
-        assertThat(metric.isUsedAi()).isFalse();
-        assertThat(metric.isUsedPlatformData()).isFalse();
-        assertThat(metric.getDurationMs()).isGreaterThanOrEqualTo(0);
-        assertThat(metric.isSuccess()).isTrue();
-        assertThat(metric.getCreatedAt()).isNotNull();
+        assertThat(metric)
+                .satisfies(messageMetric -> {
+                    assertThat(messageMetric.getConversationId()).isEqualTo(savedConversation.getId());
+                    assertThat(messageMetric.getUserId()).isEqualTo("client-1");
+                    assertThat(messageMetric.getRequestMessageId()).isEqualTo("user-message-id");
+                    assertThat(messageMetric.getConversationType()).isEqualTo(ConversationType.GENERAL);
+                    assertThat(messageMetric.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+                    assertThat(messageMetric.isUsedAi()).isFalse();
+                    assertThat(messageMetric.isUsedPlatformData()).isFalse();
+                    assertThat(messageMetric.getDurationMs()).isGreaterThanOrEqualTo(0);
+                    assertThat(messageMetric.isSuccess()).isTrue();
+                    assertThat(messageMetric.getCreatedAt()).isNotNull();
+                });
     }
 
     @Test
@@ -528,7 +546,7 @@ class ChatbotServiceTest {
 
         assertThat(response.getConversationId()).isEqualTo("conversation-history");
         assertThat(response.getEngagementLetterId()).isEqualTo("EL-10");
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(20);
         assertThat(response.getHasMore()).isTrue();
         assertThat(response.getTotalMessages()).isEqualTo(12);
@@ -562,7 +580,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", -1, 10);
 
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(10);
         verify(messagePersistence).findByConversationIdOrderedDesc("conversation-history", 0, 10);
     }
@@ -590,7 +608,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", 0, 101);
 
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(100);
         verify(messagePersistence).findByConversationIdOrderedDesc("conversation-history", 0, 100);
     }
@@ -618,7 +636,7 @@ class ChatbotServiceTest {
 
         var response = chatbotService.readConversationHistory(this.authenticatedUser, "conversation-history", 0, 0);
 
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(20);
         verify(messagePersistence).findByConversationIdOrderedDesc("conversation-history", 0, 20);
     }
@@ -911,7 +929,7 @@ class ChatbotServiceTest {
         when(conversationPersistence.reserveSequenceNumbers("conversation-99", 2)).thenReturn(5);
         when(messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(chatbotScopePolicy.evaluate(eq(existingConversation), eq("Quiero una estrategia legal definitiva")))
+        when(chatbotScopePolicy.evaluate(existingConversation, "Quiero una estrategia legal definitiva"))
                 .thenReturn(ChatbotScopeDecision.reject(
                         ChatbotScopeViolationReason.LEGAL_BINDING_ADVICE_REQUESTED,
                         "safe reply",
@@ -1001,7 +1019,7 @@ class ChatbotServiceTest {
         when(this.conversationPersistence.reserveSequenceNumbers("conversation-restricted", 2)).thenReturn(3);
         when(this.messagePersistence.createAndReturnId(any(Message.class)))
                 .thenReturn("user-message-id", "assistant-message-id");
-        when(this.chatbotScopePolicy.evaluate(eq(existingConversation), eq("Dame asesoría legal definitiva")))
+        when(this.chatbotScopePolicy.evaluate(existingConversation, "Dame asesoría legal definitiva"))
                 .thenReturn(ChatbotScopeDecision.reject(
                         ChatbotScopeViolationReason.LEGAL_BINDING_ADVICE_REQUESTED,
                         "No puedo ofrecer asesoramiento legal vinculante.",
@@ -1841,10 +1859,14 @@ class ChatbotServiceTest {
                 request
         );
 
-        assertThat(response.getConversationId()).isEqualTo("conversation-general");
-        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
-        assertThat(response.getUsedPlatformData()).isFalse();
-        assertThat(response.getSourcesSummary()).isEmpty();
+        assertThat(response)
+                .extracting(
+                        ChatbotMessageResult::getConversationId,
+                        ChatbotMessageResult::getResponseMode,
+                        ChatbotMessageResult::getUsedPlatformData,
+                        ChatbotMessageResult::getSourcesSummary
+                )
+                .containsExactly("conversation-general", ChatbotResponseMode.GENERAL, false, List.of());
         assertThat(response.getMessage()).contains("No puedo procesar mensajes que contengan datos bancarios sensibles");
         assertThat(response.getMessage()).doesNotContain("4111 1111 1111 1111");
 
@@ -1853,10 +1875,14 @@ class ChatbotServiceTest {
 
         Message savedMessage = messageCaptor.getValue();
 
-        assertThat(savedMessage.getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
-        assertThat(savedMessage.getMessageType()).isEqualTo(MessageType.RESPONSE);
-        assertThat(savedMessage.getSequenceNumber()).isEqualTo(5);
-        assertThat(savedMessage.getParentMessageId()).isNull();
+        assertThat(savedMessage)
+                .extracting(
+                        Message::getSenderType,
+                        Message::getMessageType,
+                        Message::getSequenceNumber,
+                        Message::getParentMessageId
+                )
+                .containsExactly(MessageSenderType.ASSISTANT, MessageType.RESPONSE, 5, null);
         assertThat(savedMessage.getContent()).contains("No puedo procesar mensajes que contengan datos bancarios sensibles");
         assertThat(savedMessage.getContent()).doesNotContain("4111 1111 1111 1111");
 
@@ -1872,13 +1898,25 @@ class ChatbotServiceTest {
 
         ChatbotModerationMetric moderationMetric = moderationMetricCaptor.getValue();
 
-        assertThat(moderationMetric.getConversationId()).isEqualTo("conversation-general");
-        assertThat(moderationMetric.getUserId()).isEqualTo("professional-1");
-        assertThat(moderationMetric.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
-        assertThat(moderationMetric.getReason()).isEqualTo(ChatbotModerationReason.PII_CARD);
-        assertThat(moderationMetric.isContainsPii()).isTrue();
-        assertThat(moderationMetric.isBlocked()).isTrue();
-        assertThat(moderationMetric.getUsedAi()).isFalse();
+        assertThat(moderationMetric)
+                .extracting(
+                        ChatbotModerationMetric::getConversationId,
+                        ChatbotModerationMetric::getUserId,
+                        ChatbotModerationMetric::getAction,
+                        ChatbotModerationMetric::getReason,
+                        ChatbotModerationMetric::isContainsPii,
+                        ChatbotModerationMetric::isBlocked,
+                        ChatbotModerationMetric::getUsedAi
+                )
+                .containsExactly(
+                        "conversation-general",
+                        "professional-1",
+                        ChatbotModerationAction.BLOCK,
+                        ChatbotModerationReason.PII_CARD,
+                        true,
+                        true,
+                        false
+                );
         assertThat(moderationMetric.toString()).doesNotContain("4111 1111 1111 1111");
     }
 
