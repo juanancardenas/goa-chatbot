@@ -737,6 +737,7 @@ Proveedores IA soportados por configuracion:
 
 - DEBE usar excepciones propias de `domain.exceptions` para errores funcionales.
 - DEBE centralizar el mapeo HTTP en `adapter.in.rest.error.ApiExceptionHandler`.
+- NO DEBE usar `printStackTrace()`, `System.out` ni `System.err` para diagnostico de errores; DEBE usar logging configurado con el nivel adecuado y sin exponer datos sensibles.
 - NO DEBE manejar errores de forma ad hoc en cada resource salvo casos tecnicamente justificados.
 - DEBE traducir errores de validacion a `400 BAD_REQUEST`.
 - DEBE traducir errores de ownership/acceso funcional a `403 FORBIDDEN`.
