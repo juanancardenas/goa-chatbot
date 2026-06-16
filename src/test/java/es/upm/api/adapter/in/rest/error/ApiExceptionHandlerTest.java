@@ -12,13 +12,12 @@ import org.springframework.core.env.Profiles;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ApiExceptionHandlerTest {
@@ -34,7 +33,7 @@ class ApiExceptionHandlerTest {
     void noResourceFoundRequestShouldReturnStandardNotFoundMessage() {
         ApiExceptionHandler handler = new ApiExceptionHandler(Mockito.mock(Environment.class));
 
-        ErrorMessage errorMessage = handler.noResourceFoundRequest(new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND));
+        ErrorMessage errorMessage = handler.noResourceFoundRequest();
 
         assertThat(errorMessage.getError()).isEqualTo("NotFoundException");
         assertThat(errorMessage.getCode()).isEqualTo(404);
@@ -118,42 +117,29 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    void exceptionShouldPrintStackTraceInDevAndReturnInternalServerError() {
+    void exceptionShouldCheckDebugProfilesAndReturnInternalServerError() {
         Environment environment = Mockito.mock(Environment.class);
         when(environment.acceptsProfiles(any(Profiles.class))).thenReturn(true);
         ApiExceptionHandler handler = new ApiExceptionHandler(environment);
-        AtomicBoolean printCalled = new AtomicBoolean(false);
-        Exception exception = new Exception("boom") {
-            @Override
-            public void printStackTrace() {
-                printCalled.set(true);
-            }
-        };
+        Exception exception = new Exception("boom");
 
         ErrorMessage errorMessage = handler.exception(exception);
 
-        assertThat(printCalled).isTrue();
+        verify(environment).acceptsProfiles(any(Profiles.class));
         assertThat(errorMessage.getError()).isEqualTo(exception.getClass().getSimpleName());
         assertThat(errorMessage.getCode()).isEqualTo(500);
         assertThat(errorMessage.getMessage()).isEqualTo("boom");
     }
 
     @Test
-    void exceptionShouldNotPrintStackTraceOutsideDevOrTest() {
+    void exceptionShouldReturnInternalServerErrorOutsideDevOrTest() {
         Environment environment = Mockito.mock(Environment.class);
         when(environment.acceptsProfiles(any(Profiles.class))).thenReturn(false);
         ApiExceptionHandler handler = new ApiExceptionHandler(environment);
-        AtomicBoolean printCalled = new AtomicBoolean(false);
-        Exception exception = new Exception("boom") {
-            @Override
-            public void printStackTrace() {
-                printCalled.set(true);
-            }
-        };
+        Exception exception = new Exception("boom");
 
         ErrorMessage errorMessage = handler.exception(exception);
 
-        assertThat(printCalled).isFalse();
         assertThat(errorMessage.getCode()).isEqualTo(500);
         assertThat(errorMessage.getMessage()).isEqualTo("boom");
     }

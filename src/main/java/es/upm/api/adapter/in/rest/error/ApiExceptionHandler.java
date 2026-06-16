@@ -8,6 +8,7 @@ import es.upm.api.domain.exceptions.NotFoundException;
 import feign.FeignException;
 import feign.RetryableException;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -23,6 +24,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @ControllerAdvice
 public class ApiExceptionHandler {
 
+    private static final Logger LOGGER = LogManager.getLogger(ApiExceptionHandler.class);
 
     private final Environment environment;
 
@@ -37,7 +39,7 @@ public class ApiExceptionHandler {
     })
     @ResponseBody
     public void unauthorizedRequest(Exception exception) {
-        LogManager.getLogger(this.getClass()).debug(() -> "Unauthorized: " + exception.getMessage());
+        LOGGER.debug(() -> "Unauthorized: " + exception.getMessage());
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
@@ -47,7 +49,7 @@ public class ApiExceptionHandler {
 
     })
     @ResponseBody
-    public ErrorMessage noResourceFoundRequest(Exception exception) {
+    public ErrorMessage noResourceFoundRequest() {
         return new ErrorMessage(new NotFoundException(
                 "Path no encontrado... **/actuator/info, **/swagger-ui.html, **/v3/api-docs, .well-known/openid-configuration"),
                 HttpStatus.NOT_FOUND.value());
@@ -125,9 +127,10 @@ public class ApiExceptionHandler {
             Exception.class
     })
     @ResponseBody
-    public ErrorMessage exception(Exception exception) { //WARNING!!!. It is caught for unforeseen cases.The error must be properly handled or caught.
+    public ErrorMessage exception(Exception exception) {
+        // It is caught for unforeseen cases.The error must be properly handled or caught.
         if (environment.acceptsProfiles(Profiles.of("dev", "test"))) {
-            exception.printStackTrace();
+            LOGGER.debug("Unexpected API exception handled", exception);
         }
         return new ErrorMessage(exception, HttpStatus.INTERNAL_SERVER_ERROR.value());
     }
