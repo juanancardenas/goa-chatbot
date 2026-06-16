@@ -827,6 +827,8 @@ Reglas:
 - DEBERIA mockear proveedores externos y clientes Feign en tests de servicio/resource.
 - DEBERIA usar fechas fijas, `Clock.fixed(...)` o fixtures temporales controladas en tests; DEBERIA evitar dependencias fragiles de `LocalDateTime.now()` salvo que el comportamiento temporal sea parte del caso probado.
 - DEBERIA usar constantes de `java.time.Month` en tests al crear `LocalDate` o `LocalDateTime`, evitando literales numericos para meses.
+- DEBERIA usar assertions expresivas de AssertJ en tests: `isZero()` para contadores a cero, `isEmpty()` para colecciones vacias, `hasToString(...)` para validar representacion textual, y `satisfies(...)` o `extracting(...)` para agrupar comprobaciones del mismo objeto cuando mejore la legibilidad.
+- DEBE incluir al menos una assertion o verificacion explicita por test; en Mockito, DEBERIA evitar `eq(...)` cuando todos los argumentos son valores directos y reservarlo para combinaciones con `any(...)`, captors u otros matchers.
 - DEBERIA actualizar paquetes de test cuando se muevan clases en `main`; los tests de servicios de respuesta deben seguir la estructura fisica de `domain.services.reply`.
 
 Tests actuales destacados:
