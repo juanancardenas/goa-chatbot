@@ -10,6 +10,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -23,17 +24,20 @@ public class TokenManager {
     private final String apiClientId;
     private final String apiClientSecret;
     private final String tokenUri;
+    private final Clock clock;
 
     private String token;
     private Instant expiry;
 
     public TokenManager(@Value("${spring.security.oauth2.api-client-id}") String apiClientId,
                         @Value("${spring.security.oauth2.api-client-secret}") String apiClientSecret,
-                        @Value("${spring.security.oauth2.token-uri}") String tokenUri
+                        @Value("${spring.security.oauth2.token-uri}") String tokenUri,
+                        Clock clock
     ) {
         this.apiClientId = apiClientId;
         this.apiClientSecret = apiClientSecret;
         this.tokenUri = tokenUri;
+        this.clock = clock;
         this.token = null;
     }
 
@@ -57,16 +61,16 @@ public class TokenManager {
                 new RestTemplate().postForEntity(this.tokenUri, request, Map.class).getBody()
         );
         this.token = responseBody.get("access_token").toString();
-        this.expiry = Instant.now().plusSeconds(Long.parseLong(responseBody.get("expires_in").toString()));
+        this.expiry = Instant.now(this.clock).plusSeconds(Long.parseLong(responseBody.get("expires_in").toString()));
     }
 
     public synchronized void invalidateToken() {
         this.token = null;
-        this.expiry = Instant.now();
+        this.expiry = Instant.now(this.clock);
     }
 
     public synchronized String getToken() {
-        if (token == null || Instant.now().isAfter(expiry.minus(Duration.ofMinutes(1)))) {
+        if (token == null || Instant.now(this.clock).isAfter(expiry.minus(Duration.ofMinutes(1)))) {
             this.obtainAccessToken();
         }
         return token;

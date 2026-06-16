@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @RestController
@@ -39,6 +40,12 @@ public class SystemResource {
     @Value("${info.app.build}")
     private String build;
 
+    private final Clock clock;
+
+    public SystemResource(Clock clock) {
+        this.clock = clock;
+    }
+
     public String generateBadge(String label, String value) {
         int widthLabel = TEXT_MARGIN + CHARACTER_WIDTH * label.length();
         int widthValue = TEXT_MARGIN + CHARACTER_WIDTH * value.length();
@@ -53,7 +60,7 @@ public class SystemResource {
     public String applicationInfo() {
         return """
                 {"version":"%s::%s::%s"} (%s)
-                """.formatted(this.artifact, this.version, this.build, LocalDateTime.now());
+                """.formatted(this.artifact, this.version, this.build, LocalDateTime.now(this.clock));
     }
 
     @GetMapping(value = VERSION_BADGE, produces = {"image/svg+xml"})

@@ -13,6 +13,7 @@ import es.upm.api.domain.ports.out.UserClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,17 +26,20 @@ public class ChatbotEscalationService {
     private final EscalationGateway escalationGateway;
     private final ChatbotMetricsRecorder chatbotMetricsRecorder;
     private final UserClient userClient;
+    private final Clock clock;
 
     public ChatbotEscalationService(
             ChatbotConversationService chatbotConversationService,
             EscalationGateway escalationGateway,
             ChatbotMetricsRecorder chatbotMetricsRecorder,
-            UserClient userClient
+            UserClient userClient,
+            Clock clock
     ) {
         this.chatbotConversationService = chatbotConversationService;
         this.escalationGateway = escalationGateway;
         this.chatbotMetricsRecorder = chatbotMetricsRecorder;
         this.userClient = userClient;
+        this.clock = clock;
     }
 
     public void escalateConversation(
@@ -53,7 +57,7 @@ public class ChatbotEscalationService {
 
             Optional<UserSummary> user = this.readUserSafely(conversation.getUserId());
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(this.clock);
 
             Escalation escalation = Escalation.builder()
                     .id(UUID.randomUUID())
@@ -90,7 +94,7 @@ public class ChatbotEscalationService {
                     .userId(userId)
                     .success(success)
                     .errorType(errorType)
-                    .createdAt(LocalDateTime.now())
+                    .createdAt(LocalDateTime.now(this.clock))
                     .build();
 
             this.recordEscalationMetricSafely(metric);
