@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -344,7 +345,7 @@ class ChatbotPlatformReplyBuilderTest {
                 .userId("customer-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 10, 0))
                 .build();
     }
 }

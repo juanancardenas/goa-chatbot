@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -441,7 +442,7 @@ class ChatbotReplyOrchestratorTest {
                 .engagementLetterId(engagementLetterId)
                 .status(ConversationStatus.ACTIVE)
                 .type(type)
-                .createdAt(LocalDateTime.of(2026, 5, 16, 12, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 16, 12, 0))
                 .build();
     }
 }

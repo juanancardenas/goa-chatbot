@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,7 +36,7 @@ class ChatbotMessageServiceTest {
 
     @Test
     void saveMessageShouldPersistBuiltMessageAndReturnGeneratedId() {
-        LocalDateTime timestamp = LocalDateTime.of(2026, 5, 15, 10, 30);
+        LocalDateTime timestamp = LocalDateTime.of(2026, Month.MAY, 15, 10, 30);
         when(this.messageGateway.createAndReturnId(any(Message.class))).thenReturn("message-id");
 
         String createdMessageId = this.chatbotMessageService.saveMessage(
@@ -81,7 +82,7 @@ class ChatbotMessageServiceTest {
                 .senderType(MessageSenderType.ASSISTANT)
                 .messageType(MessageType.RESPONSE)
                 .content("Respuesta")
-                .timestamp(LocalDateTime.of(2026, 5, 15, 9, 45))
+                .timestamp(LocalDateTime.of(2026, Month.MAY, 15, 9, 45))
                 .sequenceNumber(4)
                 .parentMessageId("message-0")
                 .build();

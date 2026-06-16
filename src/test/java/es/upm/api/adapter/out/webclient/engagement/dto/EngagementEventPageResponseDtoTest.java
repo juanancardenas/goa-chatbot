@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,7 +19,7 @@ class EngagementEventPageResponseDtoTest {
                 "OPEN",
                 "Vista senalada",
                 null,
-                LocalDate.of(2026, 5, 12)
+                LocalDate.of(2026, Month.MAY, 12)
         );
 
         EngagementEventPageResponseDto dto = new EngagementEventPageResponseDto(List.of(event));
@@ -57,6 +58,6 @@ class EngagementEventPageResponseDtoTest {
 
         assertThat(dto.getContent()).hasSize(1);
         assertThat(dto.getContent().getFirst().getTitle()).isEqualTo("Vista senalada");
-        assertThat(dto.getContent().getFirst().getDate()).isEqualTo(LocalDate.of(2026, 5, 12));
+        assertThat(dto.getContent().getFirst().getDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 12));
     }
 }

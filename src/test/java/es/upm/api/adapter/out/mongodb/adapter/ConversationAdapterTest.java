@@ -22,6 +22,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -118,7 +119,7 @@ class ConversationAdapterTest {
                 .engagementLetterId("EL-10")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 30, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .build();
 
         conversationAdapter.create(conversation);
@@ -233,7 +234,7 @@ class ConversationAdapterTest {
                 engagementLetterId,
                 ConversationStatus.ACTIVE,
                 type,
-                LocalDateTime.of(2026, 4, 30, 10, 0),
+                LocalDateTime.of(2026, Month.APRIL, 30, 10, 0),
                 0
         );
     }

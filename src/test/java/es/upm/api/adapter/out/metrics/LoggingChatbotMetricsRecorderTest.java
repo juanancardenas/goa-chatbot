@@ -16,13 +16,14 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(OutputCaptureExtension.class)
 class LoggingChatbotMetricsRecorderTest {
 
-    private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, 5, 26, 13, 45);
+    private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, Month.MAY, 26, 13, 45);
 
     private final LoggingChatbotMetricsRecorder recorder = new LoggingChatbotMetricsRecorder();
 

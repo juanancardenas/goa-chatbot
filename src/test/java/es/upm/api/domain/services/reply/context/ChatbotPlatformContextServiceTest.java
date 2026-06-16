@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -60,21 +61,21 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         new UserSummary(UUID.randomUUID(), "Ana", "Ocaña", "ana@goa.es", "600000000"),
                         List.of(
-                                new LegalProcedureSummary("Reclamación civil", LocalDate.of(2026, 4, 2), null, List.of()),
-                                new LegalProcedureSummary("Reclamación civil", LocalDate.of(2026, 4, 3), null, List.of()),
-                                new LegalProcedureSummary("Seguimiento penal", LocalDate.of(2026, 4, 4), null, List.of())
+                                new LegalProcedureSummary("Reclamación civil", LocalDate.of(2026, Month.APRIL, 2), null, List.of()),
+                                new LegalProcedureSummary("Reclamación civil", LocalDate.of(2026, Month.APRIL, 3), null, List.of()),
+                                new LegalProcedureSummary("Seguimiento penal", LocalDate.of(2026, Month.APRIL, 4), null, List.of())
                         )
                 ));
         when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of(
-                        new EngagementEventSummary("MILESTONE", "OPEN", "Se registró escrito", "comentario", LocalDate.of(2026, 4, 10)),
-                        new EngagementEventSummary("EVENT", "SCHEDULED", "Vista programada", "comentario", LocalDate.of(2026, 4, 11)),
-                        new EngagementEventSummary("EVENT", "DONE", "Notificación enviada", "comentario", LocalDate.of(2026, 4, 12)),
-                        new EngagementEventSummary("EVENT", "DONE", "Hito extra no esperado", "comentario", LocalDate.of(2026, 4, 13))
+                        new EngagementEventSummary("MILESTONE", "OPEN", "Se registró escrito", "comentario", LocalDate.of(2026, Month.APRIL, 10)),
+                        new EngagementEventSummary("EVENT", "SCHEDULED", "Vista programada", "comentario", LocalDate.of(2026, Month.APRIL, 11)),
+                        new EngagementEventSummary("EVENT", "DONE", "Notificación enviada", "comentario", LocalDate.of(2026, Month.APRIL, 12)),
+                        new EngagementEventSummary("EVENT", "DONE", "Hito extra no esperado", "comentario", LocalDate.of(2026, Month.APRIL, 13))
                 )));
 
         var result = service.loadContext(engagementLetterId);
@@ -101,7 +102,7 @@ class ChatbotPlatformContextServiceTest {
                 .thenThrow(new IllegalStateException("engagement unavailable"));
         when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of(
-                        new EngagementEventSummary("EVENT", "OPEN", "Vista inicial", null, LocalDate.of(2026, 4, 16))
+                        new EngagementEventSummary("EVENT", "OPEN", "Vista inicial", null, LocalDate.of(2026, Month.APRIL, 16))
                 )));
 
         var result = service.loadContext(engagementLetterId);
@@ -121,7 +122,7 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         owner,
                         List.of()
@@ -159,13 +160,13 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 5),
+                        LocalDate.of(2026, Month.APRIL, 5),
                         null,
                         null,
                         List.of(
-                                new LegalProcedureSummary("Procedimiento A", LocalDate.of(2026, 4, 6), null, List.of()),
-                                new LegalProcedureSummary(" ", LocalDate.of(2026, 4, 7), null, List.of()),
-                                new LegalProcedureSummary("Procedimiento B", LocalDate.of(2026, 4, 8), null, List.of())
+                                new LegalProcedureSummary("Procedimiento A", LocalDate.of(2026, Month.APRIL, 6), null, List.of()),
+                                new LegalProcedureSummary(" ", LocalDate.of(2026, Month.APRIL, 7), null, List.of()),
+                                new LegalProcedureSummary("Procedimiento B", LocalDate.of(2026, Month.APRIL, 8), null, List.of())
                         )
                 ));
         when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
@@ -192,17 +193,17 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         new UserSummary(UUID.randomUUID(), "Lucia", "Perez", "lucia@goa.es", "600000001"),
                         List.of()
                 ));
         when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
                 .thenReturn(new EngagementEventPage(List.of(
-                        new EngagementEventSummary("EVENT", "OPEN", " ", null, LocalDate.of(2026, 4, 10)),
-                        new EngagementEventSummary("EVENT", "OPEN", "Evento 1", null, LocalDate.of(2026, 4, 11)),
-                        new EngagementEventSummary("MILESTONE", "DONE", "Evento 2", null, LocalDate.of(2026, 4, 12)),
-                        new EngagementEventSummary("TASK", "OPEN", "Evento 3", null, LocalDate.of(2026, 4, 13))
+                        new EngagementEventSummary("EVENT", "OPEN", " ", null, LocalDate.of(2026, Month.APRIL, 10)),
+                        new EngagementEventSummary("EVENT", "OPEN", "Evento 1", null, LocalDate.of(2026, Month.APRIL, 11)),
+                        new EngagementEventSummary("MILESTONE", "DONE", "Evento 2", null, LocalDate.of(2026, Month.APRIL, 12)),
+                        new EngagementEventSummary("TASK", "OPEN", "Evento 3", null, LocalDate.of(2026, Month.APRIL, 13))
                 )));
 
         var result = service.loadContext(engagementLetterId);
@@ -230,14 +231,14 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         owner,
                         List.of(
-                                new LegalProcedureSummary("Procedimiento A", LocalDate.of(2026, 4, 2), null, List.of()),
-                                new LegalProcedureSummary(null, LocalDate.of(2026, 4, 3), null, List.of()),
-                                new LegalProcedureSummary("Procedimiento B", LocalDate.of(2026, 4, 4), null, List.of()),
-                                new LegalProcedureSummary("Procedimiento C", LocalDate.of(2026, 4, 5), null, List.of())
+                                new LegalProcedureSummary("Procedimiento A", LocalDate.of(2026, Month.APRIL, 2), null, List.of()),
+                                new LegalProcedureSummary(null, LocalDate.of(2026, Month.APRIL, 3), null, List.of()),
+                                new LegalProcedureSummary("Procedimiento B", LocalDate.of(2026, Month.APRIL, 4), null, List.of()),
+                                new LegalProcedureSummary("Procedimiento C", LocalDate.of(2026, Month.APRIL, 5), null, List.of())
                         )
                 ));
         when(this.engagementClient.readEventsByEngagementLetterId(engagementLetterId, 0, 5))
@@ -267,7 +268,7 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById(engagementLetterId))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         new UserSummary(UUID.randomUUID(), "Ana", "Diaz", "ana@goa.es", "600000002"),
                         List.of()
@@ -299,7 +300,7 @@ class ChatbotPlatformContextServiceTest {
     void shouldMapLegalTasksFromEngagementContext() {
         LegalProcedureSummary procedure = new LegalProcedureSummary(
                 "Procedimiento de herencia",
-                LocalDate.of(2026, 4, 28),
+                LocalDate.of(2026, Month.APRIL, 28),
                 null,
                 List.of(
                         "Estudio de antecedentes y documentación.",
@@ -310,7 +311,7 @@ class ChatbotPlatformContextServiceTest {
 
         EngagementLetterSummary engagementLetter = new EngagementLetterSummary(
                 UUID.randomUUID(),
-                LocalDate.of(2026, 4, 1),
+                LocalDate.of(2026, Month.APRIL, 1),
                 null,
                 null,
                 List.of(procedure)
@@ -345,7 +346,7 @@ class ChatbotPlatformContextServiceTest {
 
         EngagementLetterSummary engagementLetter = new EngagementLetterSummary(
                 UUID.randomUUID(),
-                LocalDate.of(2026, 4, 1),
+                LocalDate.of(2026, Month.APRIL, 1),
                 null,
                 null,
                 List.of(procedure)
@@ -373,7 +374,7 @@ class ChatbotPlatformContextServiceTest {
 
         EngagementLetterSummary engagementLetter = new EngagementLetterSummary(
                 UUID.randomUUID(),
-                LocalDate.of(2026, 4, 1),
+                LocalDate.of(2026, Month.APRIL, 1),
                 null,
                 null,
                 List.of(procedure)
@@ -408,7 +409,7 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById("engagement-legal-tasks"))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         null,
                         List.of(firstProcedure, secondProcedure)
@@ -448,7 +449,7 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById("engagement-null-legal-tasks"))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         null,
                         List.of(procedureWithoutTasks, procedureWithNullTask)
@@ -476,7 +477,7 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById("engagement-blank-procedure-title"))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         null,
                         List.of(procedure)
@@ -510,7 +511,7 @@ class ChatbotPlatformContextServiceTest {
         when(this.engagementClient.readById("engagement-broken"))
                 .thenReturn(new EngagementLetterSummary(
                         UUID.randomUUID(),
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         null,
                         procedures

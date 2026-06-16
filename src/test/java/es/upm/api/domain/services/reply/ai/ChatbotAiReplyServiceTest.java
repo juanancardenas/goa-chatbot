@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
@@ -421,7 +422,7 @@ class ChatbotAiReplyServiceTest {
                 .id("conversation-general")
                 .userId("professional-1")
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
     }
 
@@ -431,7 +432,7 @@ class ChatbotAiReplyServiceTest {
                 .userId("customer-9")
                 .engagementLetterId("EL-555")
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
     }
 }

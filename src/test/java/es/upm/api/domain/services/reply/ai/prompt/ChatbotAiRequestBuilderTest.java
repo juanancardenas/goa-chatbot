@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -328,7 +329,7 @@ class ChatbotAiRequestBuilderTest {
                 .id("conversation-general")
                 .userId("professional-1")
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
     }
 
@@ -338,7 +339,7 @@ class ChatbotAiRequestBuilderTest {
                 .userId("customer-9")
                 .engagementLetterId(engagementLetterId)
                 .type(ConversationType.CONTEXTUAL)
-                .createdAt(LocalDateTime.of(2026, 4, 19, 10, 30))
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 19, 10, 30))
                 .build();
     }
 }

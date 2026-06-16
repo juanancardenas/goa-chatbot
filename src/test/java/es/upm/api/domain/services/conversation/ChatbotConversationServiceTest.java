@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.when;
 class ChatbotConversationServiceTest {
 
     private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
-    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, Month.JANUARY, 1, 10, 0);
 
     @Mock
     private ConversationGateway conversationGateway;
@@ -53,7 +54,7 @@ class ChatbotConversationServiceTest {
 
     @Test
     void createGeneralConversationShouldPersistActiveGeneralConversation() {
-        LocalDateTime createdAt = LocalDateTime.of(2026, 5, 15, 11, 0);
+        LocalDateTime createdAt = LocalDateTime.of(2026, Month.MAY, 15, 11, 0);
 
         Conversation conversation = this.chatbotConversationService.createGeneralConversation("user-1", createdAt);
 
@@ -77,7 +78,7 @@ class ChatbotConversationServiceTest {
                 .engagementLetterId("EL-7")
                 .type(ConversationType.CONTEXTUAL)
                 .status(ConversationStatus.ACTIVE)
-                .createdAt(LocalDateTime.of(2026, 5, 15, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 15, 10, 0))
                 .build();
         when(this.conversationGateway.findActiveContextualConversation("user-1", "EL-7", ConversationType.CONTEXTUAL))
                 .thenReturn(Optional.of(existingConversation));

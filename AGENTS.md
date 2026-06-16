@@ -826,6 +826,7 @@ Reglas:
 - DEBE probar configuracion critica de IA.
 - DEBERIA mockear proveedores externos y clientes Feign en tests de servicio/resource.
 - DEBERIA usar fechas fijas, `Clock.fixed(...)` o fixtures temporales controladas en tests; DEBERIA evitar dependencias fragiles de `LocalDateTime.now()` salvo que el comportamiento temporal sea parte del caso probado.
+- DEBERIA usar constantes de `java.time.Month` en tests al crear `LocalDate` o `LocalDateTime`, evitando literales numericos para meses.
 - DEBERIA actualizar paquetes de test cuando se muevan clases en `main`; los tests de servicios de respuesta deben seguir la estructura fisica de `domain.services.reply`.
 
 Tests actuales destacados:

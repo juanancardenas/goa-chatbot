@@ -10,6 +10,7 @@ import es.upm.api.adapter.out.webclient.user.dto.UserResponseDto;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -31,12 +32,12 @@ class EngagementFeignMapperTest {
         UUID ownerId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         EngagementLetterResponseDto dto = new EngagementLetterResponseDto(
                 engagementId,
-                LocalDate.of(2026, 5, 1),
-                LocalDate.of(2026, 5, 30),
+                LocalDate.of(2026, Month.MAY, 1),
+                LocalDate.of(2026, Month.MAY, 30),
                 new UserResponseDto(ownerId, "Ana", "Ocana", "ana@goa.test", "600000000"),
                 List.of(new EngagementLetterResponseDto.LegalProcedureResponseDto(
                         "Procedimiento laboral",
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         List.of("Preparar demanda")
                 ))
@@ -45,13 +46,13 @@ class EngagementFeignMapperTest {
         EngagementLetterSummary result = this.mapper.toDomain(dto);
 
         assertThat(result.getId()).isEqualTo(engagementId);
-        assertThat(result.getCreationDate()).isEqualTo(LocalDate.of(2026, 5, 1));
-        assertThat(result.getClosingDate()).isEqualTo(LocalDate.of(2026, 5, 30));
+        assertThat(result.getCreationDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 1));
+        assertThat(result.getClosingDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 30));
         assertThat(result.getOwner().getId()).isEqualTo(ownerId);
         assertThat(result.getOwner().getFirstName()).isEqualTo("Ana");
         assertThat(result.getLegalProcedures()).hasSize(1);
         assertThat(result.getLegalProcedures().getFirst().getTitle()).isEqualTo("Procedimiento laboral");
-        assertThat(result.getLegalProcedures().getFirst().getStartDate()).isEqualTo(LocalDate.of(2026, 4, 1));
+        assertThat(result.getLegalProcedures().getFirst().getStartDate()).isEqualTo(LocalDate.of(2026, Month.APRIL, 1));
         assertThat(result.getLegalProcedures().getFirst().getClosingDate()).isNull();
         assertThat(result.getLegalProcedures().getFirst().getLegalTasks()).containsExactly("Preparar demanda");
     }
@@ -83,7 +84,7 @@ class EngagementFeignMapperTest {
                         new EngagementLetterResponseDto.LegalProcedureResponseDto(
                                 "Procedimiento civil",
                                 null,
-                                LocalDate.of(2026, 6, 1),
+                                LocalDate.of(2026, Month.JUNE, 1),
                                 null
                         )
                 )
@@ -93,7 +94,7 @@ class EngagementFeignMapperTest {
 
         assertThat(result.getLegalProcedures()).hasSize(1);
         assertThat(result.getLegalProcedures().getFirst().getTitle()).isEqualTo("Procedimiento civil");
-        assertThat(result.getLegalProcedures().getFirst().getClosingDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+        assertThat(result.getLegalProcedures().getFirst().getClosingDate()).isEqualTo(LocalDate.of(2026, Month.JUNE, 1));
         assertThat(result.getLegalProcedures().getFirst().getLegalTasks()).isEmpty();
     }
 
@@ -118,7 +119,7 @@ class EngagementFeignMapperTest {
                         "OPEN",
                         "Vista senalada",
                         "Comentario",
-                        LocalDate.of(2026, 5, 12)
+                        LocalDate.of(2026, Month.MAY, 12)
                 )
         ));
 
@@ -129,6 +130,6 @@ class EngagementFeignMapperTest {
         assertThat(result.getContent().getFirst().getState()).isEqualTo("OPEN");
         assertThat(result.getContent().getFirst().getTitle()).isEqualTo("Vista senalada");
         assertThat(result.getContent().getFirst().getComment()).isEqualTo("Comentario");
-        assertThat(result.getContent().getFirst().getDate()).isEqualTo(LocalDate.of(2026, 5, 12));
+        assertThat(result.getContent().getFirst().getDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 12));
     }
 }

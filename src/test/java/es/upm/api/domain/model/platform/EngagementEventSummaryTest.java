@@ -3,6 +3,7 @@ package es.upm.api.domain.model.platform;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,7 +16,7 @@ class EngagementEventSummaryTest {
                 "  completado  ",
                 "  Revisión final  ",
                 "comentario",
-                LocalDate.of(2026, 5, 3)
+                LocalDate.of(2026, Month.MAY, 3)
         );
 
         assertThat(summary.displayText()).isEqualTo("Revisión final [reunion] - completado");
@@ -28,7 +29,7 @@ class EngagementEventSummaryTest {
                 null,
                 " ",
                 null,
-                LocalDate.of(2026, 5, 4)
+                LocalDate.of(2026, Month.MAY, 4)
         );
 
         assertThat(summary.displayText()).isEqualTo("Evento sin t\u00edtulo");
@@ -41,7 +42,7 @@ class EngagementEventSummaryTest {
                 "   ",
                 "  Vista inicial  ",
                 null,
-                LocalDate.of(2026, 5, 5)
+                LocalDate.of(2026, Month.MAY, 5)
         );
 
         assertThat(summary.displayText()).isEqualTo("Vista inicial [EVENT]");
@@ -54,7 +55,7 @@ class EngagementEventSummaryTest {
                 "  OPEN  ",
                 "  Vista inicial  ",
                 null,
-                LocalDate.of(2026, 5, 6)
+                LocalDate.of(2026, Month.MAY, 6)
         );
 
         assertThat(summary.displayText()).isEqualTo("Vista inicial - OPEN");
@@ -67,7 +68,7 @@ class EngagementEventSummaryTest {
                 "  DONE  ",
                 null,
                 null,
-                LocalDate.of(2026, 5, 7)
+                LocalDate.of(2026, Month.MAY, 7)
         );
 
         assertThat(summary.displayText()).isEqualTo("Evento sin t\u00edtulo [MILESTONE] - DONE");
@@ -80,7 +81,7 @@ class EngagementEventSummaryTest {
                 "DONE",
                 "Resolucion recibida",
                 "Comentario interno",
-                LocalDate.of(2026, 5, 8)
+                LocalDate.of(2026, Month.MAY, 8)
         );
 
         assertThat(summary.displayText()).isEqualTo("Resolucion recibida [EVENT] - DONE");
@@ -95,7 +96,7 @@ class EngagementEventSummaryTest {
         summary.setState(" OPEN ");
         summary.setTitle(" Preparar escrito ");
         summary.setComment("comentario");
-        summary.setDate(LocalDate.of(2026, 5, 9));
+        summary.setDate(LocalDate.of(2026, Month.MAY, 9));
 
         assertThat(summary.displayText()).isEqualTo("Preparar escrito [TASK] - OPEN");
     }

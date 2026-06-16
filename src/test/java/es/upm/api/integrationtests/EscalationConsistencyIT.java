@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -138,7 +139,7 @@ class EscalationConsistencyIT {
                 .userId("user-escalation")
                 .status(status)
                 .type(ConversationType.GENERAL.name())
-                .createdAt(LocalDateTime.of(2026, 5, 16, 17, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 16, 17, 0))
                 .build());
     }
 
@@ -154,7 +155,7 @@ class EscalationConsistencyIT {
                 .userId("user-escalation")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 16, 17, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 16, 17, 0))
                 .build();
     }
 
@@ -163,7 +164,7 @@ class EscalationConsistencyIT {
                 .id(UUID.randomUUID())
                 .conversationId(conversationId)
                 .userId("user-escalation")
-                .createdAt(LocalDateTime.of(2026, 5, 16, 17, 5))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 16, 17, 5))
                 .phone("+34600111222")
                 .email("user@example.com")
                 .build();

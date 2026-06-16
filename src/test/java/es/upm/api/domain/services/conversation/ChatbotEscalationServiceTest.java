@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
@@ -38,7 +39,7 @@ import static org.mockito.Mockito.when;
 class ChatbotEscalationServiceTest {
 
     private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
-    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, Month.JANUARY, 1, 10, 0);
 
     @Mock
     private ChatbotConversationService chatbotConversationService;

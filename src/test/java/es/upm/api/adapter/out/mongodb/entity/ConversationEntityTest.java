@@ -6,6 +6,7 @@ import es.upm.api.domain.model.Conversation;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -19,7 +20,7 @@ class ConversationEntityTest {
                 .userId("user-1")
                 .engagementLetterId("engagement-1")
                 .type("GENERAL")
-                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 3, 10, 0))
                 .build();
 
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
@@ -31,7 +32,7 @@ class ConversationEntityTest {
                 .id("conversation-1")
                 .userId("user-1")
                 .type("GENERAL")
-                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 3, 10, 0))
                 .build();
 
         assertThat(entity.getLastSequenceNumber()).isZero();
@@ -48,7 +49,7 @@ class ConversationEntityTest {
         assertThat(entity.getEngagementLetterId()).isEqualTo("engagement-1");
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         assertThat(entity.getType()).isEqualTo("GENERAL");
-        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
+        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 3, 10, 0));
         assertThat(entity.getLastSequenceNumber()).isEqualTo(4);
     }
 
@@ -59,7 +60,7 @@ class ConversationEntityTest {
                 .userId("user-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(null)
-                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 3, 10, 0))
                 .lastSequenceNumber(null)
                 .build();
 
@@ -88,7 +89,7 @@ class ConversationEntityTest {
                 .userId(null)
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 3, 10, 0))
                 .lastSequenceNumber(1)
                 .build();
 
@@ -126,7 +127,7 @@ class ConversationEntityTest {
                 .userId("user-1")
                 .status(ConversationStatus.ACTIVE)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 3, 10, 0))
                 .lastSequenceNumber(null)
                 .build();
 
@@ -143,7 +144,7 @@ class ConversationEntityTest {
                 "engagement-2",
                 null,
                 "GENERAL",
-                LocalDateTime.of(2026, 5, 4, 9, 30)
+                LocalDateTime.of(2026, Month.MAY, 4, 9, 30)
         );
 
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
@@ -160,7 +161,7 @@ class ConversationEntityTest {
                         null,
                         ConversationStatus.ACTIVE,
                         null,
-                        LocalDateTime.of(2026, 5, 4, 9, 30)
+                        LocalDateTime.of(2026, Month.MAY, 4, 9, 30)
                 )
         );
 
@@ -195,7 +196,7 @@ class ConversationEntityTest {
         assertThat(entity.getEngagementLetterId()).isEqualTo("engagement-1");
         assertThat(entity.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         assertThat(entity.getType()).isEqualTo("GENERAL");
-        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 3, 10, 0));
+        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 3, 10, 0));
         assertThat(entity.getLastSequenceNumber()).isEqualTo(4);
     }
 
@@ -207,7 +208,7 @@ class ConversationEntityTest {
                 .engagementLetterId("engagement-3")
                 .status(ConversationStatus.ACTIVE)
                 .type("CONTEXTUAL")
-                .createdAt(LocalDateTime.of(2026, 5, 5, 8, 15))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 5, 8, 15))
                 .lastSequenceNumber(9)
                 .build();
 
@@ -218,7 +219,7 @@ class ConversationEntityTest {
         assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-3");
         assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE);
         assertThat(conversation.getType()).isEqualTo(ConversationType.CONTEXTUAL);
-        assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 5, 8, 15));
+        assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 5, 8, 15));
         assertThat(conversation.getLastSequenceNumber()).isEqualTo(9);
     }
 
@@ -229,7 +230,7 @@ class ConversationEntityTest {
         entity.setUserId("user-3");
         entity.setStatus(ConversationStatus.ACTIVE);
         entity.setType("GENERAL");
-        entity.setCreatedAt(LocalDateTime.of(2026, 5, 5, 8, 15));
+        entity.setCreatedAt(LocalDateTime.of(2026, Month.MAY, 5, 8, 15));
         entity.setLastSequenceNumber(null);
 
         Conversation conversation = entity.toConversation();
@@ -244,7 +245,7 @@ class ConversationEntityTest {
         entity.setUserId("user-3");
         entity.setStatus(null);
         entity.setType("GENERAL");
-        entity.setCreatedAt(LocalDateTime.of(2026, 5, 5, 8, 15));
+        entity.setCreatedAt(LocalDateTime.of(2026, Month.MAY, 5, 8, 15));
 
         NullPointerException exception = assertThrows(
                 NullPointerException.class,
@@ -261,7 +262,7 @@ class ConversationEntityTest {
         entity.setUserId("user-3");
         entity.setStatus(ConversationStatus.ACTIVE);
         entity.setType(null);
-        entity.setCreatedAt(LocalDateTime.of(2026, 5, 5, 8, 15));
+        entity.setCreatedAt(LocalDateTime.of(2026, Month.MAY, 5, 8, 15));
 
         NullPointerException exception = assertThrows(
                 NullPointerException.class,
@@ -295,7 +296,7 @@ class ConversationEntityTest {
                 .userId("user-3")
                 .status(ConversationStatus.ACTIVE)
                 .type("UNKNOWN")
-                .createdAt(LocalDateTime.of(2026, 5, 5, 8, 15))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 5, 8, 15))
                 .build();
 
         IllegalArgumentException exception = assertThrows(
@@ -314,7 +315,7 @@ class ConversationEntityTest {
                 null,
                 ConversationStatus.ACTIVE,
                 "GENERAL",
-                LocalDateTime.of(2026, 5, 6, 11, 45),
+                LocalDateTime.of(2026, Month.MAY, 6, 11, 45),
                 null
         );
 
@@ -329,7 +330,7 @@ class ConversationEntityTest {
                 "engagement-sequence",
                 ConversationStatus.ARCHIVED,
                 "CONTEXTUAL",
-                LocalDateTime.of(2026, 5, 6, 12, 0),
+                LocalDateTime.of(2026, Month.MAY, 6, 12, 0),
                 12
         );
 
@@ -344,7 +345,7 @@ class ConversationEntityTest {
                 .userId("user-1")
                 .status(null)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 3, 10, 0))
                 .lastSequenceNumber(1)
                 .build();
 
@@ -365,7 +366,7 @@ class ConversationEntityTest {
                         .userId("user-5")
                         .status(ConversationStatus.ACTIVE)
                         .type(null)
-                        .createdAt(LocalDateTime.of(2026, 5, 6, 11, 45))
+                        .createdAt(LocalDateTime.of(2026, Month.MAY, 6, 11, 45))
                         .lastSequenceNumber(null)
                         .build()
         );
@@ -381,7 +382,7 @@ class ConversationEntityTest {
         entity.setEngagementLetterId("engagement-setters");
         entity.setStatus(ConversationStatus.CLOSED);
         entity.setType("CONTEXTUAL");
-        entity.setCreatedAt(LocalDateTime.of(2026, 5, 7, 13, 15));
+        entity.setCreatedAt(LocalDateTime.of(2026, Month.MAY, 7, 13, 15));
         entity.setLastSequenceNumber(17);
 
         Conversation conversation = entity.toConversation();
@@ -391,7 +392,7 @@ class ConversationEntityTest {
         assertThat(conversation.getEngagementLetterId()).isEqualTo("engagement-setters");
         assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED);
         assertThat(conversation.getType()).isEqualTo(ConversationType.CONTEXTUAL);
-        assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 7, 13, 15));
+        assertThat(conversation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 7, 13, 15));
         assertThat(conversation.getLastSequenceNumber()).isEqualTo(17);
     }
 
@@ -402,7 +403,7 @@ class ConversationEntityTest {
                 .engagementLetterId("engagement-1")
                 .status(ConversationStatus.CLOSED)
                 .type(ConversationType.GENERAL)
-                .createdAt(LocalDateTime.of(2026, 5, 3, 10, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 3, 10, 0))
                 .lastSequenceNumber(4)
                 .build();
     }

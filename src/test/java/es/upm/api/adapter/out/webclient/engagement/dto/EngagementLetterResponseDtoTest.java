@@ -6,6 +6,7 @@ import es.upm.api.adapter.out.webclient.user.dto.UserResponseDto;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,22 +27,22 @@ class EngagementLetterResponseDtoTest {
         EngagementLetterResponseDto.LegalProcedureResponseDto procedure =
                 new EngagementLetterResponseDto.LegalProcedureResponseDto(
                         "Procedimiento laboral",
-                        LocalDate.of(2026, 4, 1),
+                        LocalDate.of(2026, Month.APRIL, 1),
                         null,
                         List.of("Preparar demanda")
                 );
 
         EngagementLetterResponseDto dto = new EngagementLetterResponseDto(
                 id,
-                LocalDate.of(2026, 5, 1),
-                LocalDate.of(2026, 5, 30),
+                LocalDate.of(2026, Month.MAY, 1),
+                LocalDate.of(2026, Month.MAY, 30),
                 owner,
                 List.of(procedure)
         );
 
         assertThat(dto.getId()).isEqualTo(id);
-        assertThat(dto.getCreationDate()).isEqualTo(LocalDate.of(2026, 5, 1));
-        assertThat(dto.getClosingDate()).isEqualTo(LocalDate.of(2026, 5, 30));
+        assertThat(dto.getCreationDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 1));
+        assertThat(dto.getClosingDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 30));
         assertThat(dto.getOwner()).isSameAs(owner);
         assertThat(dto.getLegalProcedures()).containsExactly(procedure);
     }
@@ -55,14 +56,14 @@ class EngagementLetterResponseDtoTest {
         EngagementLetterResponseDto dto = new EngagementLetterResponseDto();
 
         dto.setId(id);
-        dto.setCreationDate(LocalDate.of(2026, 5, 1));
-        dto.setClosingDate(LocalDate.of(2026, 5, 30));
+        dto.setCreationDate(LocalDate.of(2026, Month.MAY, 1));
+        dto.setClosingDate(LocalDate.of(2026, Month.MAY, 30));
         dto.setOwner(owner);
         dto.setLegalProcedures(List.of(procedure));
 
         assertThat(dto.getId()).isEqualTo(id);
-        assertThat(dto.getCreationDate()).isEqualTo(LocalDate.of(2026, 5, 1));
-        assertThat(dto.getClosingDate()).isEqualTo(LocalDate.of(2026, 5, 30));
+        assertThat(dto.getCreationDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 1));
+        assertThat(dto.getClosingDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 30));
         assertThat(dto.getOwner()).isSameAs(owner);
         assertThat(dto.getLegalProcedures()).containsExactly(procedure);
     }
@@ -73,13 +74,13 @@ class EngagementLetterResponseDtoTest {
                 new EngagementLetterResponseDto.LegalProcedureResponseDto();
 
         procedure.setTitle("Procedimiento civil");
-        procedure.setStartDate(LocalDate.of(2026, 4, 1));
-        procedure.setClosingDate(LocalDate.of(2026, 6, 1));
+        procedure.setStartDate(LocalDate.of(2026, Month.APRIL, 1));
+        procedure.setClosingDate(LocalDate.of(2026, Month.JUNE, 1));
         procedure.setLegalTasks(List.of("Revisar expediente"));
 
         assertThat(procedure.getTitle()).isEqualTo("Procedimiento civil");
-        assertThat(procedure.getStartDate()).isEqualTo(LocalDate.of(2026, 4, 1));
-        assertThat(procedure.getClosingDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+        assertThat(procedure.getStartDate()).isEqualTo(LocalDate.of(2026, Month.APRIL, 1));
+        assertThat(procedure.getClosingDate()).isEqualTo(LocalDate.of(2026, Month.JUNE, 1));
         assertThat(procedure.getLegalTasks()).containsExactly("Revisar expediente");
     }
 
@@ -114,8 +115,8 @@ class EngagementLetterResponseDtoTest {
                 """, EngagementLetterResponseDto.class);
 
         assertThat(dto.getId()).isEqualTo(UUID.fromString("11111111-1111-1111-1111-111111111111"));
-        assertThat(dto.getCreationDate()).isEqualTo(LocalDate.of(2026, 5, 1));
-        assertThat(dto.getClosingDate()).isEqualTo(LocalDate.of(2026, 5, 30));
+        assertThat(dto.getCreationDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 1));
+        assertThat(dto.getClosingDate()).isEqualTo(LocalDate.of(2026, Month.MAY, 30));
         assertThat(dto.getOwner().getFirstName()).isEqualTo("Ana");
         assertThat(dto.getLegalProcedures()).hasSize(1);
         assertThat(dto.getLegalProcedures().getFirst().getTitle()).isEqualTo("Procedimiento laboral");

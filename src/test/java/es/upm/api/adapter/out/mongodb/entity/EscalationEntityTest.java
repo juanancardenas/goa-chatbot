@@ -4,6 +4,7 @@ import es.upm.api.domain.model.Escalation;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,7 +20,7 @@ class EscalationEntityTest {
         assertThat(entity.getId()).isEqualTo(UUID.fromString("11111111-1111-1111-1111-111111111111"));
         assertThat(entity.getConversationId()).isEqualTo("conversation-1");
         assertThat(entity.getUserId()).isEqualTo("user-1");
-        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 1, 11, 0));
+        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 1, 11, 0));
         assertThat(entity.getPhone()).isEqualTo("+34600111222");
         assertThat(entity.getEmail()).isEqualTo("user1@example.com");
     }
@@ -33,7 +34,7 @@ class EscalationEntityTest {
         assertThat(entity.getId()).isEqualTo(UUID.fromString("11111111-1111-1111-1111-111111111111"));
         assertThat(entity.getConversationId()).isEqualTo("conversation-1");
         assertThat(entity.getUserId()).isEqualTo("user-1");
-        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 1, 11, 0));
+        assertThat(entity.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 1, 11, 0));
         assertThat(entity.getPhone()).isEqualTo("+34600111222");
         assertThat(entity.getEmail()).isEqualTo("user1@example.com");
     }
@@ -44,7 +45,7 @@ class EscalationEntityTest {
                 UUID.fromString("22222222-2222-2222-2222-222222222222"),
                 "conversation-2",
                 "user-2",
-                LocalDateTime.of(2026, 5, 2, 9, 30),
+                LocalDateTime.of(2026, Month.MAY, 2, 9, 30),
                 null,
                 "user2@example.com"
         );
@@ -54,7 +55,7 @@ class EscalationEntityTest {
         assertThat(escalation.getId()).isEqualTo(UUID.fromString("22222222-2222-2222-2222-222222222222"));
         assertThat(escalation.getConversationId()).isEqualTo("conversation-2");
         assertThat(escalation.getUserId()).isEqualTo("user-2");
-        assertThat(escalation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 5, 2, 9, 30));
+        assertThat(escalation.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, Month.MAY, 2, 9, 30));
         assertThat(escalation.getPhone()).isNull();
         assertThat(escalation.getEmail()).isEqualTo("user2@example.com");
     }
@@ -64,7 +65,7 @@ class EscalationEntityTest {
                 .id(UUID.fromString("11111111-1111-1111-1111-111111111111"))
                 .conversationId("conversation-1")
                 .userId("user-1")
-                .createdAt(LocalDateTime.of(2026, 5, 1, 11, 0))
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 1, 11, 0))
                 .phone("+34600111222")
                 .email("user1@example.com")
                 .build();
