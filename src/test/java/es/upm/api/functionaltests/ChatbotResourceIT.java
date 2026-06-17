@@ -18,6 +18,7 @@ import es.upm.api.adapter.in.rest.dto.ChatbotContextualConversationRequestDto;
 import es.upm.api.adapter.in.rest.dto.ChatbotContextualConversationResponseDto;
 import es.upm.api.adapter.in.rest.dto.ChatbotConversationHistoryResponseDto;
 import es.upm.api.adapter.in.rest.dto.ChatbotConversationSummaryDto;
+import es.upm.api.adapter.in.rest.dto.ChatbotHistoryMessageDto;
 import es.upm.api.adapter.in.rest.dto.ChatbotMessageRequestDto;
 import es.upm.api.adapter.in.rest.dto.ChatbotMessageResponseDto;
 import es.upm.api.adapter.out.mongodb.repository.ConversationRepository;
@@ -58,6 +59,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpMethod.POST;
@@ -65,7 +67,7 @@ import static org.springframework.http.HttpStatus.OK;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class ChatbotResourceFT {
+class ChatbotResourceIT {
 
     private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
     private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, Month.JANUARY, 1, 10, 0);
@@ -141,18 +143,22 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getEngagementLetterId()).isEqualTo("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
-        assertThat(response.getBody().getCreatedAt()).isNotBlank();
-        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000", ChatbotContextualConversationResponseDto::getEngagementLetterId)
+                .returns(null, ChatbotContextualConversationResponseDto::getError)
+                .satisfies(body -> {
+                    assertThat(body.getConversationId()).isNotBlank();
+                    assertThat(body.getCreatedAt()).isNotBlank();
+                });
 
         List<ConversationEntity> conversations = this.conversationRepository.findAll();
-        assertThat(conversations).hasSize(1);
-        assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
-        assertThat(conversations.getFirst().getEngagementLetterId()).isEqualTo("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000");
-        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo(ConversationType.CONTEXTUAL.name());
+        assertThat(conversations)
+                .singleElement()
+                .returns("customer-1", ConversationEntity::getUserId)
+                .returns("aaaaaaa0-bbbb-cccc-dddd-eeeeffff0000", ConversationEntity::getEngagementLetterId)
+                .returns(ConversationStatus.ACTIVE, ConversationEntity::getStatus)
+                .returns(ConversationType.CONTEXTUAL.name(), ConversationEntity::getType);
     }
 
     @Test
@@ -192,9 +198,10 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).contains("\"code\":400");
-        assertThat(response.getBody()).contains("engagementLetterId es obligatorio");
+        assertThat(response.getBody())
+                .isNotNull()
+                .contains("\"code\":400")
+                .contains("engagementLetterId es obligatorio");
         assertThat(this.conversationRepository.findAll()).isEmpty();
     }
 
@@ -214,9 +221,10 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).contains("\"code\":400");
-        assertThat(response.getBody()).contains("engagementLetterId es obligatorio");
+        assertThat(response.getBody())
+                .isNotNull()
+                .contains("\"code\":400")
+                .contains("engagementLetterId es obligatorio");
         assertThat(this.conversationRepository.findAll()).isEmpty();
     }
 
@@ -246,8 +254,9 @@ class ChatbotResourceFT {
         assertThat(firstResponse.getStatusCode()).isEqualTo(OK);
         assertThat(secondResponse.getStatusCode()).isEqualTo(OK);
         assertThat(firstResponse.getBody()).isNotNull();
-        assertThat(secondResponse.getBody()).isNotNull();
-        assertThat(secondResponse.getBody().getConversationId()).isEqualTo(firstResponse.getBody().getConversationId());
+        assertThat(secondResponse.getBody())
+                .isNotNull()
+                .returns(firstResponse.getBody().getConversationId(), ChatbotContextualConversationResponseDto::getConversationId);
 
         List<ConversationEntity> conversations = this.conversationRepository.findAll();
         assertThat(conversations).hasSize(1);
@@ -312,8 +321,8 @@ class ChatbotResourceFT {
                 .isEqualTo(secondStartResponse.getBody().getConversationId());
 
         List<ConversationEntity> conversations = this.conversationRepository.findAll();
-        assertThat(conversations).hasSize(2);
         assertThat(conversations)
+                .hasSize(2)
                 .anySatisfy(conversation -> assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.CLOSED))
                 .anySatisfy(conversation -> assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ACTIVE));
     }
@@ -397,20 +406,18 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).hasSize(2);
-
         assertThat(response.getBody())
-                .extracting(ChatbotConversationSummaryDto::getConversationId)
-                .containsExactly("general-active-001", "general-closed-001");
-
-        assertThat(response.getBody())
-                .extracting(ChatbotConversationSummaryDto::getPreview)
-                .containsExactly("Consulta reciente general", "Consulta antigua general");
-
-        assertThat(response.getBody())
-                .extracting(ChatbotConversationSummaryDto::getType)
-                .containsOnly(ConversationType.GENERAL.name());
+                .isNotNull()
+                .hasSize(2)
+                .extracting(
+                        ChatbotConversationSummaryDto::getConversationId,
+                        ChatbotConversationSummaryDto::getPreview,
+                        ChatbotConversationSummaryDto::getType
+                )
+                .containsExactly(
+                        tuple("general-active-001", "Consulta reciente general", ConversationType.GENERAL.name()),
+                        tuple("general-closed-001", "Consulta antigua general", ConversationType.GENERAL.name())
+                );
     }
 
     @Test
@@ -425,14 +432,17 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().isEnabled()).isTrue();
-        assertThat(response.getBody().getProvider()).isEqualTo("ollama");
-        assertThat(response.getBody().getModel()).isNotBlank();
-        assertThat(response.getBody().getMaxInputCharacters()).isGreaterThan(0);
-        assertThat(response.getBody().getMaxOutputTokens()).isGreaterThan(0);
-        assertThat(response.getBody().getMaxContextMessages()).isGreaterThanOrEqualTo(0);
-        assertThat(response.getBody().isDocumentsAvailable()).isFalse();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(true, ChatbotConfigurationStatusDto::isEnabled)
+                .returns("ollama", ChatbotConfigurationStatusDto::getProvider)
+                .returns(false, ChatbotConfigurationStatusDto::isDocumentsAvailable)
+                .satisfies(body -> {
+                    assertThat(body.getModel()).isNotBlank();
+                    assertThat(body.getMaxInputCharacters()).isGreaterThan(0);
+                    assertThat(body.getMaxOutputTokens()).isGreaterThan(0);
+                    assertThat(body.getMaxContextMessages()).isGreaterThanOrEqualTo(0);
+                });
     }
 
     @Test
@@ -447,16 +457,16 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).contains("provider");
-        assertThat(response.getBody()).contains("model");
-
-        assertThat(response.getBody()).doesNotContain("apiKey");
-        assertThat(response.getBody()).doesNotContain("basePrompt");
-        assertThat(response.getBody()).doesNotContain("prompt");
-        assertThat(response.getBody()).doesNotContain("CHATBOT_OPENAI_API_KEY");
-        assertThat(response.getBody()).doesNotContain("secret");
-        assertThat(response.getBody()).doesNotContain("stackTrace");
+        assertThat(response.getBody())
+                .isNotNull()
+                .contains("provider")
+                .contains("model")
+                .doesNotContain("apiKey")
+                .doesNotContain("basePrompt")
+                .doesNotContain("prompt")
+                .doesNotContain("CHATBOT_OPENAI_API_KEY")
+                .doesNotContain("secret")
+                .doesNotContain("stackTrace");
     }
 
     @Test
@@ -530,20 +540,18 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).hasSize(2);
-
         assertThat(response.getBody())
-                .extracting(ChatbotConversationSummaryDto::getConversationId)
-                .containsExactly("contextual-b-001", "contextual-a-001");
-
-        assertThat(response.getBody())
-                .extracting(ChatbotConversationSummaryDto::getEngagementLetterId)
-                .containsOnly("eng-001");
-
-        assertThat(response.getBody())
-                .extracting(ChatbotConversationSummaryDto::getType)
-                .containsOnly(ConversationType.CONTEXTUAL.name());
+                .isNotNull()
+                .hasSize(2)
+                .extracting(
+                        ChatbotConversationSummaryDto::getConversationId,
+                        ChatbotConversationSummaryDto::getEngagementLetterId,
+                        ChatbotConversationSummaryDto::getType
+                )
+                .containsExactly(
+                        tuple("contextual-b-001", "eng-001", ConversationType.CONTEXTUAL.name()),
+                        tuple("contextual-a-001", "eng-001", ConversationType.CONTEXTUAL.name())
+                );
     }
 
     @Test
@@ -593,21 +601,25 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isEqualTo(conversationId);
-        assertThat(response.getBody().getType()).isEqualTo(ConversationType.CONTEXTUAL.name());
-        assertThat(response.getBody().getStatus()).isEqualTo(ConversationStatus.CLOSED.name());
-        assertThat(response.getBody().getPage()).isZero();
-        assertThat(response.getBody().getSize()).isEqualTo(20);
-        assertThat(response.getBody().getHasMore()).isFalse();
-        assertThat(response.getBody().getTotalMessages()).isEqualTo(2);
-        assertThat(response.getBody().getMessages()).hasSize(2);
-        assertThat(response.getBody().getMessages())
-                .extracting(message -> message.getSequenceNumber())
-                .containsExactly(1, 2);
-        assertThat(response.getBody().getMessages())
-                .extracting(message -> message.getContent())
-                .containsExactly("Consulta inicial", "Respuesta del asistente");
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(conversationId, ChatbotConversationHistoryResponseDto::getConversationId)
+                .returns(ConversationType.CONTEXTUAL.name(), ChatbotConversationHistoryResponseDto::getType)
+                .returns(ConversationStatus.CLOSED.name(), ChatbotConversationHistoryResponseDto::getStatus)
+                .returns(0, ChatbotConversationHistoryResponseDto::getPage)
+                .returns(20, ChatbotConversationHistoryResponseDto::getSize)
+                .returns(false, ChatbotConversationHistoryResponseDto::getHasMore)
+                .returns(2L, ChatbotConversationHistoryResponseDto::getTotalMessages)
+                .satisfies(body -> assertThat(body.getMessages())
+                        .hasSize(2)
+                        .extracting(
+                                ChatbotHistoryMessageDto::getSequenceNumber,
+                                ChatbotHistoryMessageDto::getContent
+                        )
+                        .containsExactly(
+                                tuple(1, "Consulta inicial"),
+                                tuple(2, "Respuesta del asistente")
+                        ));
     }
 
     @Test
@@ -622,8 +634,9 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).isEmpty();
+        assertThat(response.getBody())
+                .isNotNull()
+                .isEmpty();
     }
 
     @Test
@@ -760,38 +773,44 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.CLIENT_GENERAL_START_REPLY);
-        assertThat(response.getBody().getError()).isNull();
-        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(ChatbotTestMessages.CLIENT_GENERAL_START_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(null, ChatbotMessageResponseDto::getError)
+                .satisfies(body -> {
+                    assertThat(body.getConversationId()).isNotBlank();
+                    assertThat(body.getCreatedAt()).isNotBlank();
+                });
 
         List<ConversationEntity> conversations = this.conversationRepository.findAll();
-        assertThat(conversations).hasSize(1);
-        assertThat(conversations.getFirst().getUserId()).isEqualTo("customer-1");
-        assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
-        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo(ConversationType.GENERAL.name());
+        assertThat(conversations)
+                .singleElement()
+                .returns("customer-1", ConversationEntity::getUserId)
+                .returns(null, ConversationEntity::getEngagementLetterId)
+                .returns(ConversationStatus.ACTIVE, ConversationEntity::getStatus)
+                .returns(ConversationType.GENERAL.name(), ConversationEntity::getType);
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(conversations.getFirst().getId());
         assertThat(messages).hasSize(2);
 
         MessageEntity firstMessage = messages.get(0);
-        assertThat(firstMessage.getSenderType()).isEqualTo(MessageSenderType.USER);
-        assertThat(firstMessage.getMessageType()).isEqualTo(MessageType.REQUEST);
-        assertThat(firstMessage.getContent()).isEqualTo("Hola chatbot");
-        assertThat(firstMessage.getSequenceNumber()).isEqualTo(1);
-        assertThat(firstMessage.getTimestamp()).isNotNull();
-        assertThat(firstMessage.getParentMessageId()).isNull();
+        assertThat(firstMessage)
+                .returns(MessageSenderType.USER, MessageEntity::getSenderType)
+                .returns(MessageType.REQUEST, MessageEntity::getMessageType)
+                .returns("Hola chatbot", MessageEntity::getContent)
+                .returns(1, MessageEntity::getSequenceNumber)
+                .returns(null, MessageEntity::getParentMessageId)
+                .satisfies(message -> assertThat(message.getTimestamp()).isNotNull());
 
         MessageEntity secondMessage = messages.get(1);
-        assertThat(secondMessage.getSenderType()).isEqualTo(MessageSenderType.ASSISTANT);
-        assertThat(secondMessage.getMessageType()).isEqualTo(MessageType.RESPONSE);
-        assertThat(secondMessage.getContent()).isEqualTo(ChatbotTestMessages.CLIENT_GENERAL_START_REPLY);
-        assertThat(secondMessage.getSequenceNumber()).isEqualTo(2);
-        assertThat(secondMessage.getTimestamp()).isNotNull();
-        assertThat(secondMessage.getParentMessageId()).isEqualTo(firstMessage.getId());
+        assertThat(secondMessage)
+                .returns(MessageSenderType.ASSISTANT, MessageEntity::getSenderType)
+                .returns(MessageType.RESPONSE, MessageEntity::getMessageType)
+                .returns(ChatbotTestMessages.CLIENT_GENERAL_START_REPLY, MessageEntity::getContent)
+                .returns(2, MessageEntity::getSequenceNumber)
+                .returns(firstMessage.getId(), MessageEntity::getParentMessageId)
+                .satisfies(message -> assertThat(message.getTimestamp()).isNotNull());
     }
 
     @Test
@@ -809,23 +828,28 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isNotBlank();
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY);
-        assertThat(response.getBody().getError()).isNull();
-        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(null, ChatbotMessageResponseDto::getError)
+                .satisfies(body -> {
+                    assertThat(body.getConversationId()).isNotBlank();
+                    assertThat(body.getCreatedAt()).isNotBlank();
+                });
 
         List<ConversationEntity> conversations = this.conversationRepository.findAll();
-        assertThat(conversations).hasSize(1);
-        assertThat(conversations.getFirst().getUserId()).isEqualTo("admin-1");
-        assertThat(conversations.getFirst().getEngagementLetterId()).isNull();
-        assertThat(conversations.getFirst().getStatus()).isEqualTo(ConversationStatus.ACTIVE);
-        assertThat(conversations.getFirst().getType()).isEqualTo(ConversationType.GENERAL.name());
+        assertThat(conversations)
+                .singleElement()
+                .returns("admin-1", ConversationEntity::getUserId)
+                .returns(null, ConversationEntity::getEngagementLetterId)
+                .returns(ConversationStatus.ACTIVE, ConversationEntity::getStatus)
+                .returns(ConversationType.GENERAL.name(), ConversationEntity::getType);
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(conversations.getFirst().getId());
-        assertThat(messages).hasSize(2);
-        assertThat(messages).extracting(MessageEntity::getContent)
+        assertThat(messages)
+                .hasSize(2)
+                .extracting(MessageEntity::getContent)
                 .containsExactly(
                         "Necesito soporte operativo",
                         ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY
@@ -897,30 +921,27 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY);
-        assertThat(response.getBody().getError()).isNull();
-        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
+                .returns(ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(null, ChatbotMessageResponseDto::getError)
+                .satisfies(body -> assertThat(body.getCreatedAt()).isNotBlank());
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
-        assertThat(messages).hasSize(4);
-        assertThat(messages).extracting(MessageEntity::getContent)
+        assertThat(messages)
+                .hasSize(4)
+                .extracting(
+                        MessageEntity::getContent,
+                        MessageEntity::getSequenceNumber,
+                        MessageEntity::getSenderType
+                )
                 .containsExactly(
-                        "Hola chatbot",
-                        ChatbotTestMessages.CLIENT_GENERAL_START_REPLY,
-                        "¿Cómo puedo consultar el estado de un encargo?",
-                        ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY
-                );
-        assertThat(messages).extracting(MessageEntity::getSequenceNumber)
-                .containsExactly(1, 2, 3, 4);
-        assertThat(messages).extracting(MessageEntity::getSenderType)
-                .containsExactly(
-                        MessageSenderType.USER,
-                        MessageSenderType.ASSISTANT,
-                        MessageSenderType.USER,
-                        MessageSenderType.ASSISTANT
+                        tuple(startRequest.getMessage(), 1, MessageSenderType.USER),
+                        tuple(ChatbotTestMessages.CLIENT_GENERAL_START_REPLY, 2, MessageSenderType.ASSISTANT),
+                        tuple(request.getMessage(), 3, MessageSenderType.USER),
+                        tuple(ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY, 4, MessageSenderType.ASSISTANT)
                 );
         assertThat(messages.get(2).getParentMessageId()).isNull();
         assertThat(messages.get(3).getParentMessageId()).isEqualTo(messages.get(2).getId());
@@ -957,30 +978,27 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY);
-        assertThat(response.getBody().getError()).isNull();
-        assertThat(response.getBody().getCreatedAt()).isNotBlank();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
+                .returns(ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(null, ChatbotMessageResponseDto::getError)
+                .satisfies(body -> assertThat(body.getCreatedAt()).isNotBlank());
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
-        assertThat(messages).hasSize(4);
-        assertThat(messages).extracting(MessageEntity::getContent)
+        assertThat(messages)
+                .hasSize(4)
+                .extracting(
+                        MessageEntity::getContent,
+                        MessageEntity::getSequenceNumber,
+                        MessageEntity::getSenderType
+                )
                 .containsExactly(
-                        "Necesito revisar el flujo",
-                        ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY,
-                        "Necesito saber cómo revisar el estado de un encargo",
-                        ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY
-                );
-        assertThat(messages).extracting(MessageEntity::getSequenceNumber)
-                .containsExactly(1, 2, 3, 4);
-        assertThat(messages).extracting(MessageEntity::getSenderType)
-                .containsExactly(
-                        MessageSenderType.USER,
-                        MessageSenderType.ASSISTANT,
-                        MessageSenderType.USER,
-                        MessageSenderType.ASSISTANT
+                        tuple(startRequest.getMessage(), 1, MessageSenderType.USER),
+                        tuple(ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY, 2, MessageSenderType.ASSISTANT),
+                        tuple(request.getMessage(), 3, MessageSenderType.USER),
+                        tuple(ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY, 4, MessageSenderType.ASSISTANT)
                 );
         assertThat(messages.get(2).getParentMessageId()).isNull();
         assertThat(messages.get(3).getParentMessageId()).isEqualTo(messages.get(2).getId());
@@ -1141,11 +1159,12 @@ class ChatbotResourceFT {
         assertThat(conversation.getStatus()).isEqualTo(ConversationStatus.ARCHIVED);
 
         List<EscalationEntity> escalations = this.escalationRepository.findAll();
-        assertThat(escalations).hasSize(1);
-        assertThat(escalations.getFirst().getConversationId()).isEqualTo(conversationId);
-        assertThat(escalations.getFirst().getUserId()).isEqualTo("customer-1");
-        assertThat(escalations.getFirst().getPhone()).isEqualTo("+34600111222");
-        assertThat(escalations.getFirst().getEmail()).isEqualTo("customer-1@example.com");
+        assertThat(escalations)
+                .singleElement()
+                .returns(conversationId, EscalationEntity::getConversationId)
+                .returns("customer-1", EscalationEntity::getUserId)
+                .returns("+34600111222", EscalationEntity::getPhone)
+                .returns("customer-1@example.com", EscalationEntity::getEmail);
     }
 
     @Test
@@ -1388,22 +1407,22 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.OUT_OF_CASE_SCOPE_REPLY);
-        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
+                .returns(ChatbotTestMessages.OUT_OF_CASE_SCOPE_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(null, ChatbotMessageResponseDto::getError);
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
 
-        assertThat(messages).hasSize(2);
-        assertThat(messages).extracting(MessageEntity::getContent)
+        assertThat(messages)
+                .hasSize(2)
+                .extracting(MessageEntity::getContent, MessageEntity::getSequenceNumber)
                 .containsExactly(
-                        "¿Qué pasará con mi otro caso?",
-                        ChatbotTestMessages.OUT_OF_CASE_SCOPE_REPLY
+                        tuple(request.getMessage(), 1),
+                        tuple(ChatbotTestMessages.OUT_OF_CASE_SCOPE_REPLY, 2)
                 );
-        assertThat(messages).extracting(MessageEntity::getSequenceNumber)
-                .containsExactly(1, 2);
     }
 
     @Test
@@ -1476,31 +1495,34 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getResponseMode()).isEqualTo("CONTEXTUAL_PLATFORM_DATA");
-        assertThat(response.getBody().getUsedPlatformData()).isTrue();
-        assertThat(response.getBody().getSourcesSummary())
-                .anySatisfy(source -> assertThat(source).startsWith("Hoja de encargo"))
-                .contains(
-                        "Procedimiento: Reclamación civil",
-                        "Hito/evento: Se registró escrito [MILESTONE] - OPEN"
-                );
-        assertThat(response.getBody().getError()).isNull();
-        assertThat(response.getBody().getMessage()).contains("Se registró escrito");
-        assertThat(response.getBody().getMessage()).contains("Vista programada");
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
+                .returns("CONTEXTUAL_PLATFORM_DATA", ChatbotMessageResponseDto::getResponseMode)
+                .returns(true, ChatbotMessageResponseDto::getUsedPlatformData)
+                .returns(null, ChatbotMessageResponseDto::getError)
+                .satisfies(body -> {
+                    assertThat(body.getSourcesSummary())
+                            .anySatisfy(source -> assertThat(source).startsWith("Hoja de encargo"))
+                            .contains(
+                                    "Procedimiento: Reclamación civil",
+                                    "Hito/evento: Se registró escrito [MILESTONE] - OPEN"
+                            );
+                    assertThat(body.getMessage())
+                            .contains("Se registró escrito")
+                            .contains("Vista programada");
+                });
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
 
-        assertThat(messages).hasSize(2);
-        assertThat(messages).extracting(MessageEntity::getContent)
+        assertThat(messages)
+                .hasSize(2)
+                .extracting(MessageEntity::getContent, MessageEntity::getSequenceNumber)
                 .containsExactly(
-                        "Que hitos recientes tiene el caso",
-                        response.getBody().getMessage()
+                        tuple("Que hitos recientes tiene el caso", 1),
+                        tuple(response.getBody().getMessage(), 2)
                 );
-        assertThat(messages).extracting(MessageEntity::getSequenceNumber)
-                .containsExactly(1, 2);
     }
 
     @Test
@@ -1538,19 +1560,23 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getResponseMode()).isEqualTo("CONTEXTUAL_RESTRICTED");
-        assertThat(response.getBody().getUsedPlatformData()).isFalse();
-        assertThat(response.getBody().getSourcesSummary()).isEmpty();
-        assertThat(response.getBody().getError()).isNull();
-        assertThat(response.getBody().getMessage()).contains("no he podido recuperar");
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
+                .returns("CONTEXTUAL_RESTRICTED", ChatbotMessageResponseDto::getResponseMode)
+                .returns(false, ChatbotMessageResponseDto::getUsedPlatformData)
+                .returns(null, ChatbotMessageResponseDto::getError)
+                .satisfies(body -> {
+                    assertThat(body.getSourcesSummary()).isEmpty();
+                    assertThat(body.getMessage()).contains("no he podido recuperar");
+                });
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
 
-        assertThat(messages).hasSize(2);
-        assertThat(messages).extracting(MessageEntity::getContent)
+        assertThat(messages)
+                .hasSize(2)
+                .extracting(MessageEntity::getContent)
                 .containsExactly(
                         "Dame contexto del caso",
                         response.getBody().getMessage()
@@ -1588,16 +1614,18 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.MISSING_CASE_CONTEXT_REPLY);
-        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
+                .returns(ChatbotTestMessages.MISSING_CASE_CONTEXT_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(null, ChatbotMessageResponseDto::getError);
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
 
-        assertThat(messages).hasSize(4);
-        assertThat(messages).extracting(MessageEntity::getContent)
+        assertThat(messages)
+                .hasSize(4)
+                .extracting(MessageEntity::getContent)
                 .containsExactly(
                         "Hola chatbot",
                         ChatbotTestMessages.CLIENT_GENERAL_START_REPLY,
@@ -1637,16 +1665,18 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getConversationId()).isEqualTo(startResponse.getBody().getConversationId());
-        assertThat(response.getBody().getMessage()).isEqualTo(ChatbotTestMessages.LEGAL_BINDING_ADVICE_REPLY);
-        assertThat(response.getBody().getError()).isNull();
+        assertThat(response.getBody())
+                .isNotNull()
+                .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
+                .returns(ChatbotTestMessages.LEGAL_BINDING_ADVICE_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(null, ChatbotMessageResponseDto::getError);
 
         List<MessageEntity> messages = this.messageRepository
                 .findByConversationIdOrderBySequenceNumberAsc(startResponse.getBody().getConversationId());
 
-        assertThat(messages).hasSize(4);
-        assertThat(messages).extracting(MessageEntity::getContent)
+        assertThat(messages)
+                .hasSize(4)
+                .extracting(MessageEntity::getContent)
                 .containsExactly(
                         "Necesito soporte",
                         ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY,
@@ -1711,8 +1741,9 @@ class ChatbotResourceFT {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getHeaders().getAccessControlAllowOrigin()).isEqualTo("http://localhost:4200");
-        assertThat(response.getHeaders().getAccessControlAllowMethods()).contains(HttpMethod.PATCH);
+        HttpHeaders responseHeaders = response.getHeaders();
+        assertThat(responseHeaders.getAccessControlAllowOrigin()).isEqualTo("http://localhost:4200");
+        assertThat(responseHeaders.getAccessControlAllowMethods()).contains(HttpMethod.PATCH);
     }
 
     private HttpHeaders authHeaders(String token, String subject, List<String> roles) {

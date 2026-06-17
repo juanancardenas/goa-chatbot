@@ -13,7 +13,7 @@ import static org.springframework.http.HttpStatus.OK;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class SystemResourceFT {
+class SystemResourceIT {
     @Autowired
     private TestRestTemplate restTemplate;
 

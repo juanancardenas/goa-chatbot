@@ -83,9 +83,10 @@ class ChatbotEscalationMetricTest {
                 .createdAt(CREATED_AT)
                 .build();
 
-        assertThat(metric).isEqualTo(sameMetric);
-        assertThat(metric).hasSameHashCodeAs(sameMetric);
-        assertThat(metric).isNotEqualTo(differentMetric);
+        assertThat(metric)
+                .isEqualTo(sameMetric)
+                .hasSameHashCodeAs(sameMetric)
+                .isNotEqualTo(differentMetric);
         assertThat(metric.toString())
                 .contains("conversation-1")
                 .contains("user-1")

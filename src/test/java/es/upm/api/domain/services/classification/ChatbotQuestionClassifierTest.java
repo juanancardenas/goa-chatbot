@@ -3,6 +3,7 @@ package es.upm.api.domain.services.classification;
 import es.upm.api.domain.enums.PlatformQuestionType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,32 +68,17 @@ class ChatbotQuestionClassifierTest {
                 .isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
     }
 
-    @Test
-    void shouldClassifyLegalTasksQuestionInEnglish() {
-        PlatformQuestionType result = this.classifier.classify("What are the Legal Tasks of this engagement?");
+    @ParameterizedTest
+    @CsvSource({
+            "What are the Legal Tasks of this engagement?, LEGAL_TASKS",
+            "Cuáles son las tareas legales de este encargo?, LEGAL_TASKS",
+            "Qué actuaciones del encargo están previstas?, LEGAL_TASKS",
+            "Revisa el documento y dime las tareas legales, DOCUMENTS"
+    })
+    void classifyShouldReturnExpectedTypeForLegalTaskSignals(String message, PlatformQuestionType expectedType) {
+        PlatformQuestionType result = this.classifier.classify(message);
 
-        assertThat(result).isEqualTo(PlatformQuestionType.LEGAL_TASKS);
-    }
-
-    @Test
-    void shouldClassifyLegalTasksQuestionInSpanish() {
-        PlatformQuestionType result = this.classifier.classify("Cuáles son las tareas legales de este encargo?");
-
-        assertThat(result).isEqualTo(PlatformQuestionType.LEGAL_TASKS);
-    }
-
-    @Test
-    void shouldClassifyEngagementTasksQuestion() {
-        PlatformQuestionType result = this.classifier.classify("Qué actuaciones del encargo están previstas?");
-
-        assertThat(result).isEqualTo(PlatformQuestionType.LEGAL_TASKS);
-    }
-
-    @Test
-    void shouldKeepDocumentsPriorityOverLegalTasksWhenQuestionMentionsDocument() {
-        PlatformQuestionType result = this.classifier.classify("Revisa el documento y dime las tareas legales");
-
-        assertThat(result).isEqualTo(PlatformQuestionType.DOCUMENTS);
+        assertThat(result).isEqualTo(expectedType);
     }
 
     @ParameterizedTest

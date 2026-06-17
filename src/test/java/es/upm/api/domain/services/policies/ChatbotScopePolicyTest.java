@@ -5,10 +5,13 @@ import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDateTime;
 import java.time.Month;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,24 +19,12 @@ class ChatbotScopePolicyTest {
 
     private final ChatbotScopePolicy chatbotScopePolicy = new ChatbotScopePolicy();
 
-    @Test
-    void evaluateShouldAllowNullMessage() {
+    @ParameterizedTest
+    @MethodSource("allowedMessages")
+    void evaluateShouldAllowMessage(String conversationType, String message) {
         ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
-                this.conversation("GENERAL"),
-                null
-        );
-
-        assertThat(decision.isAllowed()).isTrue();
-        assertThat(decision.getReason()).isNull();
-        assertThat(decision.getSafeMessage()).isNull();
-        assertThat(decision.isRequiresHuman()).isFalse();
-    }
-
-    @Test
-    void evaluateShouldAllowBlankMessage() {
-        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
-                this.conversation("CONTEXTUAL"),
-                "   "
+                this.conversation(conversationType),
+                message
         );
 
         assertThat(decision.isAllowed()).isTrue();
@@ -78,19 +69,6 @@ class ChatbotScopePolicyTest {
         assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.AMBIGUOUS_CONTEXT);
         assertThat(decision.getSafeMessage()).contains("necesita más contexto");
-        assertThat(decision.isRequiresHuman()).isFalse();
-    }
-
-    @Test
-    void evaluateShouldAllowGeneralMessageWithoutAmbiguousContext() {
-        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
-                this.conversation("GENERAL"),
-                "Necesito ayuda con la plataforma"
-        );
-
-        assertThat(decision.isAllowed()).isTrue();
-        assertThat(decision.getReason()).isNull();
-        assertThat(decision.getSafeMessage()).isNull();
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
@@ -165,19 +143,6 @@ class ChatbotScopePolicyTest {
     }
 
     @Test
-    void evaluateShouldAllowContextualMessageWithinScope() {
-        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
-                this.conversation("CONTEXTUAL"),
-                "Puedes resumirme la informacion visible del encargo activo"
-        );
-
-        assertThat(decision.isAllowed()).isTrue();
-        assertThat(decision.getReason()).isNull();
-        assertThat(decision.getSafeMessage()).isNull();
-        assertThat(decision.isRequiresHuman()).isFalse();
-    }
-
-    @Test
     void evaluateShouldRejectOutOfDomainMessageInGeneralConversation() {
         ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
                 this.conversation("GENERAL"),
@@ -188,6 +153,15 @@ class ChatbotScopePolicyTest {
         assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.OUT_OF_DOMAIN);
         assertThat(decision.getSafeMessage()).contains("consultas sobre GOA");
         assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
+    private static Stream<Arguments> allowedMessages() {
+        return Stream.of(
+                Arguments.of("GENERAL", null),
+                Arguments.of("CONTEXTUAL", "   "),
+                Arguments.of("GENERAL", "Necesito ayuda con la plataforma"),
+                Arguments.of("CONTEXTUAL", "Puedes resumirme la informacion visible del encargo activo")
+        );
     }
 
     private Conversation conversation(String type) {
