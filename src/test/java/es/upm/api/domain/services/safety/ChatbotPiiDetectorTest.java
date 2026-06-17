@@ -3,31 +3,20 @@ package es.upm.api.domain.services.safety;
 import es.upm.api.domain.model.safety.ChatbotModerationReason;
 import es.upm.api.domain.model.safety.ChatbotPiiDetectionResult;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ChatbotPiiDetectorTest {
     private final ChatbotPiiDetector detector = new ChatbotPiiDetector();
 
-    @Test
-    void detectShouldReturnEmptyResultWhenMessageIsNull() {
-        ChatbotPiiDetectionResult result = this.detector.detect(null);
-
-        assertThat(result.containsPii()).isFalse();
-        assertThat(result.getReasons()).isEmpty();
-    }
-
-    @Test
-    void detectShouldReturnEmptyResultWhenMessageIsEmpty() {
-        ChatbotPiiDetectionResult result = this.detector.detect("");
-
-        assertThat(result.containsPii()).isFalse();
-        assertThat(result.getReasons()).isEmpty();
-    }
-
-    @Test
-    void detectShouldReturnEmptyResultWhenMessageIsBlank() {
-        ChatbotPiiDetectionResult result = this.detector.detect("   ");
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = "   ")
+    void detectShouldReturnEmptyResultWhenMessageHasNoContent(String message) {
+        ChatbotPiiDetectionResult result = this.detector.detect(message);
 
         assertThat(result.containsPii()).isFalse();
         assertThat(result.getReasons()).isEmpty();
@@ -59,36 +48,15 @@ class ChatbotPiiDetectorTest {
         assertThat(result.isContainsEmail()).isFalse();
     }
 
-    @Test
-    void detectShouldFindSpanishMobilePhone() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi móvil es 612345678");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsPhone()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_PHONE);
-    }
-
-    @Test
-    void detectShouldFindSpanishLandlinePhone() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi fijo es 912345678");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsPhone()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_PHONE);
-    }
-
-    @Test
-    void detectShouldFindSpanishPhoneWithPrefixAndSpaces() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi teléfono es +34 612 345 678");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsPhone()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_PHONE);
-    }
-
-    @Test
-    void detectShouldFindSpanishPhoneWithPrefixAndHyphens() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi teléfono es +34-912-345-678");
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Mi móvil es 612345678",
+            "Mi fijo es 912345678",
+            "Mi teléfono es +34 612 345 678",
+            "Mi teléfono es +34-912-345-678"
+    })
+    void detectShouldFindSpanishPhone(String message) {
+        ChatbotPiiDetectionResult result = this.detector.detect(message);
 
         assertThat(result.containsPii()).isTrue();
         assertThat(result.isContainsPhone()).isTrue();
@@ -103,45 +71,16 @@ class ChatbotPiiDetectorTest {
         assertThat(result.isContainsPhone()).isFalse();
     }
 
-    @Test
-    void detectShouldFindDni() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi DNI es 12345678Z");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsDniNie()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_DNI_NIE);
-    }
-
-    @Test
-    void detectShouldFindDniWithHyphen() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi DNI es 12345678-Z");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsDniNie()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_DNI_NIE);
-    }
-
-    @Test
-    void detectShouldFindNieStartingWithX() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi NIE es X1234567L");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsDniNie()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_DNI_NIE);
-    }
-
-    @Test
-    void detectShouldFindNieStartingWithY() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi NIE es Y1234567X");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsDniNie()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_DNI_NIE);
-    }
-
-    @Test
-    void detectShouldFindNieStartingWithZ() {
-        ChatbotPiiDetectionResult result = this.detector.detect("Mi NIE es Z1234567R");
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Mi DNI es 12345678Z",
+            "Mi DNI es 12345678-Z",
+            "Mi NIE es X1234567L",
+            "Mi NIE es Y1234567X",
+            "Mi NIE es Z1234567R"
+    })
+    void detectShouldFindDniNie(String message) {
+        ChatbotPiiDetectionResult result = this.detector.detect(message);
 
         assertThat(result.containsPii()).isTrue();
         assertThat(result.isContainsDniNie()).isTrue();
@@ -156,27 +95,14 @@ class ChatbotPiiDetectorTest {
         assertThat(result.isContainsDniNie()).isFalse();
     }
 
-    @Test
-    void detectShouldFindCardWithoutSeparators() {
-        ChatbotPiiDetectionResult result = this.detector.detect("La tarjeta es 4111111111111111");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsCard()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_CARD);
-    }
-
-    @Test
-    void detectShouldFindCardWithSpaces() {
-        ChatbotPiiDetectionResult result = this.detector.detect("La tarjeta es 4111 1111 1111 1111");
-
-        assertThat(result.containsPii()).isTrue();
-        assertThat(result.isContainsCard()).isTrue();
-        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_CARD);
-    }
-
-    @Test
-    void detectShouldFindCardWithHyphens() {
-        ChatbotPiiDetectionResult result = this.detector.detect("La tarjeta es 5500-0000-0000-0004");
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "La tarjeta es 4111111111111111",
+            "La tarjeta es 4111 1111 1111 1111",
+            "La tarjeta es 5500-0000-0000-0004"
+    })
+    void detectShouldFindCard(String message) {
+        ChatbotPiiDetectionResult result = this.detector.detect(message);
 
         assertThat(result.containsPii()).isTrue();
         assertThat(result.isContainsCard()).isTrue();
