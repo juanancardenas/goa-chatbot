@@ -22,6 +22,8 @@ import java.util.Optional;
 
 @Repository
 public class ConversationAdapter implements ConversationGateway {
+    private static final String LAST_SEQUENCE_NUMBER_FIELD = "lastSequenceNumber";
+
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final MongoTemplate mongoTemplate;
@@ -115,6 +117,10 @@ public class ConversationAdapter implements ConversationGateway {
     @Override
     public void update(Conversation conversation) {
         ConversationEntity entity = ConversationEntity.fromConversation(conversation);
+        if (!this.conversationRepository.existsById(entity.getId())) {
+            throw new NotFoundException("conversationId no corresponde a una conversacion existente");
+        }
+
         this.conversationRepository.save(entity);
     }
 
@@ -128,7 +134,7 @@ public class ConversationAdapter implements ConversationGateway {
 
         ConversationEntity updatedConversation = this.mongoTemplate.findAndModify(
                 Query.query(Criteria.where("_id").is(conversationId)),
-                new Update().inc("lastSequenceNumber", quantity),
+                new Update().inc(LAST_SEQUENCE_NUMBER_FIELD, quantity),
                 FindAndModifyOptions.options().returnNew(true),
                 ConversationEntity.class
         );
@@ -146,11 +152,11 @@ public class ConversationAdapter implements ConversationGateway {
                         Query.query(new Criteria().andOperator(
                                 Criteria.where("_id").is(conversationId),
                                 new Criteria().orOperator(
-                                        Criteria.where("lastSequenceNumber").exists(false),
-                                        Criteria.where("lastSequenceNumber").lt(latestMessage.getSequenceNumber())
+                                        Criteria.where(LAST_SEQUENCE_NUMBER_FIELD).exists(false),
+                                        Criteria.where(LAST_SEQUENCE_NUMBER_FIELD).lt(latestMessage.getSequenceNumber())
                                 )
                         )),
-                        new Update().set("lastSequenceNumber", latestMessage.getSequenceNumber()),
+                        new Update().set(LAST_SEQUENCE_NUMBER_FIELD, latestMessage.getSequenceNumber()),
                         ConversationEntity.class
                 ));
     }
