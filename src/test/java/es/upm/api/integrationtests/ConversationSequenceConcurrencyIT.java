@@ -69,7 +69,7 @@ class ConversationSequenceConcurrencyIT {
     }
 
     @Test
-    void reserveSequenceNumbersShouldReturnUniqueValuesUnderConcurrency() throws Exception {
+    void reserveSequenceNumbersShouldReturnUniqueValuesUnderConcurrency() {
         String conversationId = CONCURRENCY_PREFIX + UUID.randomUUID();
         this.conversationRepository.save(ConversationEntity.builder()
                 .id(conversationId)

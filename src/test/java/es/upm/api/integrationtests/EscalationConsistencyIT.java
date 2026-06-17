@@ -87,7 +87,7 @@ class EscalationConsistencyIT {
     }
 
     @Test
-    void simultaneousEscalationRequestsShouldCreateOneTraceAndArchiveConversationOnce() throws Exception {
+    void simultaneousEscalationRequestsShouldCreateOneTraceAndArchiveConversationOnce() {
         String conversationId = ESCALATION_PREFIX + UUID.randomUUID();
         this.saveConversation(conversationId, ConversationStatus.ACTIVE);
         CountDownLatch start = new CountDownLatch(1);
