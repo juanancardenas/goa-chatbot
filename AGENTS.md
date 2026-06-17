@@ -862,8 +862,8 @@ Tests actuales destacados:
 - `ChatbotDocumentContextServiceTest`
 - `SpringAiChatbotClientTest`
 - `LoggingChatbotMetricsRecorderTest`
-- `ChatbotResourceFT`
-- `SystemResourceFT`
+- `ChatbotResourceIT`
+- `SystemResourceIT`
 - `ConversationAdapterTest`
 - `MessageAdapterTest`
 - `EscalationAdapterTest`

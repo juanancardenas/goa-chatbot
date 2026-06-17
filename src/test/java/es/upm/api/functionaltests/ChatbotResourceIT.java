@@ -67,7 +67,7 @@ import static org.springframework.http.HttpStatus.OK;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class ChatbotResourceFT {
+class ChatbotResourceIT {
 
     private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T10:00:00Z");
     private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, Month.JANUARY, 1, 10, 0);
