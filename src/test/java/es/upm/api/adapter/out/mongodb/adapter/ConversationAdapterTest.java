@@ -121,6 +121,7 @@ class ConversationAdapterTest {
                 .type(ConversationType.CONTEXTUAL)
                 .createdAt(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
                 .build();
+        when(conversationRepository.existsById("conversation-10")).thenReturn(true);
 
         conversationAdapter.create(conversation);
         conversationAdapter.update(conversation);
@@ -133,6 +134,26 @@ class ConversationAdapterTest {
         assertThat(saved.get(0).getId()).isEqualTo("conversation-10");
         assertThat(saved.get(0).getUserId()).isEqualTo("user-10");
         assertThat(saved.get(0).getType()).isEqualTo("CONTEXTUAL");
+    }
+
+    @Test
+    void updateShouldThrowWhenConversationDoesNotExist() {
+        Conversation conversation = Conversation.builder()
+                .id("missing-conversation")
+                .userId("user-10")
+                .status(ConversationStatus.ACTIVE)
+                .type(ConversationType.GENERAL)
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 30, 10, 0))
+                .build();
+        when(conversationRepository.existsById("missing-conversation")).thenReturn(false);
+
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> conversationAdapter.update(conversation)
+        );
+
+        assertThat(exception.getMessage()).contains("conversacion existente");
+        verify(conversationRepository, never()).save(any(ConversationEntity.class));
     }
 
     @Test
