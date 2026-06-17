@@ -153,6 +153,8 @@ class ConversationEntityTest {
 
     @Test
     void allArgsConstructorShouldRejectNullType() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, Month.MAY, 4, 9, 30);
+
         NullPointerException exception = assertThrows(
                 NullPointerException.class,
                 () -> new ConversationEntity(
@@ -161,7 +163,7 @@ class ConversationEntityTest {
                         null,
                         ConversationStatus.ACTIVE,
                         null,
-                        LocalDateTime.of(2026, Month.MAY, 4, 9, 30)
+                        createdAt
                 )
         );
 
@@ -359,16 +361,17 @@ class ConversationEntityTest {
 
     @Test
     void builderShouldRejectNullType() {
+        ConversationEntity.ConversationEntityBuilder entityBuilder = ConversationEntity.builder()
+                .id("conversation-5")
+                .userId("user-5")
+                .status(ConversationStatus.ACTIVE)
+                .type(null)
+                .createdAt(LocalDateTime.of(2026, Month.MAY, 6, 11, 45))
+                .lastSequenceNumber(null);
+
         NullPointerException exception = assertThrows(
                 NullPointerException.class,
-                () -> ConversationEntity.builder()
-                        .id("conversation-5")
-                        .userId("user-5")
-                        .status(ConversationStatus.ACTIVE)
-                        .type(null)
-                        .createdAt(LocalDateTime.of(2026, Month.MAY, 6, 11, 45))
-                        .lastSequenceNumber(null)
-                        .build()
+                entityBuilder::build
         );
 
         assertThat(exception.getMessage()).isEqualTo("type must not be null");

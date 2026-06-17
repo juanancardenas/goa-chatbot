@@ -120,10 +120,11 @@ class ConversationSequenceConcurrencyIT {
     void messageUniqueIndexShouldRejectDuplicatedConversationSequence() {
         String conversationId = UNIQUE_SEQUENCE_PREFIX + UUID.randomUUID();
         this.messageRepository.save(this.message("message-a-" + UUID.randomUUID(), conversationId, 1));
+        MessageEntity duplicatedMessage = this.message("message-b-" + UUID.randomUUID(), conversationId, 1);
 
         assertThrows(
                 DuplicateKeyException.class,
-                () -> this.messageRepository.save(this.message("message-b-" + UUID.randomUUID(), conversationId, 1))
+                () -> this.messageRepository.save(duplicatedMessage)
         );
     }
 

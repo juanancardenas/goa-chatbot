@@ -69,13 +69,12 @@ class EscalationConsistencyIT {
         String conversationId = ESCALATION_PREFIX + UUID.randomUUID();
         this.saveConversation(conversationId, ConversationStatus.ARCHIVED);
         this.escalationRepository.save(this.escalationEntity(conversationId));
+        Conversation conversation = this.conversation(conversationId);
+        Escalation escalation = this.escalation(conversationId);
 
         ConflictException exception = assertThrows(
                 ConflictException.class,
-                () -> this.escalationGateway.createAndArchiveConversation(
-                        this.conversation(conversationId),
-                        this.escalation(conversationId)
-                )
+                () -> this.escalationGateway.createAndArchiveConversation(conversation, escalation)
         );
 
         assertThat(exception).hasMessageContaining("La conversacion no esta activa");

@@ -2252,10 +2252,11 @@ class ChatbotServiceTest {
                 .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 11, 30))
                 .build();
         when(conversationPersistence.readById("conversation-closed")).thenReturn(existingConversation);
+        ChatbotMessageCommand command = new ChatbotMessageCommand("conversation-closed", "Hola");
 
         ConflictException exception = assertThrows(
                 ConflictException.class,
-                () -> chatbotService.sendMessage(this.authenticatedUser, new ChatbotMessageCommand("conversation-closed", "Hola"))
+                () -> chatbotService.sendMessage(this.authenticatedUser, command)
         );
 
         assertThat(exception).hasMessageContaining("La conversacion no esta activa");
