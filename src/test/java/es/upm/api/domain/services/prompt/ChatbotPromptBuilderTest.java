@@ -30,12 +30,13 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("Prompt personalizado");
-        assertThat(prompt).contains("[TIPO DE CONVERSACI");
-        assertThat(prompt).contains("general.");
-        assertThat(prompt).contains("apoyo conversacional");
-        assertThat(prompt).contains("No sustituyes a un abogado real");
-        assertThat(prompt).contains("Rol conversacional: PROFESSIONAL");
+        assertThat(prompt)
+                .contains("Prompt personalizado")
+                .contains("[TIPO DE CONVERSACI")
+                .contains("general.")
+                .contains("apoyo conversacional")
+                .contains("No sustituyes a un abogado real")
+                .contains("Rol conversacional: PROFESSIONAL");
     }
 
     @Test
@@ -51,14 +52,15 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("Prompt contextual");
-        assertThat(prompt).contains("contextual.");
-        assertThat(prompt).contains("Usa el contexto del encargo asociado");
-        assertThat(prompt).contains("No inventes tareas legales");
-        assertThat(prompt).contains("No respondas con datos de otros encargos");
-        assertThat(prompt).contains("Cierra cada respuesta con una pregunta breve de seguimiento");
-        assertThat(prompt).contains("EngagementLetterId: engagement-123");
-        assertThat(prompt).contains("Rol conversacional: CLIENT");
+        assertThat(prompt)
+                .contains("Prompt contextual")
+                .contains("contextual.")
+                .contains("Usa el contexto del encargo asociado")
+                .contains("No inventes tareas legales")
+                .contains("No respondas con datos de otros encargos")
+                .contains("Cierra cada respuesta con una pregunta breve de seguimiento")
+                .contains("EngagementLetterId: engagement-123")
+                .contains("Rol conversacional: CLIENT");
     }
 
     @Test
@@ -81,10 +83,11 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("Legal Tasks");
-        assertThat(prompt).contains("fuente principal");
-        assertThat(prompt).contains("Procedimiento de herencia: Estudio de antecedentes y documentacion.");
-        assertThat(prompt).contains("Procedimiento de herencia: Asesoramiento juridico.");
+        assertThat(prompt)
+                .contains("Legal Tasks")
+                .contains("fuente principal")
+                .contains("Procedimiento de herencia: Estudio de antecedentes y documentacion.")
+                .contains("Procedimiento de herencia: Asesoramiento juridico.");
     }
 
     @Test
@@ -99,9 +102,10 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("[RESTRICCI");
-        assertThat(prompt).contains("No proporciones asesoramiento legal vinculante");
-        assertThat(prompt).contains("No inventes informaci");
+        assertThat(prompt)
+                .contains("[RESTRICCI")
+                .contains("No proporciones asesoramiento legal vinculante")
+                .contains("No inventes informaci");
     }
 
     @Test
@@ -116,10 +120,11 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("El servicio documental no");
-        assertThat(prompt).contains("disponible actualmente");
-        assertThat(prompt).contains("No afirmes haber le");
-        assertThat(prompt).contains("No inventes contenido documental");
+        assertThat(prompt)
+                .contains("El servicio documental no")
+                .contains("disponible actualmente")
+                .contains("No afirmes haber le")
+                .contains("No inventes contenido documental");
     }
 
     @Test
@@ -134,10 +139,11 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("El servicio documental");
-        assertThat(prompt).contains("disponible");
-        assertThat(prompt).contains("Usa");
-        assertThat(prompt).contains("documentos autorizados");
+        assertThat(prompt)
+                .contains("El servicio documental")
+                .contains("disponible")
+                .contains("Usa")
+                .contains("documentos autorizados");
     }
 
     @Test
@@ -156,9 +162,10 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).doesNotContain("USER: primer mensaje");
-        assertThat(prompt).contains("ASSISTANT: primera respuesta");
-        assertThat(prompt).contains("USER: ultimo mensaje");
+        assertThat(prompt)
+                .doesNotContain("USER: primer mensaje")
+                .contains("ASSISTANT: primera respuesta")
+                .contains("USER: ultimo mensaje");
     }
 
     @Test
@@ -173,9 +180,10 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("[CONTEXTO DE PLATAFORMA]");
-        assertThat(prompt).contains("No disponible");
-        assertThat(prompt).contains("no inventes datos de plataforma");
+        assertThat(prompt)
+                .contains("[CONTEXTO DE PLATAFORMA]")
+                .contains("No disponible")
+                .contains("no inventes datos de plataforma");
     }
 
     @Test
@@ -191,14 +199,15 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("Prompt base de pruebas para GOA.");
-        assertThat(prompt).contains("[TIPO DE CONVERSACI");
-        assertThat(prompt).contains("general.");
-        assertThat(prompt).contains("Rol conversacional: No disponible");
-        assertThat(prompt).contains("El servicio documental no");
-        assertThat(prompt).contains("disponible actualmente");
-        assertThat(prompt).contains("[HISTORIAL RECIENTE]");
-        assertThat(prompt).contains("No hay mensajes recientes disponibles");
+        assertThat(prompt)
+                .contains("Prompt base de pruebas para GOA.")
+                .contains("[TIPO DE CONVERSACI")
+                .contains("general.")
+                .contains("Rol conversacional: No disponible")
+                .contains("El servicio documental no")
+                .contains("disponible actualmente")
+                .contains("[HISTORIAL RECIENTE]")
+                .contains("No hay mensajes recientes disponibles");
     }
 
     @Test
@@ -214,9 +223,10 @@ class ChatbotPromptBuilderTest {
 
         String prompt = this.chatbotPromptBuilder.buildSystemPrompt(request);
 
-        assertThat(prompt).contains("[TIPO DE CONVERSACI");
-        assertThat(prompt).contains("general.");
-        assertThat(prompt).doesNotContain("contextual.");
+        assertThat(prompt)
+                .contains("[TIPO DE CONVERSACI")
+                .contains("general.")
+                .doesNotContain("contextual.");
     }
 
     @Test
@@ -240,9 +250,7 @@ class ChatbotPromptBuilderTest {
                 .contains("No uses identificadores personales o financieros del historial")
                 .contains("un IBAN del historial no debe usarse como DNI/NIE")
                 .contains("un DNI/NIE del historial no debe usarse como IBAN")
-                .contains("Si el historial contiene un IBAN y la pregunta actual habla de un DNI/NIE");
-
-        assertThat(prompt)
+                .contains("Si el historial contiene un IBAN y la pregunta actual habla de un DNI/NIE")
                 .contains("Mi IBAN es ES91 2100 0418 4502 0005 1332")
                 .contains("Mi DNI es 12345678Z");
     }

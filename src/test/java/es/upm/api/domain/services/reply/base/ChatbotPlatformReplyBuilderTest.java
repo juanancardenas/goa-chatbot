@@ -48,9 +48,10 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.LEGAL_TASKS
         );
 
-        assertThat(reply).contains("Tareas");
-        assertThat(reply).contains("Estudio de antecedentes");
-        assertThat(reply).contains("Asesoramiento juridico");
+        assertThat(reply)
+                .contains("Tareas")
+                .contains("Estudio de antecedentes")
+                .contains("Asesoramiento juridico");
     }
 
     @Test
@@ -114,9 +115,10 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.TIMELINE_EVENTS
         );
 
-        assertThat(reply).contains("Demanda admitida");
-        assertThat(reply).contains("Vista senalada");
-        assertThat(reply).contains("Procedimiento ordinario");
+        assertThat(reply)
+                .contains("Demanda admitida")
+                .contains("Vista senalada")
+                .contains("Procedimiento ordinario");
     }
 
     @Test
@@ -133,8 +135,9 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.TIMELINE_EVENTS
         );
 
-        assertThat(reply).contains("Providencia recibida");
-        assertThat(reply).contains("Juicio verbal");
+        assertThat(reply)
+                .contains("Providencia recibida")
+                .contains("Juicio verbal");
     }
 
     @Test
@@ -166,9 +169,10 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.ENGAGEMENT_STATUS
         );
 
-        assertThat(reply).contains("EL-STATUS");
-        assertThat(reply).contains("Laura");
-        assertThat(reply).contains("Recurso administrativo");
+        assertThat(reply)
+                .contains("EL-STATUS")
+                .contains("Laura")
+                .contains("Recurso administrativo");
     }
 
     @Test
@@ -191,11 +195,12 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.DOCUMENTS
         );
 
-        assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
-        assertThat(reply).contains("Reclamacion civil");
-        assertThat(reply).contains("Documentos visibles preparados");
-        assertThat(reply).contains("Contrato");
-        assertThat(reply).contains("Poder");
+        assertThat(reply)
+                .contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY)
+                .contains("Reclamacion civil")
+                .contains("Documentos visibles preparados")
+                .contains("Contrato")
+                .contains("Poder");
     }
 
     @Test
@@ -252,8 +257,9 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.DOCUMENTS
         );
 
-        assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
-        assertThat(reply).contains("Apelacion");
+        assertThat(reply)
+                .contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY)
+                .contains("Apelacion");
     }
 
     @Test
@@ -273,10 +279,11 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.GENERAL_CONTEXT
         );
 
-        assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
-        assertThat(reply).contains("EL-555");
-        assertThat(reply).contains("Escrito presentado");
-        assertThat(reply).contains("Revisar documentacion");
+        assertThat(reply)
+                .contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY)
+                .contains("EL-555")
+                .contains("Escrito presentado")
+                .contains("Revisar documentacion");
     }
 
     @Test
@@ -295,10 +302,11 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.GENERAL_CONTEXT
         );
 
-        assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
-        assertThat(reply).contains("EL-GENERAL");
-        assertThat(reply).contains("Carlos");
-        assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY);
+        assertThat(reply)
+                .contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY)
+                .contains("EL-GENERAL")
+                .contains("Carlos")
+                .contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_NO_EVENTS_REPLY);
     }
 
     @Test
@@ -317,8 +325,9 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.GENERAL_CONTEXT
         );
 
-        assertThat(reply).contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
-        assertThat(reply).contains("Resolucion notificada");
+        assertThat(reply)
+                .contains(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_GENERAL_SUMMARY_REPLY)
+                .contains("Resolucion notificada");
     }
 
     @Test
@@ -335,8 +344,9 @@ class ChatbotPlatformReplyBuilderTest {
                 PlatformQuestionType.GENERAL_CONTEXT
         );
 
-        assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY);
-        assertThat(reply).contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY);
+        assertThat(reply)
+                .contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_GENERAL_SUMMARY_REPLY)
+                .contains(ChatbotResponseMessages.CLIENT_CONTEXTUAL_NO_EVENTS_REPLY);
     }
 
     private Conversation conversation(String id) {
