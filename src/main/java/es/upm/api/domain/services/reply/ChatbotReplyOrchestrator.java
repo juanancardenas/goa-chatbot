@@ -23,7 +23,10 @@ import java.util.regex.Pattern;
 @Service
 public class ChatbotReplyOrchestrator {
 
-    private static final Pattern ENGAGEMENT_ID_PATTERN = Pattern.compile("\\bEL-\\d+\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ENGAGEMENT_ID_PATTERN = Pattern.compile(
+            "\\b(?:EL-\\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\b",
+            Pattern.CASE_INSENSITIVE
+    );
 
     private final ChatbotBaseReplyBuilder chatbotBaseReplyBuilder;
     private final ChatbotAiReplyService chatbotAiReplyService;

@@ -120,6 +120,28 @@ class ChatbotReplyOrchestratorTest {
     }
 
     @Test
+    void resolveReplyShouldRestrictContextualConversationWhenMessageReferencesAnotherUuidEngagement() {
+        String activeEngagementId = "00000000-0000-4000-8000-000000000001";
+        String otherEngagementId = "00000000-0000-4000-8000-000000000002";
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                this.contextualConversation(activeEngagementId),
+                ConversationProfileType.CLIENT,
+                "Compara este encargo con el encargo " + otherEngagementId
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo(ChatbotResponseMessages.OUT_OF_CASE_SCOPE_REPLY);
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.CONTEXTUAL_RESTRICTED);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        assertThat(decision.isUsedAi()).isFalse( );
+        assertThat(decision.getSourcesSummary()).isEmpty();
+
+        verify(this.chatbotScopePolicy, never()).evaluate(any(), any());
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+        verify(this.chatbotAiReplyService, never()).generateConfiguredAssistantReply(any(), any(), any(), any(), any());
+    }
+
+    @Test
     void resolveReplyShouldRestrictReferencedEngagementWhenActiveEngagementIdIsBlank() {
         ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
                 this.contextualConversation(" "),

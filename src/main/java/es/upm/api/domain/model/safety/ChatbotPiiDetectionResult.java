@@ -11,6 +11,7 @@ public class ChatbotPiiDetectionResult {
     private final boolean containsEmail;
     private final boolean containsPhone;
     private final boolean containsDniNie;
+    private final boolean containsPassport;
     private final boolean containsCard;
     private final boolean containsIban;
     private final Set<ChatbotModerationReason> reasons;
@@ -19,12 +20,14 @@ public class ChatbotPiiDetectionResult {
             boolean containsEmail,
             boolean containsPhone,
             boolean containsDniNie,
+            boolean containsPassport,
             boolean containsCard,
             boolean containsIban
     ) {
         this.containsEmail = containsEmail;
         this.containsPhone = containsPhone;
         this.containsDniNie = containsDniNie;
+        this.containsPassport = containsPassport;
         this.containsCard = containsCard;
         this.containsIban = containsIban;
         this.reasons = this.buildReasons();
@@ -32,6 +35,7 @@ public class ChatbotPiiDetectionResult {
 
     public static ChatbotPiiDetectionResult empty() {
         return new ChatbotPiiDetectionResult(
+                false,
                 false,
                 false,
                 false,
@@ -44,6 +48,7 @@ public class ChatbotPiiDetectionResult {
             boolean containsEmail,
             boolean containsPhone,
             boolean containsDniNie,
+            boolean containsPassport,
             boolean containsCard,
             boolean containsIban
     ) {
@@ -51,6 +56,7 @@ public class ChatbotPiiDetectionResult {
                 containsEmail,
                 containsPhone,
                 containsDniNie,
+                containsPassport,
                 containsCard,
                 containsIban
         );
@@ -60,6 +66,7 @@ public class ChatbotPiiDetectionResult {
         return this.containsEmail
                 || this.containsPhone
                 || this.containsDniNie
+                || this.containsPassport
                 || this.containsCard
                 || this.containsIban;
     }
@@ -79,6 +86,9 @@ public class ChatbotPiiDetectionResult {
         }
         if (this.containsDniNie) {
             detectedReasons.add(ChatbotModerationReason.PII_DNI_NIE);
+        }
+        if (this.containsPassport) {
+            detectedReasons.add(ChatbotModerationReason.PII_PASSPORT);
         }
         if (this.containsCard) {
             detectedReasons.add(ChatbotModerationReason.PII_CARD);

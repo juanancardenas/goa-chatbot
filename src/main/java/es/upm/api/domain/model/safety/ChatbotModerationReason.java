@@ -5,6 +5,7 @@ public enum ChatbotModerationReason {
     PII_EMAIL,
     PII_PHONE,
     PII_DNI_NIE,
+    PII_PASSPORT,
     PII_CARD,
     PII_IBAN,
     UNSAFE_REQUEST,
