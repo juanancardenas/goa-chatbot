@@ -27,7 +27,7 @@ jobs:
           echo "REPOSITORY=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
           echo "ARTIFACT=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV          
           echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
-#         echo "AWS_ECR_URL=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION_RUNNER }}.amazonaws.com" >> $GITHUB_ENV
+          echo "AWS_ECR_URL=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION_RUNNER }}.amazonaws.com" >> $GITHUB_ENV
 
       - name: 📦 Login to GitHub Container Registry
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
