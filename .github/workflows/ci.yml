@@ -50,4 +50,4 @@ jobs:
           -Dsonar.projectKey=${{ env.ORGANIZATION }}_${{ env.ARTIFACT }}
           -Dsonar.organization=${{ env.ORGANIZATION }}
           -Dsonar.host.url=https://sonarcloud.io 
-          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+#         -Dsonar.token=${{ secrets.SONAR_TOKEN }}
