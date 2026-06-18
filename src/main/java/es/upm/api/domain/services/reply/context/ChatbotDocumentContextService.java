@@ -8,6 +8,7 @@ import java.util.List;
 
 @Service
 public class ChatbotDocumentContextService {
+    @SuppressWarnings("UnusedParameters")
     public ChatbotDocumentContext loadDocumentContext(Conversation conversation) {
         return ChatbotDocumentContext.builder()
                 .available(false)
