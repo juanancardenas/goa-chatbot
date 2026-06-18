@@ -11,6 +11,7 @@ import es.upm.api.adapter.out.webclient.user.UserFeignMapper;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class EngagementFeignMapper {
@@ -51,13 +52,8 @@ public class EngagementFeignMapper {
         }
 
         return legalProcedures.stream()
-                .filter(procedure -> procedure != null)
-                .map(procedure -> new LegalProcedureSummary(
-                        procedure.getTitle(),
-                        procedure.getStartDate(),
-                        procedure.getClosingDate(),
-                        procedure.getLegalTasks() != null ? procedure.getLegalTasks() : List.of()
-                ))
+                .filter(Objects::nonNull)
+                .map(EngagementFeignMapper::toLegalProcedureSummary)
                 .toList();
     }
 
@@ -67,14 +63,29 @@ public class EngagementFeignMapper {
         }
 
         return events.stream()
-                .filter(event -> event != null)
-                .map(event -> new EngagementEventSummary(
-                        event.getType(),
-                        event.getState(),
-                        event.getTitle(),
-                        event.getComment(),
-                        event.getDate()
-                ))
+                .filter(Objects::nonNull)
+                .map(EngagementFeignMapper::toEventSummary)
                 .toList();
+    }
+
+    private static LegalProcedureSummary toLegalProcedureSummary(
+            EngagementLetterResponseDto.LegalProcedureResponseDto procedure
+    ) {
+        return new LegalProcedureSummary(
+                procedure.getTitle(),
+                procedure.getStartDate(),
+                procedure.getClosingDate(),
+                procedure.getLegalTasks() != null ? procedure.getLegalTasks() : List.of()
+        );
+    }
+
+    private static EngagementEventSummary toEventSummary(EngagementEventResponseDto event) {
+        return new EngagementEventSummary(
+                event.getType(),
+                event.getState(),
+                event.getTitle(),
+                event.getComment(),
+                event.getDate()
+        );
     }
 }
