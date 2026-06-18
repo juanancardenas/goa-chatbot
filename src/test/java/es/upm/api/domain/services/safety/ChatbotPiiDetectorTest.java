@@ -109,6 +109,20 @@ class ChatbotPiiDetectorTest {
         assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_CARD);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Mi pasaporte es PA1234567",
+            "Mi pasaporte número A12345678",
+            "My passport number is AB1234567"
+    })
+    void detectShouldFindPassport(String message) {
+        ChatbotPiiDetectionResult result = this.detector.detect(message);
+
+        assertThat(result.containsPii()).isTrue();
+        assertThat(result.isContainsPassport()).isTrue();
+        assertThat(result.getReasons()).contains(ChatbotModerationReason.PII_PASSPORT);
+    }
+
     @Test
     void detectShouldNotFindShortCardNumber() {
         ChatbotPiiDetectionResult result = this.detector.detect("El número es 1234");

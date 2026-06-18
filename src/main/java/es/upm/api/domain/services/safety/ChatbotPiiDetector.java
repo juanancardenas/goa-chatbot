@@ -18,6 +18,11 @@ public class ChatbotPiiDetector {
             Pattern.CASE_INSENSITIVE
     );
 
+    private static final Pattern PASSPORT_PATTERN = Pattern.compile(
+            "\\b(?:pasaporte|passport)\\s*(?:(?:n[úu]m(?:ero)?\\.?|number|nº|no\\.?)\\s*)?(?:es|is|:)?\\s*[A-Z]{1,2}[0-9]{6,9}\\b",
+            Pattern.CASE_INSENSITIVE
+    );
+
     private static final Pattern CARD_PATTERN = Pattern.compile(
             "(?<!\\d)(?:\\d[\\s-]*?){13,19}(?!\\d)"
     );
@@ -39,6 +44,7 @@ public class ChatbotPiiDetector {
                 this.containsEmail(message),
                 this.containsPhone(message),
                 this.containsDniNie(message),
+                this.containsPassport(message),
                 this.containsCard(messageWithoutIban),
                 containsIban
         );
@@ -54,6 +60,10 @@ public class ChatbotPiiDetector {
 
     private boolean containsDniNie(String message) {
         return DNI_NIE_PATTERN.matcher(message).find();
+    }
+
+    private boolean containsPassport(String message) {
+        return PASSPORT_PATTERN.matcher(message).find();
     }
 
     private boolean containsCard(String message) {

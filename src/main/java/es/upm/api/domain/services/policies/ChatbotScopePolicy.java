@@ -8,9 +8,15 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 @Service
 public class ChatbotScopePolicy {
+
+    private static final Pattern ENGAGEMENT_REFERENCE_PATTERN = Pattern.compile(
+            "\\b(?:EL-\\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\b",
+            Pattern.CASE_INSENSITIVE
+    );
 
     private static final List<String> LEGAL_BINDING_PATTERNS = List.of(
             "legal vinculante",
@@ -48,7 +54,27 @@ public class ChatbotScopePolicy {
             "qué pasó en mi caso",
             "que paso en mi caso",
             "próximos pasos de mi caso",
-            "proximos pasos de mi caso"
+            "proximos pasos de mi caso",
+            "información del encargo",
+            "informacion del encargo",
+            "datos del encargo",
+            "detalle del encargo",
+            "detalles del encargo",
+            "mis encargos",
+            "mis casos",
+            "mis expedientes",
+            "qué encargos tengo",
+            "que encargos tengo",
+            "encargos tengo",
+            "encargos abiertos",
+            "encargos relacionados",
+            "encargos pendientes",
+            "encargos cerrados",
+            "lista mis encargos",
+            "listar mis encargos",
+            "ver mis encargos",
+            "compara mis encargos",
+            "comparar mis encargos"
     );
 
     private static final List<String> EMOTIONAL_DISTRESS_PATTERNS = List.of(
@@ -80,7 +106,19 @@ public class ChatbotScopePolicy {
             "mi otro encargo",
             "otro expediente",
             "además de este caso",
-            "ademas de este caso"
+            "ademas de este caso",
+            "comparar con otro encargo",
+            "compara con otro encargo",
+            "comparar este encargo con otro",
+            "compara este encargo con otro",
+            "comparar este encargo con el encargo",
+            "compara este encargo con el encargo",
+            "compararlo con otro encargo",
+            "compararlo con otro caso",
+            "consultar otro encargo",
+            "consulta otro encargo",
+            "ver otro encargo",
+            "revisar otro encargo"
     );
 
     private static final List<String> OUT_OF_DOMAIN_PATTERNS = List.of(
@@ -138,7 +176,8 @@ public class ChatbotScopePolicy {
         }
 
         if (ConversationType.GENERAL == conversation.getType()
-                && this.containsAny(normalizedMessage, CONTEXT_REQUIRED_PATTERNS)) {
+                && (this.containsAny(normalizedMessage, CONTEXT_REQUIRED_PATTERNS)
+                || this.referencesSpecificEngagement(normalizedMessage))) {
             return ChatbotScopeDecision.reject(
                     ChatbotScopeViolationReason.MISSING_CASE_CONTEXT,
                     ChatbotResponseMessages.MISSING_CASE_CONTEXT_REPLY,
@@ -206,6 +245,10 @@ public class ChatbotScopePolicy {
 
     private boolean containsAny(String normalizedMessage, List<String> patterns) {
         return patterns.stream().anyMatch(normalizedMessage::contains);
+    }
+
+    private boolean referencesSpecificEngagement(String normalizedMessage) {
+        return ENGAGEMENT_REFERENCE_PATTERN.matcher(normalizedMessage).find();
     }
 
     private String normalize(String message) {

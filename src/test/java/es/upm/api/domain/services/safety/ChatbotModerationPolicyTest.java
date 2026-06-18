@@ -20,6 +20,7 @@ class ChatbotModerationPolicyTest {
         assertThat(decision.getSafeReply()).isNull();
         assertThat(decision.isContainsPii()).isFalse();
         assertThat(decision.isAllowed()).isTrue();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isFalse();
     }
 
@@ -29,14 +30,18 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.ALLOW);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.NONE);
+        assertThat(decision.getSafeReply()).isNull();
         assertThat(decision.isContainsPii()).isFalse();
         assertThat(decision.isAllowed()).isTrue();
+        assertThat(decision.isWarning()).isFalse();
+        assertThat(decision.isBlocked()).isFalse();
     }
 
     @Test
     void evaluateShouldWarnWhenEmailIsDetected() {
         ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
                 true,
+                false,
                 false,
                 false,
                 false,
@@ -49,6 +54,7 @@ class ChatbotModerationPolicyTest {
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_EMAIL);
         assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.isWarning()).isTrue();
         assertThat(decision.isBlocked()).isFalse();
     }
@@ -60,6 +66,7 @@ class ChatbotModerationPolicyTest {
                 true,
                 false,
                 false,
+                false,
                 false
         );
 
@@ -69,12 +76,15 @@ class ChatbotModerationPolicyTest {
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_PHONE);
         assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.isWarning()).isTrue();
+        assertThat(decision.isBlocked()).isFalse();
     }
 
     @Test
-    void evaluateShouldWarnWhenDniNieIsDetected() {
+    void evaluateShouldWarnWhenPassportIsDetected() {
         ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
+                false,
                 false,
                 false,
                 true,
@@ -85,15 +95,40 @@ class ChatbotModerationPolicyTest {
         ChatbotModerationDecision decision = this.policy.evaluate(piiDetectionResult);
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.WARN);
+        assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_PASSPORT);
+        assertThat(decision.getSafeReply()).isNotBlank();
+        assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isTrue();
+        assertThat(decision.isBlocked()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldWarnWhenDniNieIsDetected() {
+        ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
+                false,
+                false,
+                true,
+                false,
+                false,
+                false
+        );
+
+        ChatbotModerationDecision decision = this.policy.evaluate(piiDetectionResult);
+
+        assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.WARN);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_DNI_NIE);
         assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.isWarning()).isTrue();
+        assertThat(decision.isBlocked()).isFalse();
     }
 
     @Test
     void evaluateShouldWarnWhenIbanIsDetected() {
         ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
+                false,
                 false,
                 false,
                 false,
@@ -107,6 +142,7 @@ class ChatbotModerationPolicyTest {
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_IBAN);
         assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.isWarning()).isTrue();
         assertThat(decision.isBlocked()).isFalse();
     }
@@ -114,6 +150,7 @@ class ChatbotModerationPolicyTest {
     @Test
     void evaluateShouldBlockWhenCardIsDetected() {
         ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
+                false,
                 false,
                 false,
                 false,
@@ -127,6 +164,8 @@ class ChatbotModerationPolicyTest {
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_CARD);
         assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isTrue();
     }
 
@@ -142,6 +181,8 @@ class ChatbotModerationPolicyTest {
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.UNSAFE_REQUEST);
         assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isFalse();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isTrue();
     }
 
@@ -153,6 +194,7 @@ class ChatbotModerationPolicyTest {
                         false,
                         false,
                         false,
+                        false,
                         false
                 ),
                 true,
@@ -161,7 +203,10 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.UNSAFE_REQUEST);
+        assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isTrue();
     }
 
@@ -177,6 +222,8 @@ class ChatbotModerationPolicyTest {
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.OUT_OF_POLICY);
         assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isFalse();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isTrue();
     }
 
@@ -188,6 +235,7 @@ class ChatbotModerationPolicyTest {
                         true,
                         false,
                         false,
+                        false,
                         false
                 ),
                 false,
@@ -196,7 +244,10 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.OUT_OF_POLICY);
+        assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isTrue();
     }
 
@@ -204,6 +255,7 @@ class ChatbotModerationPolicyTest {
     void evaluateShouldApplyMostRestrictiveRuleWhenEmailAndCardAreDetected() {
         ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
                 true,
+                false,
                 false,
                 false,
                 true,
@@ -214,13 +266,17 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_CARD);
+        assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isTrue();
     }
 
     @Test
     void evaluateShouldPrioritizeCardOverUnsafeRequest() {
         ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
+                false,
                 false,
                 false,
                 false,
@@ -236,7 +292,10 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_CARD);
+        assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isTrue();
     }
 
@@ -250,12 +309,17 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.UNSAFE_REQUEST);
+        assertThat(decision.getSafeReply()).isNotBlank();
+        assertThat(decision.isContainsPii()).isFalse();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
         assertThat(decision.isBlocked()).isTrue();
     }
 
     @Test
-    void evaluateShouldPrioritizeIbanOverDniNiePhoneAndEmailForWarnings() {
+    void evaluateShouldPrioritizeIbanOverPassportDniNiePhoneAndEmailForWarnings() {
         ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
+                true,
                 true,
                 true,
                 true,
@@ -267,8 +331,33 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.WARN);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_IBAN);
+        assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.isWarning()).isTrue();
+        assertThat(decision.isBlocked()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldPrioritizePassportOverDniNiePhoneAndEmailForWarnings() {
+        ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+        );
+
+        ChatbotModerationDecision decision = this.policy.evaluate(piiDetectionResult);
+
+        assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.WARN);
+        assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_PASSPORT);
+        assertThat(decision.getSafeReply()).isNotBlank();
+        assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isTrue();
+        assertThat(decision.isBlocked()).isFalse();
     }
 
     @Test
@@ -278,6 +367,7 @@ class ChatbotModerationPolicyTest {
                 true,
                 true,
                 false,
+                false,
                 false
         );
 
@@ -285,8 +375,11 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.WARN);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_DNI_NIE);
+        assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.isWarning()).isTrue();
+        assertThat(decision.isBlocked()).isFalse();
     }
 
     @Test
@@ -296,6 +389,7 @@ class ChatbotModerationPolicyTest {
                 true,
                 false,
                 false,
+                false,
                 false
         );
 
@@ -303,15 +397,19 @@ class ChatbotModerationPolicyTest {
 
         assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.WARN);
         assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_PHONE);
+        assertThat(decision.getSafeReply()).isNotBlank();
         assertThat(decision.isContainsPii()).isTrue();
+        assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.isWarning()).isTrue();
+        assertThat(decision.isBlocked()).isFalse();
     }
 
     @Test
     void evaluateShouldNotExposePiiValuesInSafeReply() {
-        String sensitiveValue = "4111 1111 1111 1111";
+        String sensitiveValue = "test-card-0000-0000-0000-0000";
 
         ChatbotPiiDetectionResult piiDetectionResult = ChatbotPiiDetectionResult.of(
+                false,
                 false,
                 false,
                 false,
@@ -322,9 +420,10 @@ class ChatbotModerationPolicyTest {
         ChatbotModerationDecision decision = this.policy.evaluate(piiDetectionResult);
 
         assertThat(decision.getSafeReply()).doesNotContain(sensitiveValue);
-        assertThat(decision.getSafeReply()).doesNotContain("usuario@example.com");
-        assertThat(decision.getSafeReply()).doesNotContain("612345678");
-        assertThat(decision.getSafeReply()).doesNotContain("12345678Z");
-        assertThat(decision.getSafeReply()).doesNotContain("ES9121000418450200051332");
+        assertThat(decision.getSafeReply()).doesNotContain("fake-user@example.test");
+        assertThat(decision.getSafeReply()).doesNotContain("test-phone-000000000");
+        assertThat(decision.getSafeReply()).doesNotContain("test-dni-00000000T");
+        assertThat(decision.getSafeReply()).doesNotContain("test-passport-AA0000000");
+        assertThat(decision.getSafeReply()).doesNotContain("test-iban-ES0000000000000000000000");
     }
 }
