@@ -143,6 +143,18 @@ class ChatbotScopePolicyTest {
     }
 
     @Test
+    void evaluateShouldRejectEngagementListRequestInGeneralConversation() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                "¿Qué encargos tengo abiertos?"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
+        assertThat(decision.getSafeMessage()).contains("Hojas de Encargo");
+    }
+
+    @Test
     void evaluateShouldRejectOutOfDomainMessageInGeneralConversation() {
         ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
                 this.conversation("GENERAL"),
@@ -152,6 +164,19 @@ class ChatbotScopePolicyTest {
         assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.OUT_OF_DOMAIN);
         assertThat(decision.getSafeMessage()).contains("consultas sobre GOA");
+        assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldRejectSpecificEngagementUuidInGeneralConversation() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                "Dame información del encargo 00000000-0000-4000-8000-000000000055"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
+        assertThat(decision.getSafeMessage()).contains("no está asociada a un encargo específico");
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 

@@ -21,6 +21,10 @@ public class ChatbotModerationPolicy {
             "He detectado que tu mensaje puede contener datos bancarios. "
                     + "Evita compartir información financiera sensible si no es estrictamente necesario.";
 
+    private static final String PASSPORT_WARNING_REPLY =
+            "He detectado que tu mensaje puede contener un pasaporte. "
+                    + "Evita compartir documentos personales si no es estrictamente necesario.";
+
     private static final String CARD_BLOCKED_REPLY =
             "No puedo procesar mensajes que contengan datos bancarios sensibles. "
                     + "Por favor, elimina esa información y vuelve a intentarlo.";
@@ -73,6 +77,14 @@ public class ChatbotModerationPolicy {
             );
         }
 
+        if (this.containsPassport(piiDetectionResult)) {
+            return ChatbotModerationDecision.warn(
+                    ChatbotModerationReason.PII_PASSPORT,
+                    PASSPORT_WARNING_REPLY,
+                    true
+            );
+        }
+
         if (this.containsDniNie(piiDetectionResult)) {
             return ChatbotModerationDecision.warn(
                     ChatbotModerationReason.PII_DNI_NIE,
@@ -114,6 +126,10 @@ public class ChatbotModerationPolicy {
 
     private boolean containsDniNie(ChatbotPiiDetectionResult piiDetectionResult) {
         return piiDetectionResult != null && piiDetectionResult.isContainsDniNie();
+    }
+
+    private boolean containsPassport(ChatbotPiiDetectionResult piiDetectionResult) {
+        return piiDetectionResult != null && piiDetectionResult.isContainsPassport();
     }
 
     private boolean containsCard(ChatbotPiiDetectionResult piiDetectionResult) {

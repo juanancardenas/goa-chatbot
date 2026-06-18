@@ -13,6 +13,7 @@ class ChatbotPiiDetectionResultTest {
         assertThat(result.isContainsEmail()).isFalse();
         assertThat(result.isContainsPhone()).isFalse();
         assertThat(result.isContainsDniNie()).isFalse();
+        assertThat(result.isContainsPassport()).isFalse();
         assertThat(result.isContainsCard()).isFalse();
         assertThat(result.isContainsIban()).isFalse();
         assertThat(result.getReasons()).isEmpty();
@@ -22,6 +23,7 @@ class ChatbotPiiDetectionResultTest {
     void ofShouldCreateResultWithEmailReason() {
         ChatbotPiiDetectionResult result = ChatbotPiiDetectionResult.of(
                 true,
+                false,
                 false,
                 false,
                 false,
@@ -39,6 +41,7 @@ class ChatbotPiiDetectionResultTest {
                 true,
                 false,
                 false,
+                false,
                 false
         );
 
@@ -53,6 +56,7 @@ class ChatbotPiiDetectionResultTest {
                 false,
                 true,
                 false,
+                false,
                 false
         );
 
@@ -61,8 +65,24 @@ class ChatbotPiiDetectionResultTest {
     }
 
     @Test
+    void ofShouldCreateResultWithPassportReason() {
+        ChatbotPiiDetectionResult result = ChatbotPiiDetectionResult.of(
+                false,
+                false,
+                false,
+                true,
+                false,
+                false
+        );
+
+        assertThat(result.containsPii()).isTrue();
+        assertThat(result.getReasons()).containsExactly(ChatbotModerationReason.PII_PASSPORT);
+    }
+
+    @Test
     void ofShouldCreateResultWithCardReason() {
         ChatbotPiiDetectionResult result = ChatbotPiiDetectionResult.of(
+                false,
                 false,
                 false,
                 false,
@@ -81,6 +101,7 @@ class ChatbotPiiDetectionResultTest {
                 false,
                 false,
                 false,
+                false,
                 true
         );
 
@@ -95,6 +116,7 @@ class ChatbotPiiDetectionResultTest {
                 true,
                 true,
                 true,
+                true,
                 true
         );
 
@@ -103,6 +125,7 @@ class ChatbotPiiDetectionResultTest {
                 ChatbotModerationReason.PII_EMAIL,
                 ChatbotModerationReason.PII_PHONE,
                 ChatbotModerationReason.PII_DNI_NIE,
+                ChatbotModerationReason.PII_PASSPORT,
                 ChatbotModerationReason.PII_CARD,
                 ChatbotModerationReason.PII_IBAN
         );
@@ -112,6 +135,7 @@ class ChatbotPiiDetectionResultTest {
     void reasonsShouldBeImmutable() {
         ChatbotPiiDetectionResult result = ChatbotPiiDetectionResult.of(
                 true,
+                false,
                 false,
                 false,
                 false,
