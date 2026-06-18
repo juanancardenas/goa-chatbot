@@ -19,8 +19,8 @@ public class ChatbotPiiDetector {
     );
 
     private static final Pattern PASSPORT_PATTERN = Pattern.compile(
-            "\\b(?:pasaporte|passport)\\s*(?:(?:n[úu]m(?:ero)?\\.?|number|nº|no\\.?)\\s*)?(?:es|is|:)?\\s*[A-Z]{1,2}[0-9]{6,9}\\b",
-            Pattern.CASE_INSENSITIVE
+            "\\b(?:pasaporte|passport)\\b[^\\r\\n]{0,30}\\b[A-Z]{1,2}\\d{6,9}\\b",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
 
     private static final Pattern CARD_PATTERN = Pattern.compile(

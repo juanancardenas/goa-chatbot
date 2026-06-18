@@ -124,6 +124,14 @@ class ChatbotPiiDetectorTest {
     }
 
     @Test
+    void detectShouldNotFindPassportWithoutPassportContext() {
+        ChatbotPiiDetectionResult result = this.detector.detect("El código de referencia es AB1234567");
+
+        assertThat(result.containsPii()).isFalse();
+        assertThat(result.isContainsPassport()).isFalse();
+    }
+
+    @Test
     void detectShouldNotFindShortCardNumber() {
         ChatbotPiiDetectionResult result = this.detector.detect("El número es 1234");
 
