@@ -301,5 +301,10 @@ class ChatbotPromptBuilderTest {
         public double temperature() {
             return 0.2;
         }
+
+        @Override
+        public int timeoutSeconds() {
+            return 5;
+        }
     }
 }

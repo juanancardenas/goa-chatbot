@@ -40,7 +40,7 @@ chatbot:
     max-input-characters: 1000
     max-output-tokens: 500
     max-context-messages: 10
-    timeout-seconds: 20
+    timeout-seconds: 70
     documents-available: false
     base-prompt: >
       Eres un asistente conversacional integrado en GOA, una plataforma de gestión jurídica.

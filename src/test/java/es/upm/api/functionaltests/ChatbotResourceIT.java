@@ -775,7 +775,7 @@ class ChatbotResourceIT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody())
                 .isNotNull()
-                .returns(ChatbotTestMessages.CLIENT_GENERAL_START_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(ChatbotTestMessages.AI_FALLBACK_REPLY, ChatbotMessageResponseDto::getMessage)
                 .returns(null, ChatbotMessageResponseDto::getError)
                 .satisfies(body -> {
                     assertThat(body.getConversationId()).isNotBlank();
@@ -807,7 +807,7 @@ class ChatbotResourceIT {
         assertThat(secondMessage)
                 .returns(MessageSenderType.ASSISTANT, MessageEntity::getSenderType)
                 .returns(MessageType.RESPONSE, MessageEntity::getMessageType)
-                .returns(ChatbotTestMessages.CLIENT_GENERAL_START_REPLY, MessageEntity::getContent)
+                .returns(ChatbotTestMessages.AI_FALLBACK_REPLY, MessageEntity::getContent)
                 .returns(2, MessageEntity::getSequenceNumber)
                 .returns(firstMessage.getId(), MessageEntity::getParentMessageId)
                 .satisfies(message -> assertThat(message.getTimestamp()).isNotNull());
@@ -830,7 +830,7 @@ class ChatbotResourceIT {
         assertThat(response.getStatusCode()).isEqualTo(OK);
         assertThat(response.getBody())
                 .isNotNull()
-                .returns(ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(ChatbotTestMessages.AI_FALLBACK_REPLY, ChatbotMessageResponseDto::getMessage)
                 .returns(null, ChatbotMessageResponseDto::getError)
                 .satisfies(body -> {
                     assertThat(body.getConversationId()).isNotBlank();
@@ -852,7 +852,7 @@ class ChatbotResourceIT {
                 .extracting(MessageEntity::getContent)
                 .containsExactly(
                         "Necesito soporte operativo",
-                        ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY
+                        ChatbotTestMessages.AI_FALLBACK_REPLY
                 );
     }
 
@@ -924,7 +924,7 @@ class ChatbotResourceIT {
         assertThat(response.getBody())
                 .isNotNull()
                 .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
-                .returns(ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(ChatbotTestMessages.AI_FALLBACK_REPLY, ChatbotMessageResponseDto::getMessage)
                 .returns(null, ChatbotMessageResponseDto::getError)
                 .satisfies(body -> assertThat(body.getCreatedAt()).isNotBlank());
 
@@ -939,9 +939,9 @@ class ChatbotResourceIT {
                 )
                 .containsExactly(
                         tuple(startRequest.getMessage(), 1, MessageSenderType.USER),
-                        tuple(ChatbotTestMessages.CLIENT_GENERAL_START_REPLY, 2, MessageSenderType.ASSISTANT),
+                        tuple(ChatbotTestMessages.AI_FALLBACK_REPLY, 2, MessageSenderType.ASSISTANT),
                         tuple(request.getMessage(), 3, MessageSenderType.USER),
-                        tuple(ChatbotTestMessages.CLIENT_GENERAL_STATUS_REPLY, 4, MessageSenderType.ASSISTANT)
+                        tuple(ChatbotTestMessages.AI_FALLBACK_REPLY, 4, MessageSenderType.ASSISTANT)
                 );
         assertThat(messages.get(2).getParentMessageId()).isNull();
         assertThat(messages.get(3).getParentMessageId()).isEqualTo(messages.get(2).getId());
@@ -981,7 +981,7 @@ class ChatbotResourceIT {
         assertThat(response.getBody())
                 .isNotNull()
                 .returns(startResponse.getBody().getConversationId(), ChatbotMessageResponseDto::getConversationId)
-                .returns(ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY, ChatbotMessageResponseDto::getMessage)
+                .returns(ChatbotTestMessages.AI_FALLBACK_REPLY, ChatbotMessageResponseDto::getMessage)
                 .returns(null, ChatbotMessageResponseDto::getError)
                 .satisfies(body -> assertThat(body.getCreatedAt()).isNotBlank());
 
@@ -996,9 +996,9 @@ class ChatbotResourceIT {
                 )
                 .containsExactly(
                         tuple(startRequest.getMessage(), 1, MessageSenderType.USER),
-                        tuple(ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY, 2, MessageSenderType.ASSISTANT),
+                        tuple(ChatbotTestMessages.AI_FALLBACK_REPLY, 2, MessageSenderType.ASSISTANT),
                         tuple(request.getMessage(), 3, MessageSenderType.USER),
-                        tuple(ChatbotTestMessages.PROFESSIONAL_GENERAL_STATUS_REPLY, 4, MessageSenderType.ASSISTANT)
+                        tuple(ChatbotTestMessages.AI_FALLBACK_REPLY, 4, MessageSenderType.ASSISTANT)
                 );
         assertThat(messages.get(2).getParentMessageId()).isNull();
         assertThat(messages.get(3).getParentMessageId()).isEqualTo(messages.get(2).getId());
@@ -1508,9 +1508,7 @@ class ChatbotResourceIT {
                                     "Procedimiento: Reclamación civil",
                                     "Hito/evento: Se registró escrito [MILESTONE] - OPEN"
                             );
-                    assertThat(body.getMessage())
-                            .contains("Se registró escrito")
-                            .contains("Vista programada");
+                    assertThat(body.getMessage()).isEqualTo(ChatbotTestMessages.AI_FALLBACK_REPLY);
                 });
 
         List<MessageEntity> messages = this.messageRepository
@@ -1568,7 +1566,7 @@ class ChatbotResourceIT {
                 .returns(null, ChatbotMessageResponseDto::getError)
                 .satisfies(body -> {
                     assertThat(body.getSourcesSummary()).isEmpty();
-                    assertThat(body.getMessage()).contains("no he podido recuperar");
+                    assertThat(body.getMessage()).isEqualTo(ChatbotTestMessages.AI_FALLBACK_REPLY);
                 });
 
         List<MessageEntity> messages = this.messageRepository
@@ -1628,7 +1626,7 @@ class ChatbotResourceIT {
                 .extracting(MessageEntity::getContent)
                 .containsExactly(
                         "Hola chatbot",
-                        ChatbotTestMessages.CLIENT_GENERAL_START_REPLY,
+                        ChatbotTestMessages.AI_FALLBACK_REPLY,
                         "¿Cuál es el estado de mi encargo?",
                         ChatbotTestMessages.MISSING_CASE_CONTEXT_REPLY
                 );
@@ -1679,7 +1677,7 @@ class ChatbotResourceIT {
                 .extracting(MessageEntity::getContent)
                 .containsExactly(
                         "Necesito soporte",
-                        ChatbotTestMessages.PROFESSIONAL_GENERAL_START_REPLY,
+                        ChatbotTestMessages.AI_FALLBACK_REPLY,
                         "Dime exactamente qué debo alegar jurídicamente",
                         ChatbotTestMessages.LEGAL_BINDING_ADVICE_REPLY
                 );

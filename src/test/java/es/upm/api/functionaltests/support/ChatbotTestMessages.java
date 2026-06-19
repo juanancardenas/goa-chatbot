@@ -11,6 +11,9 @@ public final class ChatbotTestMessages {
     public static final String PROFESSIONAL_GENERAL_START_REPLY =
             ChatbotResponseMessages.PROFESSIONAL_GENERAL_START_REPLY;
 
+    public static final String AI_FALLBACK_REPLY =
+            ChatbotResponseMessages.AI_FALLBACK_REPLY;
+
     public static final String CLIENT_MESSAGE_REPLY =
             "He recibido tu mensaje. De momento estoy en una versión inicial, pero intentaré ayudarte de forma clara con los siguientes pasos o con el estado de tu consulta.";
     public static final String PROFESSIONAL_MESSAGE_REPLY =

@@ -57,4 +57,9 @@ public class ChatbotAiSettingsAdapter implements ChatbotAiSettings {
     public double temperature() {
         return this.properties.getTemperature();
     }
+
+    @Override
+    public int timeoutSeconds() {
+        return this.properties.getTimeoutSeconds();
+    }
 }

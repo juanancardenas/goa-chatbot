@@ -19,4 +19,6 @@ public interface ChatbotAiSettings {
     String basePrompt();
 
     double temperature();
+
+    int timeoutSeconds();
 }

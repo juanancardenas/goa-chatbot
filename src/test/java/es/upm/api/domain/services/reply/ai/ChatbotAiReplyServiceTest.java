@@ -1,5 +1,6 @@
 package es.upm.api.domain.services.reply.ai;
 
+import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.enums.ConversationType;
 import es.upm.api.domain.model.Conversation;
@@ -201,10 +202,10 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         );
 
-        assertThat(nullResponseResult.getAssistantReply()).isEqualTo("Safe base reply");
-        assertThat(errorResponseResult.getAssistantReply()).isEqualTo("Safe base reply");
-        assertThat(nullContentResult.getAssistantReply()).isEqualTo("Safe base reply");
-        assertThat(blankContentResult.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(nullResponseResult.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
+        assertThat(errorResponseResult.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
+        assertThat(nullContentResult.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
+        assertThat(blankContentResult.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
         assertThat(nullResponseResult.isUsedAi()).isFalse();
         assertThat(errorResponseResult.isUsedAi()).isFalse();
         assertThat(nullContentResult.isUsedAi()).isFalse();
@@ -267,7 +268,7 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         );
 
-        assertThat(response.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(response.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
         assertThat(response.isUsedAi()).isFalse();
 
         ArgumentCaptor<ChatbotAiMetric> aiMetricCaptor = ArgumentCaptor.forClass(ChatbotAiMetric.class);
@@ -302,7 +303,7 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         );
 
-        assertThat(response.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(response.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
         assertThat(response.isUsedAi()).isFalse();
         verify(this.chatbotAiClient, never()).generate(any());
 
@@ -337,7 +338,7 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         );
 
-        assertThat(response.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(response.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
         assertThat(response.isUsedAi()).isFalse();
 
         ArgumentCaptor<ChatbotAiMetric> aiMetricCaptor = ArgumentCaptor.forClass(ChatbotAiMetric.class);
@@ -346,6 +347,92 @@ class ChatbotAiReplyServiceTest {
         assertThat(aiMetricCaptor.getValue().isFallback()).isTrue();
         assertThat(aiMetricCaptor.getValue().getErrorType()).isEqualTo("RuntimeException");
         verify(this.chatbotMetricsRecorder).recordFallback(any(ChatbotFallbackMetric.class));
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldFallbackWhenAiClientExceedsConfiguredTimeout() {
+        Conversation conversation = this.generalConversation();
+        ChatbotAiRequest aiRequest = ChatbotAiRequest.builder().conversationId("conversation-general").build();
+
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.provider()).thenReturn("ollama");
+        when(this.chatbotAiSettings.model()).thenReturn("llama3.2:3b");
+        when(this.chatbotAiSettings.timeoutSeconds()).thenReturn(1);
+        when(this.chatbotAiRequestBuilder.build(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        )).thenReturn(aiRequest);
+        when(this.chatbotAiClient.generate(aiRequest)).thenAnswer(invocation -> {
+            Thread.sleep(1_500);
+            return ChatbotAiResponse.builder().content("Late AI reply").build();
+        });
+
+        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        );
+
+        assertThat(response.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
+        assertThat(response.isUsedAi()).isFalse();
+
+        ArgumentCaptor<ChatbotAiMetric> aiMetricCaptor = ArgumentCaptor.forClass(ChatbotAiMetric.class);
+        verify(this.chatbotMetricsRecorder).recordAiCall(aiMetricCaptor.capture());
+        assertThat(aiMetricCaptor.getValue().isSuccess()).isFalse();
+        assertThat(aiMetricCaptor.getValue().isFallback()).isTrue();
+        assertThat(aiMetricCaptor.getValue().getErrorType()).isEqualTo("IllegalStateException");
+
+        ArgumentCaptor<ChatbotFallbackMetric> fallbackMetricCaptor = ArgumentCaptor.forClass(ChatbotFallbackMetric.class);
+        verify(this.chatbotMetricsRecorder).recordFallback(fallbackMetricCaptor.capture());
+        assertThat(fallbackMetricCaptor.getValue().getFallbackType()).isEqualTo("AI_EXCEPTION");
+        assertThat(fallbackMetricCaptor.getValue().getReason()).isEqualTo("IllegalStateException");
+    }
+
+    @Test
+    void generateConfiguredAssistantReplyShouldFallbackWhenAsyncAiClientFailsWithNonRuntimeCause() {
+        Conversation conversation = this.generalConversation();
+        ChatbotAiRequest aiRequest = ChatbotAiRequest.builder().conversationId("conversation-general").build();
+
+        when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
+        when(this.chatbotAiSettings.provider()).thenReturn("ollama");
+        when(this.chatbotAiSettings.model()).thenReturn("llama3.2:3b");
+        when(this.chatbotAiRequestBuilder.build(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        )).thenReturn(aiRequest);
+        when(this.chatbotAiClient.generate(aiRequest)).thenAnswer(invocation -> {
+            throw new AssertionError("provider linkage error");
+        });
+
+        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.empty()
+        );
+
+        assertThat(response.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
+        assertThat(response.isUsedAi()).isFalse();
+
+        ArgumentCaptor<ChatbotAiMetric> aiMetricCaptor = ArgumentCaptor.forClass(ChatbotAiMetric.class);
+        verify(this.chatbotMetricsRecorder).recordAiCall(aiMetricCaptor.capture());
+        assertThat(aiMetricCaptor.getValue().isSuccess()).isFalse();
+        assertThat(aiMetricCaptor.getValue().isFallback()).isTrue();
+        assertThat(aiMetricCaptor.getValue().getErrorType()).isEqualTo("IllegalStateException");
+
+        ArgumentCaptor<ChatbotFallbackMetric> fallbackMetricCaptor = ArgumentCaptor.forClass(ChatbotFallbackMetric.class);
+        verify(this.chatbotMetricsRecorder).recordFallback(fallbackMetricCaptor.capture());
+        assertThat(fallbackMetricCaptor.getValue().getFallbackType()).isEqualTo("AI_EXCEPTION");
+        assertThat(fallbackMetricCaptor.getValue().getReason()).isEqualTo("IllegalStateException");
     }
 
     @Test
@@ -411,7 +498,7 @@ class ChatbotAiReplyServiceTest {
                 Optional.empty()
         );
 
-        assertThat(response.getAssistantReply()).isEqualTo("Safe base reply");
+        assertThat(response.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
         assertThat(response.isUsedAi()).isFalse();
         verify(this.chatbotMetricsRecorder).recordAiCall(any(ChatbotAiMetric.class));
         verify(this.chatbotMetricsRecorder).recordFallback(any(ChatbotFallbackMetric.class));
