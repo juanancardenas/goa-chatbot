@@ -118,16 +118,18 @@ public final class ChatbotResponseMessages {
 
     public static final String CLIENT_GENERAL_LEGAL_TASKS_EXAMPLE_REPLY =
             """
-            Puedo ayudarte con una orientación general sobre tareas legales típicas de un encargo.
-            Si necesitas datos reales de un encargo específico, entra en Hojas de Encargo y abre el Asistente de ese encargo.
-            En esta versión no puedo mostrar tablas o gráficos en la interfaz, pero sí puedo darte una lista orientativa clara.
+            Puedo orientarte de forma general sobre tareas legales típicas de un encargo.
+            Por ejemplo: revisar documentación, preparar escritos, hacer seguimiento de próximos pasos
+            o consultar el estado general de una actuación.
+            Si necesitas datos reales de un encargo concreto, entra en Hojas de Encargo y abre el Asistente de ese encargo.
             """;
 
     public static final String PROFESSIONAL_GENERAL_LEGAL_TASKS_EXAMPLE_REPLY =
             """
-            Puedes responder de forma general sobre Legal Tasks habituales de un encargo jurídico.
-            Si el usuario pide tabla, gráfico o formato Markdown, indica que de momento no está disponible en la interfaz y ofrece una lista orientativa.
-            No presentes esa información como datos reales de un encargo concreto.
+            Puedo orientarte de forma general sobre tareas legales habituales de un encargo jurídico.
+            En un encargo suelen existir tareas como revisión de antecedentes, preparación documental,
+            seguimiento de hitos, coordinación con el cliente y control de actuaciones pendientes.
+            Si necesitas datos reales de un encargo concreto, entra en Hojas de Encargo y abre el Asistente de ese encargo.
             """;
 
     public static final String CLIENT_GENERAL_STATUS_EXAMPLE_REPLY =
@@ -254,4 +256,10 @@ public final class ChatbotResponseMessages {
 
     public static final String PROFESSIONAL_COURTESY_REPLY =
             "Gracias por el mensaje. Sigo disponible para ayudarte con consultas sobre GOA y gestión de encargos.";
+
+    //Fallback
+
+    public static final String AI_FALLBACK_REPLY =
+            "Ahora mismo no he podido generar una respuesta asistida con IA. "
+                    + "Puedo seguir ayudándote con una orientación general segura o puedes intentarlo nuevamente en unos momentos.";
 }

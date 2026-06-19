@@ -1,5 +1,6 @@
 package es.upm.api.domain.services.reply.ai;
 
+import es.upm.api.domain.common.ChatbotResponseMessages;
 import es.upm.api.domain.enums.ConversationProfileType;
 import es.upm.api.domain.model.Conversation;
 import es.upm.api.domain.model.ai.ChatbotAiRequest;
@@ -175,7 +176,7 @@ public class ChatbotAiReplyService {
                 this.fallbackMetric(conversationId, fallbackType, errorType)
         );
 
-        return ChatbotAiReplyResult.withoutAi(baseReply);
+        return ChatbotAiReplyResult.withoutAi(ChatbotResponseMessages.AI_FALLBACK_REPLY);
     }
 
     private ChatbotAiMetric aiMetric(
