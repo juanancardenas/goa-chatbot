@@ -18,6 +18,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.Optional;
 
 @Service
@@ -70,7 +74,7 @@ public class ChatbotAiReplyService {
                     platformContext
             );
 
-            ChatbotAiResponse aiResponse = this.chatbotAiClient.generate(aiRequest);
+            ChatbotAiResponse aiResponse = this.generateWithTimeout(aiRequest);
             long durationMs = this.clock.millis() - startTime;
 
             if (aiResponse == null) {
@@ -194,6 +198,33 @@ public class ChatbotAiReplyService {
                 .createdAt(LocalDateTime.now(this.clock))
                 .build();
     }
+
+    private ChatbotAiResponse generateWithTimeout(ChatbotAiRequest aiRequest) {
+        try {
+            return CompletableFuture
+                    .supplyAsync(() -> this.chatbotAiClient.generate(aiRequest))
+                    .orTimeout(this.aiTimeoutSeconds(), TimeUnit.SECONDS)
+                    .join();
+
+        } catch (CompletionException exception) {
+            Throwable cause = exception.getCause();
+
+            if (cause instanceof TimeoutException) {
+                throw new IllegalStateException("AI_TIMEOUT", cause);
+            }
+
+            if (cause instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+
+            throw new IllegalStateException("AI_PROVIDER_ERROR", cause);
+        }
+    }
+
+    private int aiTimeoutSeconds() {
+        return Math.max(1, this.chatbotAiSettings.timeoutSeconds());
+    }
+
 
     private ChatbotFallbackMetric fallbackMetric(
             String conversationId,
