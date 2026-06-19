@@ -16,6 +16,7 @@ class ChatbotAiSettingsAdapterTest {
         properties.setMaxInputCharacters(2048);
         properties.setMaxOutputTokens(800);
         properties.setMaxContextMessages(6);
+        properties.setTimeoutSeconds(12);
         properties.setDocumentsAvailable(true);
         properties.setBasePrompt("Prompt base");
         properties.setTemperature(0.4);
@@ -28,6 +29,7 @@ class ChatbotAiSettingsAdapterTest {
         assertThat(adapter.maxInputCharacters()).isEqualTo(2048);
         assertThat(adapter.maxOutputTokens()).isEqualTo(800);
         assertThat(adapter.maxContextMessages()).isEqualTo(6);
+        assertThat(adapter.timeoutSeconds()).isEqualTo(12);
         assertThat(adapter.documentsAvailable()).isTrue();
         assertThat(adapter.basePrompt()).isEqualTo("Prompt base");
         assertThat(adapter.temperature()).isEqualTo(0.4);

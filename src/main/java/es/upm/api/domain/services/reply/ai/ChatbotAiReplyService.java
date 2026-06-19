@@ -89,7 +89,6 @@ public class ChatbotAiReplyService {
                         provider,
                         model,
                         durationMs,
-                        baseReply,
                         "NULL_AI_RESPONSE",
                         "AI_NULL_RESPONSE"
                 );
@@ -108,7 +107,6 @@ public class ChatbotAiReplyService {
                         provider,
                         model,
                         durationMs,
-                        baseReply,
                         errorType,
                         "AI_RESPONSE_ERROR"
                 );
@@ -125,7 +123,6 @@ public class ChatbotAiReplyService {
                         provider,
                         model,
                         durationMs,
-                        baseReply,
                         "EMPTY_AI_RESPONSE",
                         "AI_EMPTY_RESPONSE"
                 );
@@ -153,7 +150,6 @@ public class ChatbotAiReplyService {
                     provider,
                     model,
                     durationMs,
-                    baseReply,
                     errorType,
                     "AI_EXCEPTION"
             );
@@ -165,7 +161,6 @@ public class ChatbotAiReplyService {
             String provider,
             String model,
             long durationMs,
-            String baseReply,
             String errorType,
             String fallbackType
     ) {
