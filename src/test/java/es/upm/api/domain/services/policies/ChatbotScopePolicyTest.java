@@ -180,6 +180,29 @@ class ChatbotScopePolicyTest {
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
+    @Test
+    void evaluateShouldRejectSpecificEngagementCodeInGeneralConversation() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                "Revisa EL-123"
+        );
+
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
+        assertThat(decision.getSafeMessage()).contains("Hojas de Encargo");
+        assertThat(decision.isRequiresHuman()).isFalse();
+    }
+
+    @Test
+    void evaluateShouldAllowOutOfDomainKeywordWhenDomainKeywordIsAlsoPresent() {
+        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
+                this.conversation("GENERAL"),
+                "Esto del abogado es estupido"
+        );
+
+        assertThat(decision.isAllowed()).isTrue();
+    }
+
     private static Stream<Arguments> allowedMessages() {
         return Stream.of(
                 Arguments.of("GENERAL", null),

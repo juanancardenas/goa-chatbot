@@ -114,6 +114,27 @@ class SpringAiChatbotClientTest {
     }
 
     @Test
+    void generateShouldUseFallbackContentWhenProviderReturnsNullText() {
+        ChatbotAiRequest request = ChatbotAiRequest.builder()
+                .userMessage("Necesito ayuda")
+                .build();
+
+        when(this.chatbotAiProperties.isEnabled()).thenReturn(true);
+        when(this.chatbotPromptTemplate.buildSystemPrompt(request)).thenReturn("prompt del sistema");
+        when(this.chatClient.prompt()).thenReturn(this.chatClientRequestSpec);
+        when(this.chatClientRequestSpec.system("prompt del sistema")).thenReturn(this.chatClientRequestSpec);
+        when(this.chatClientRequestSpec.user("Necesito ayuda")).thenReturn(this.chatClientRequestSpec);
+        when(this.chatClientRequestSpec.call()).thenReturn(this.callResponseSpec);
+        when(this.callResponseSpec.content()).thenReturn(null);
+
+        ChatbotAiResponse response = this.springAiChatbotClient.generate(request);
+
+        assertThat(response.getContent()).isEqualTo(AI_UNAVAILABLE_REPLY);
+        assertThat(response.getFinishReason()).isEqualTo("SUCCESS");
+        assertThat(response.getError()).isNull();
+    }
+
+    @Test
     void generateShouldReturnErrorResponseWhenProviderThrowsException() {
         ChatbotAiRequest request = ChatbotAiRequest.builder()
                 .userMessage("Necesito ayuda")
