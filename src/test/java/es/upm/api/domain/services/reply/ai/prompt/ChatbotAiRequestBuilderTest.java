@@ -220,6 +220,36 @@ class ChatbotAiRequestBuilderTest {
     }
 
     @Test
+    void buildShouldUseUnavailablePlatformContextWhenProcedureTitlesAndEventsAreEmpty() {
+        Conversation conversation = this.generalConversation();
+        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-EMPTY")
+                .ownerDisplayName("Ana Ocana")
+                .procedureTitles(List.of())
+                .legalTaskSummaries(List.of("Task A"))
+                .recentEventSummaries(List.of())
+                .sourcesSummary(List.of("Source A"))
+                .build();
+        when(this.chatbotMessageService.readRecentMessagesForPrompt("conversation-general", 2))
+                .thenReturn(List.of());
+
+        ChatbotAiRequest aiRequest = this.chatbotAiRequestBuilder.build(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                "Question",
+                "Safe base reply",
+                Optional.of(platformContext)
+        );
+
+        assertThat(aiRequest.getPlatformContext())
+                .contains("Procedimientos: No disponible")
+                .contains("Eventos recientes:")
+                .contains("No disponible")
+                .contains("Task A")
+                .contains("Source A");
+    }
+
+    @Test
     void buildShouldTrimScalarPlatformContextFields() {
         Conversation conversation = this.generalConversation();
         ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()

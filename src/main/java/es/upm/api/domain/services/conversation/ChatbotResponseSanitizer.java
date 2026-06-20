@@ -23,7 +23,7 @@ public class ChatbotResponseSanitizer {
         StringBuilder sanitized = new StringBuilder();
 
         for (String rawLine : lines) {
-            String line = rawLine == null ? "" : rawLine.trim();
+            String line = rawLine.trim();
 
             if (line.isBlank()) {
                 if (!sanitized.isEmpty()) {
