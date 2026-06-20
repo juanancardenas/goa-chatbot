@@ -62,6 +62,19 @@ class EngagementEventSummaryTest {
     }
 
     @Test
+    void displayTextShouldAppendOnlyStateWhenTypeIsNull() {
+        EngagementEventSummary summary = new EngagementEventSummary(
+                null,
+                "  OPEN  ",
+                "  Vista inicial  ",
+                null,
+                LocalDate.of(2026, Month.MAY, 6)
+        );
+
+        assertThat(summary.displayText()).isEqualTo("Vista inicial - OPEN");
+    }
+
+    @Test
     void displayTextShouldUseFallbackTitleWhenTitleIsNull() {
         EngagementEventSummary summary = new EngagementEventSummary(
                 "  MILESTONE  ",
