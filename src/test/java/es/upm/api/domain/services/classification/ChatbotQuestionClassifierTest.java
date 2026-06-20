@@ -56,6 +56,12 @@ class ChatbotQuestionClassifierTest {
     }
 
     @Test
+    void classifyShouldReturnGeneralContextWhenMessageOnlyMentionsCaseReference() {
+        assertThat(this.classifier.classify("Tengo una duda sobre este expediente"))
+                .isEqualTo(PlatformQuestionType.GENERAL_CONTEXT);
+    }
+
+    @Test
     void classifyOrGeneralContextShouldFallbackWhenClassifierReturnsNull() {
         ChatbotQuestionClassifier nullClassifier = new ChatbotQuestionClassifier() {
             @Override
