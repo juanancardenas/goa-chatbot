@@ -1092,6 +1092,53 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void startGeneralConversationShouldAllowLongMessageWhenConfiguredLimitIsDisabled() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        when(this.chatbotAiSettings.maxInputCharacters()).thenReturn(0);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+
+        ChatbotMessageCommand request = new ChatbotMessageCommand(
+                null,
+                "mensaje largo permitido porque el limite esta desactivado"
+        );
+
+        ChatbotMessageResult response = this.chatbotService.startGeneralConversation(
+                this.authenticatedUser,
+                request
+        );
+
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(this.messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
+        assertThat(messageCaptor.getAllValues().getFirst().getContent())
+                .isEqualTo("mensaje largo permitido porque el limite esta desactivado");
+    }
+
+    @Test
+    void startGeneralConversationShouldAllowNullMessageWhenConfiguredLimitIsEnabled() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("user-message-id", "assistant-message-id");
+
+        ChatbotMessageCommand request = new ChatbotMessageCommand(null, null);
+
+        ChatbotMessageResult response = this.chatbotService.startGeneralConversation(
+                this.authenticatedUser,
+                request
+        );
+
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(this.messagePersistence, times(2)).createAndReturnId(messageCaptor.capture());
+        assertThat(messageCaptor.getAllValues().getFirst().getContent()).isNull();
+    }
+
+    @Test
     void sendMessageShouldUseDocumentStubReplyWhenDocumentsIntegrationIsNotAvailable() {
         this.authenticate("professional-1", "ROLE_ADMIN");
 
@@ -1986,6 +2033,60 @@ class ChatbotServiceTest {
         assertThat(metric.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(metric.isUsedAi()).isFalse();
         assertThat(metric.isUsedPlatformData()).isFalse();
+        assertThat(metric.isSuccess()).isTrue();
+    }
+
+    @Test
+    void sendMessageShouldUseDefaultSafeReplyAndGeneralModeWhenBlockedConversationTypeIsNull() {
+        this.authenticate("professional-1", "ROLE_ADMIN");
+
+        ChatbotModerationService moderationService = mock(ChatbotModerationService.class);
+        ChatbotService service = this.buildChatbotService(moderationService);
+
+        Conversation existingConversation = Conversation.builder()
+                .id("conversation-moderation-null-type")
+                .userId("professional-1")
+                .status(ConversationStatus.ACTIVE)
+                .engagementLetterId("EL-NULL-TYPE")
+                .createdAt(LocalDateTime.of(2026, Month.APRIL, 21, 10, 0))
+                .build();
+
+        when(this.conversationPersistence.readById("conversation-moderation-null-type"))
+                .thenReturn(existingConversation);
+        when(moderationService.moderate(
+                "mensaje bloqueado sin respuesta segura",
+                "conversation-moderation-null-type",
+                "professional-1"
+        )).thenReturn(ChatbotModerationDecision.block(
+                ChatbotModerationReason.OUT_OF_POLICY,
+                null,
+                false
+        ));
+        when(this.conversationPersistence.reserveSequenceNumbers("conversation-moderation-null-type", 1))
+                .thenReturn(13);
+        when(this.messagePersistence.createAndReturnId(any(Message.class)))
+                .thenReturn("assistant-message-id");
+
+        ChatbotMessageResult response = service.sendMessage(
+                this.authenticatedUser,
+                new ChatbotMessageCommand(
+                        "conversation-moderation-null-type",
+                        "mensaje bloqueado sin respuesta segura"
+                )
+        );
+
+        assertThat(response.getConversationId()).isEqualTo("conversation-moderation-null-type");
+        assertThat(response.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(response.getMessage()).contains("No puedo procesar este mensaje");
+        assertThat(response.getMessage()).contains("solicitud no permitida");
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(this.messagePersistence).createAndReturnId(messageCaptor.capture());
+        assertThat(messageCaptor.getValue().getContent()).isEqualTo(response.getMessage());
+
+        ChatbotMessageMetric metric = this.captureMessageMetric();
+        assertThat(metric.getConversationType()).isNull();
+        assertThat(metric.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
         assertThat(metric.isSuccess()).isTrue();
     }
 
