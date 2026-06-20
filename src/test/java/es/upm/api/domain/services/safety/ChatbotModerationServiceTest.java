@@ -101,6 +101,24 @@ class ChatbotModerationServiceTest {
     }
 
     @Test
+    void moderateShouldNotRequireMetricsRecorder() {
+        ChatbotModerationService service = new ChatbotModerationService(
+                new ChatbotPiiDetector(),
+                new ChatbotModerationPolicy()
+        );
+
+        ChatbotModerationDecision decision = service.moderate(
+                "Mi correo es usuario@example.com",
+                "conversation-without-recorder",
+                "user-without-recorder"
+        );
+
+        assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.WARN);
+        assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.PII_EMAIL);
+        assertThat(decision.isContainsPii()).isTrue();
+    }
+
+    @Test
     void moderateShouldRecordSafeBlockMetricWhenDetectorFails() {
         ChatbotPiiDetector failingDetector = new ChatbotPiiDetector() {
             @Override
