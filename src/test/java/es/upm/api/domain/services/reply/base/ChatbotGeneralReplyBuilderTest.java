@@ -106,6 +106,12 @@ class ChatbotGeneralReplyBuilderTest {
                 ),
                 Arguments.of(
                         ConversationProfileType.CLIENT,
+                        PlatformQuestionType.ENGAGEMENT_STATUS,
+                        "   ",
+                        ChatbotResponseMessages.CLIENT_GENERAL_STATUS_EXAMPLE_REPLY
+                ),
+                Arguments.of(
+                        ConversationProfileType.CLIENT,
                         PlatformQuestionType.TIMELINE_EVENTS,
                         "Que hitos hay en este expediente",
                         ChatbotResponseMessages.CLIENT_GENERAL_TIMELINE_REPLY
