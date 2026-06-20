@@ -71,6 +71,16 @@ class ChatbotResponseSanitizerTest {
     }
 
     @Test
+    void normalizeReplyForFrontendShouldSkipLeadingBlankLinesWhenReplyContainsPipes() {
+        String reply = System.lineSeparator()
+                + "  " + System.lineSeparator()
+                + "| Campo | Valor |";
+
+        assertThat(this.chatbotResponseSanitizer.normalizeReplyForFrontend(reply))
+                .isEqualTo("- Campo: Valor");
+    }
+
+    @Test
     void normalizeReplyForFrontendShouldTrimPlainLinesWhenReplyContainsPipes() {
         String reply = "  Inicio con espacios  " + System.lineSeparator()
                 + "  Valor | Detalle  " + System.lineSeparator()
