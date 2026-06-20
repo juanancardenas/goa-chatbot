@@ -176,6 +176,27 @@ class ChatbotPlatformReplyBuilderTest {
     }
 
     @Test
+    void contextualPlatformReplyShouldBuildStatusReplyWithoutProceduresWhenProcedureTitlesAreEmpty() {
+        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
+                .engagementLetterId("EL-STATUS-EMPTY")
+                .ownerDisplayName("Laura")
+                .procedureTitles(List.of())
+                .build();
+
+        String reply = this.chatbotPlatformReplyBuilder.contextualPlatformReply(
+                ConversationProfileType.CLIENT,
+                this.conversation("conversation-status-empty-procedures"),
+                platformContext,
+                PlatformQuestionType.ENGAGEMENT_STATUS
+        );
+
+        assertThat(reply)
+                .contains("EL-STATUS-EMPTY")
+                .contains("Laura")
+                .doesNotContain("Procedimientos");
+    }
+
+    @Test
     void contextualPlatformReplyShouldAppendVisibleDocumentsForDocumentsQuestion() {
         Conversation conversation = this.conversation("conversation-docs");
         ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder()
@@ -240,6 +261,27 @@ class ChatbotPlatformReplyBuilderTest {
         );
 
         assertThat(reply).isEqualTo(ChatbotResponseMessages.CLIENT_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
+    }
+
+    @Test
+    void contextualPlatformReplyShouldReturnDocumentsStubWhenVisibleDocumentTitlesAreNull() {
+        Conversation conversation = this.conversation("conversation-docs-null-titles");
+        ChatbotPlatformContext platformContext = ChatbotPlatformContext.builder().build();
+        when(this.chatbotDocumentContextService.loadDocumentContext(conversation))
+                .thenReturn(ChatbotDocumentContext.builder()
+                        .available(true)
+                        .authorizedSourceConfigured(true)
+                        .visibleDocumentTitles(null)
+                        .build());
+
+        String reply = this.chatbotPlatformReplyBuilder.contextualPlatformReply(
+                ConversationProfileType.PROFESSIONAL,
+                conversation,
+                platformContext,
+                PlatformQuestionType.DOCUMENTS
+        );
+
+        assertThat(reply).isEqualTo(ChatbotResponseMessages.PROFESSIONAL_CONTEXTUAL_DOCUMENTS_STUB_REPLY);
     }
 
     @Test

@@ -363,6 +363,60 @@ class ChatbotReplyOrchestratorTest {
     }
 
     @Test
+    void resolveReplyShouldAllowContextualConversationWithNullMessage() {
+        Conversation conversation = this.contextualConversation(null);
+        when(this.chatbotScopePolicy.evaluate(conversation, null)).thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotBaseReplyBuilder.generalFaqReply(ConversationProfileType.CLIENT, null))
+                .thenReturn("Base null");
+        when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                null,
+                "Base null",
+                Optional.empty()
+        )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta null"));
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                conversation,
+                ConversationProfileType.CLIENT,
+                null
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo("Respuesta null");
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
+    void resolveReplyShouldAllowContextualConversationWithBlankMessage() {
+        Conversation conversation = this.contextualConversation(null);
+        String userMessage = "   ";
+        when(this.chatbotBaseReplyBuilder.isCourtesyMessage(userMessage)).thenReturn(false);
+        when(this.chatbotScopePolicy.evaluate(conversation, userMessage)).thenReturn(ChatbotScopeDecision.allow());
+        when(this.chatbotBaseReplyBuilder.generalFaqReply(ConversationProfileType.PROFESSIONAL, userMessage))
+                .thenReturn("Base blank");
+        when(this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                userMessage,
+                "Base blank",
+                Optional.empty()
+        )).thenReturn(ChatbotAiReplyResult.withAi("Respuesta blank"));
+
+        ChatbotReplyDecision decision = this.chatbotReplyOrchestrator.resolveReply(
+                conversation,
+                ConversationProfileType.PROFESSIONAL,
+                userMessage
+        );
+
+        assertThat(decision.getAssistantReply()).isEqualTo("Respuesta blank");
+        assertThat(decision.getResponseMode()).isEqualTo(ChatbotResponseMode.GENERAL);
+        assertThat(decision.isUsedPlatformData()).isFalse();
+        verify(this.chatbotPlatformContextService, never()).loadContext(any());
+    }
+
+    @Test
     void resolveReplyShouldUseContextualFallbackReplyWhenContextualConversationHasNoPlatformContext() {
         Conversation conversation = this.contextualConversation("EL-1");
         when(this.chatbotBaseReplyBuilder.isCourtesyMessage("estado")).thenReturn(false);

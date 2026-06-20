@@ -87,6 +87,21 @@ class ChatbotMongoIndexInitializerTest {
     }
 
     @Test
+    void runShouldNotDropUniqueIndexFoundDuringDropScan() {
+        when(this.messageIndexOperations.getIndexInfo()).thenReturn(
+                List.of(),
+                List.of(indexInfo("conversation_sequence_idx", true, "conversationId", "sequenceNumber"))
+        );
+        when(this.escalationIndexOperations.getIndexInfo()).thenReturn(List.of());
+
+        this.initializer.run(null);
+
+        verify(this.messageIndexOperations, never()).dropIndex("conversation_sequence_idx");
+        verify(this.messageIndexOperations).createIndex(any(IndexDefinition.class));
+        verify(this.escalationIndexOperations).createIndex(any(IndexDefinition.class));
+    }
+
+    @Test
     void runShouldContinueWhenOneIndexMigrationFails() {
         when(this.messageIndexOperations.getIndexInfo()).thenReturn(List.of());
         when(this.escalationIndexOperations.getIndexInfo()).thenReturn(List.of());

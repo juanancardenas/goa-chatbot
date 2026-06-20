@@ -187,6 +187,23 @@ class ChatbotModerationPolicyTest {
     }
 
     @Test
+    void evaluateShouldBlockUnsafeRequestWithoutPiiWhenDetectionResultIsNull() {
+        ChatbotModerationDecision decision = this.policy.evaluate(
+                null,
+                true,
+                false
+        );
+
+        assertThat(decision.getAction()).isEqualTo(ChatbotModerationAction.BLOCK);
+        assertThat(decision.getReason()).isEqualTo(ChatbotModerationReason.UNSAFE_REQUEST);
+        assertThat(decision.getSafeReply()).isNotBlank();
+        assertThat(decision.isContainsPii()).isFalse();
+        assertThat(decision.isAllowed()).isFalse();
+        assertThat(decision.isWarning()).isFalse();
+        assertThat(decision.isBlocked()).isTrue();
+    }
+
+    @Test
     void evaluateShouldBlockUnsafeRequestAndPreservePiiFlagWhenPiiIsDetected() {
         ChatbotModerationDecision decision = this.policy.evaluate(
                 ChatbotPiiDetectionResult.of(
