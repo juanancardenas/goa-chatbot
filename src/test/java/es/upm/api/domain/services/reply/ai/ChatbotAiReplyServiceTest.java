@@ -16,6 +16,7 @@ import es.upm.api.domain.ports.out.ChatbotMetricsRecorder;
 import es.upm.api.domain.services.reply.ai.prompt.ChatbotAiRequestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -350,14 +352,18 @@ class ChatbotAiReplyServiceTest {
     }
 
     @Test
+    @Timeout(3)
     void generateConfiguredAssistantReplyShouldFallbackWhenAiClientExceedsConfiguredTimeout() {
         Conversation conversation = this.generalConversation();
-        ChatbotAiRequest aiRequest = ChatbotAiRequest.builder().conversationId("conversation-general").build();
+        ChatbotAiRequest aiRequest = ChatbotAiRequest.builder()
+                .conversationId("conversation-general")
+                .build();
 
         when(this.chatbotAiSettings.isEnabled()).thenReturn(true);
         when(this.chatbotAiSettings.provider()).thenReturn("ollama");
         when(this.chatbotAiSettings.model()).thenReturn("llama3.2:3b");
         when(this.chatbotAiSettings.timeoutSeconds()).thenReturn(1);
+
         when(this.chatbotAiRequestBuilder.build(
                 conversation,
                 ConversationProfileType.PROFESSIONAL,
@@ -365,32 +371,41 @@ class ChatbotAiReplyServiceTest {
                 "Safe base reply",
                 Optional.empty()
         )).thenReturn(aiRequest);
+
+        CountDownLatch aiClientCanContinue = new CountDownLatch(1);
+
         when(this.chatbotAiClient.generate(aiRequest)).thenAnswer(invocation -> {
-            Thread.sleep(1_500);
+            aiClientCanContinue.await();
             return ChatbotAiResponse.builder().content("Late AI reply").build();
         });
 
-        ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
-                conversation,
-                ConversationProfileType.PROFESSIONAL,
-                "Question",
-                "Safe base reply",
-                Optional.empty()
-        );
+        try {
+            ChatbotAiReplyResult response = this.chatbotAiReplyService.generateConfiguredAssistantReply(
+                    conversation,
+                    ConversationProfileType.PROFESSIONAL,
+                    "Question",
+                    "Safe base reply",
+                    Optional.empty()
+            );
 
-        assertThat(response.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
-        assertThat(response.isUsedAi()).isFalse();
+            assertThat(response.getAssistantReply()).isEqualTo(ChatbotResponseMessages.AI_FALLBACK_REPLY);
+            assertThat(response.isUsedAi()).isFalse();
 
-        ArgumentCaptor<ChatbotAiMetric> aiMetricCaptor = ArgumentCaptor.forClass(ChatbotAiMetric.class);
-        verify(this.chatbotMetricsRecorder).recordAiCall(aiMetricCaptor.capture());
-        assertThat(aiMetricCaptor.getValue().isSuccess()).isFalse();
-        assertThat(aiMetricCaptor.getValue().isFallback()).isTrue();
-        assertThat(aiMetricCaptor.getValue().getErrorType()).isEqualTo("IllegalStateException");
+            ArgumentCaptor<ChatbotAiMetric> aiMetricCaptor = ArgumentCaptor.forClass(ChatbotAiMetric.class);
+            verify(this.chatbotMetricsRecorder).recordAiCall(aiMetricCaptor.capture());
 
-        ArgumentCaptor<ChatbotFallbackMetric> fallbackMetricCaptor = ArgumentCaptor.forClass(ChatbotFallbackMetric.class);
-        verify(this.chatbotMetricsRecorder).recordFallback(fallbackMetricCaptor.capture());
-        assertThat(fallbackMetricCaptor.getValue().getFallbackType()).isEqualTo("AI_EXCEPTION");
-        assertThat(fallbackMetricCaptor.getValue().getReason()).isEqualTo("IllegalStateException");
+            assertThat(aiMetricCaptor.getValue().isSuccess()).isFalse();
+            assertThat(aiMetricCaptor.getValue().isFallback()).isTrue();
+            assertThat(aiMetricCaptor.getValue().getErrorType()).isEqualTo("IllegalStateException");
+
+            ArgumentCaptor<ChatbotFallbackMetric> fallbackMetricCaptor = ArgumentCaptor.forClass(ChatbotFallbackMetric.class);
+            verify(this.chatbotMetricsRecorder).recordFallback(fallbackMetricCaptor.capture());
+
+            assertThat(fallbackMetricCaptor.getValue().getFallbackType()).isEqualTo("AI_EXCEPTION");
+            assertThat(fallbackMetricCaptor.getValue().getReason()).isEqualTo("IllegalStateException");
+        } finally {
+            aiClientCanContinue.countDown();
+        }
     }
 
     @Test
