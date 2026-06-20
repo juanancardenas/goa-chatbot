@@ -72,16 +72,20 @@ class ChatbotScopePolicyTest {
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
-    @Test
-    void evaluateShouldRejectMissingCaseContextInGeneralConversation() {
+    @ParameterizedTest
+    @MethodSource("missingCaseContextMessages")
+    void evaluateShouldRejectMissingCaseContextInGeneralConversation(
+            String message,
+            String expectedSafeMessageFragment
+    ) {
         ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
                 this.conversation("GENERAL"),
-                "¿Cuál es el estado de mi encargo?"
+                message
         );
 
         assertThat(decision.isAllowed()).isFalse();
         assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
-        assertThat(decision.getSafeMessage()).contains("no está asociada a un encargo específico");
+        assertThat(decision.getSafeMessage()).contains(expectedSafeMessageFragment);
         assertThat(decision.isRequiresHuman()).isFalse();
     }
 
@@ -168,32 +172,6 @@ class ChatbotScopePolicyTest {
     }
 
     @Test
-    void evaluateShouldRejectSpecificEngagementUuidInGeneralConversation() {
-        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
-                this.conversation("GENERAL"),
-                "Dame información del encargo 00000000-0000-4000-8000-000000000055"
-        );
-
-        assertThat(decision.isAllowed()).isFalse();
-        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
-        assertThat(decision.getSafeMessage()).contains("no está asociada a un encargo específico");
-        assertThat(decision.isRequiresHuman()).isFalse();
-    }
-
-    @Test
-    void evaluateShouldRejectSpecificEngagementCodeInGeneralConversation() {
-        ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
-                this.conversation("GENERAL"),
-                "Revisa EL-123"
-        );
-
-        assertThat(decision.isAllowed()).isFalse();
-        assertThat(decision.getReason()).isEqualTo(ChatbotScopeViolationReason.MISSING_CASE_CONTEXT);
-        assertThat(decision.getSafeMessage()).contains("Hojas de Encargo");
-        assertThat(decision.isRequiresHuman()).isFalse();
-    }
-
-    @Test
     void evaluateShouldAllowOutOfDomainKeywordWhenDomainKeywordIsAlsoPresent() {
         ChatbotScopeDecision decision = chatbotScopePolicy.evaluate(
                 this.conversation("GENERAL"),
@@ -209,6 +187,23 @@ class ChatbotScopePolicyTest {
                 Arguments.of("CONTEXTUAL", "   "),
                 Arguments.of("GENERAL", "Necesito ayuda con la plataforma"),
                 Arguments.of("CONTEXTUAL", "Puedes resumirme la informacion visible del encargo activo")
+        );
+    }
+
+    private static Stream<Arguments> missingCaseContextMessages() {
+        return Stream.of(
+                Arguments.of(
+                        "¿Cuál es el estado de mi encargo?",
+                        "no está asociada a un encargo específico"
+                ),
+                Arguments.of(
+                        "Dame información del encargo 00000000-0000-4000-8000-000000000055",
+                        "no está asociada a un encargo específico"
+                ),
+                Arguments.of(
+                        "Revisa EL-123",
+                        "Hojas de Encargo"
+                )
         );
     }
 
