@@ -49,7 +49,7 @@ public class ChatbotPlatformContextService {
             String ownerDisplayName = engagementLetter
                     .map(EngagementLetterSummary::getOwner)
                     .map(UserSummary::displayName)
-                    .filter(name -> name != null && !name.isBlank())
+                    .filter(name -> !name.isBlank())
                     .orElse(DEFAULT_OWNER);
 
             List<String> procedureTitles = engagementLetter
