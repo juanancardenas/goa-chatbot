@@ -104,7 +104,7 @@ public class ChatbotModerationService {
             ChatbotModerationDecision decision,
             Boolean usedAi
     ) {
-        if (this.chatbotMetricsRecorder == null || decision == null) {
+        if (this.chatbotMetricsRecorder == null) {
             return;
         }
 
